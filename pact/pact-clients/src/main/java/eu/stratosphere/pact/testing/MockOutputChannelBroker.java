@@ -177,4 +177,9 @@ public class MockOutputChannelBroker implements ByteBufferedOutputChannelBroker,
 
 		return null;
 	}
+
+	@Override
+	public void limitBufferSize(int bufferSize) {
+		// Nothing to do here
+	}
 }

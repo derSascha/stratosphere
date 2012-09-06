@@ -81,4 +81,12 @@ public interface ByteBufferedOutputChannelBroker {
 	 *         thrown if an error occurs while creating the compressor
 	 */
 	Compressor getCompressor() throws CompressionException;
+	
+	/**
+	 * Limits the size of the buffer the output channel is allowed to write into.
+	 * 
+	 * @param bufferSize
+	 *        the new buffer size in bytes
+	 */
+	void limitBufferSize(int bufferSize);
 }

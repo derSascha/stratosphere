@@ -22,6 +22,7 @@ import java.util.Set;
 
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.Environment;
+import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.io.ChannelSelector;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.InputGate;
@@ -338,5 +339,10 @@ public class MockEnvironment implements Environment
 	public int getNumberOfInputChannels() {
 		
 		return this.inputs.size();
+	}
+
+	@Override
+	public void registerMapper(Mapper<? extends Record, ? extends Record> mapper) {
+		// Nothing to do here
 	}
 }

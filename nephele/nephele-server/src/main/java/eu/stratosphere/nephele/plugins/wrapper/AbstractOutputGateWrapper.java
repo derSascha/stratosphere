@@ -325,4 +325,13 @@ public abstract class AbstractOutputGateWrapper<T extends Record> implements Out
 		return this.wrappedOutputGate.createInMemoryOutputChannel(outputGate, channelID, connectedChannelID,
 			compressionLevel);
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void outputBufferSent(final ChannelID channelID) {
+
+		this.wrappedOutputGate.outputBufferSent(channelID);
+	}
 }

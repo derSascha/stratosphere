@@ -413,4 +413,13 @@ public class RuntimeOutputGate<T extends Record> extends AbstractGate<T> impleme
 			this.outputChannels.get(i).initializeCompressor();
 		}
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void outputBufferSent(final ChannelID channelID) {
+
+		// Nothing to do here
+	}
 }

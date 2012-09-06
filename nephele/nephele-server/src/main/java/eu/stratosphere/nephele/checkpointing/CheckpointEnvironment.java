@@ -21,6 +21,7 @@ import java.util.Set;
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.execution.ExecutionObserver;
+import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.ChannelSelector;
 import eu.stratosphere.nephele.io.GateID;
@@ -334,5 +335,10 @@ final class CheckpointEnvironment implements Environment {
 
 			return this.executingThread;
 		}
+	}
+
+	@Override
+	public void registerMapper(Mapper<? extends Record, ? extends Record> mapper) {
+		this.environment.registerMapper(mapper);
 	}
 }
