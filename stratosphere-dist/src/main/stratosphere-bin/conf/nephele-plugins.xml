@@ -16,5 +16,19 @@
 #######################################################################################################################
 -->
 <plugins>
+  <plugin>
+	  <name>NepheleStreaming</name>
+	  <class>eu.stratosphere.nephele.streaming.StreamingPluginLoader</class>
+	  <configuration>
+		  <property>
+			  <key>streaming.tagging.interval</key>
+			  <value>10</value>
+		  </property>
+		  <property>
+			  <key>streaming.aggregation.interval</key>
+			  <value>1000</value>
+		  </property>
+	  </configuration>
+  </plugin>
 </plugins>
 

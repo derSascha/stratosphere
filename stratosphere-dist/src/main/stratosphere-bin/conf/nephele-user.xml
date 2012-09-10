@@ -153,7 +153,7 @@
 	      
 	<property>
 		<key>jobmanager.profiling.enable</key>
-		<value>false</value>
+		<value>true</value>
 	</property>
 
 	<property>
