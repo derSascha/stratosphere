@@ -172,8 +172,8 @@ public final class StreamListenerContext {
 		return this.pendingActions;
 	}
 
-	void registerMapper(final Mapper<? extends Record, ? extends Record> mapper,
-			final StreamingInputGate<? extends Record> inputGate, final StreamingOutputGate<? extends Record> outputGate) {
+	<I extends Record, O extends Record> void registerMapper(final Mapper<I, O> mapper,
+			final StreamingInputGate<I> inputGate, final StreamingOutputGate<O> outputGate) {
 
 		this.chainCoordinator.registerMapper(this.vertexID, mapper, inputGate, outputGate);
 	}

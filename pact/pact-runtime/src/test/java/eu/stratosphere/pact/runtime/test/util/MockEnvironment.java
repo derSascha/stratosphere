@@ -342,7 +342,7 @@ public class MockEnvironment implements Environment
 	}
 
 	@Override
-	public void registerMapper(Mapper<? extends Record, ? extends Record> mapper) {
+	public <I extends Record, O extends Record> void registerMapper(Mapper<I, O> mapper) {
 		// Nothing to do here
 	}
 }

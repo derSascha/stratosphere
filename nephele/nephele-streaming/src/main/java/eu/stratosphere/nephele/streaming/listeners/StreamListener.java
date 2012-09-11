@@ -211,8 +211,8 @@ public final class StreamListener {
 		this.outputGateMap.put(outputGate.getGateID(), outputGate);
 	}
 
-	public void registerMapper(final Mapper<? extends Record, ? extends Record> mapper,
-			final StreamingInputGate<? extends Record> input, final StreamingOutputGate<? extends Record> output) {
+	public <I extends Record, O extends Record> void registerMapper(final Mapper<I, O> mapper,
+			final StreamingInputGate<I> input, final StreamingOutputGate<O> output) {
 
 		this.listenerContext.registerMapper(mapper, input, output);
 	}

@@ -26,11 +26,10 @@ import eu.stratosphere.nephele.util.StringUtils;
 
 public final class StreamChain {
 
-	@SuppressWarnings("rawtypes")
-	private final List<StreamChainLink> chainLinks;
+	private final List<StreamChainLink<?,?>> chainLinks;
 
-	@SuppressWarnings("rawtypes")
-	StreamChain(final List<StreamChainLink> chainLinks) {
+
+	StreamChain(final List<StreamChainLink<?,?>> chainLinks) {
 
 		if (chainLinks.isEmpty()) {
 			throw new IllegalArgumentException("List chainLinks must not be empty");
@@ -39,7 +38,6 @@ public final class StreamChain {
 		this.chainLinks = chainLinks;
 	}
 
-	@SuppressWarnings("unchecked")
 	public StreamingOutputGate<? extends Record> getFirstOutputGate() {
 
 		return this.chainLinks.get(0).getOutputGate();

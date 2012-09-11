@@ -97,8 +97,9 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 	/**
 	 * {@inheritDoc}
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
-	public void registerMapper(final Mapper<? extends Record, ? extends Record> mapper) {
+	public <I extends Record, O extends Record> void registerMapper(final Mapper<I, O> mapper) {
 
 		if (this.streamingInputGates.size() != 1) {
 			return;
@@ -107,8 +108,9 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 		if (this.streamingOutputGates.size() != 1) {
 			return;
 		}
-
-		this.streamListener.registerMapper(mapper, this.streamingInputGates.get(0), this.streamingOutputGates.get(0));
+		
+		this.streamListener.registerMapper(mapper, (StreamingInputGate<I>) this.streamingInputGates.get(0),
+			(StreamingOutputGate<O>) this.streamingOutputGates.get(0));
 	}
 
 	@Override
