@@ -7,7 +7,7 @@
     <parent>
         <artifactId>stratosphere</artifactId>
         <groupId>eu.stratosphere</groupId>
-        <version>0.2</version>
+        <version>streaming-git</version>
     </parent>
 
     <artifactId>build-tools</artifactId>

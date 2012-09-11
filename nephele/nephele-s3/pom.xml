@@ -7,7 +7,7 @@
     <parent>
         <artifactId>nephele</artifactId>
         <groupId>eu.stratosphere</groupId>
-        <version>0.2</version>
+        <version>streaming-git</version>
     </parent>
 
     <artifactId>nephele-s3</artifactId>

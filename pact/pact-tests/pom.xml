@@ -6,7 +6,7 @@
   <parent>
     <artifactId>pact</artifactId>
     <groupId>eu.stratosphere</groupId>
-    <version>0.2</version>
+    <version>streaming-git</version>
   </parent>
 
   <artifactId>pact-tests</artifactId>
