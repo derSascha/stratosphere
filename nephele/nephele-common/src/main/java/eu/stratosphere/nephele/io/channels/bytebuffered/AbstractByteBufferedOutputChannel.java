@@ -156,6 +156,9 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 
 		this.outputChannelBroker.releaseWriteBuffer(this.dataBuffer);
 		this.dataBuffer = null;
+
+		// Notify the output gate to enable statistics collection by plugins
+		getOutputGate().outputBufferSent(getID());
 	}
 
 	/**
