@@ -8,7 +8,6 @@ import java.util.HashSet;
 
 import eu.stratosphere.nephele.managementgraph.ManagementAttachment;
 import eu.stratosphere.nephele.managementgraph.ManagementEdge;
-import eu.stratosphere.nephele.streaming.profiling.EdgeCharacteristics;
 import eu.stratosphere.nephele.streaming.profiling.ProfilingPath;
 import eu.stratosphere.nephele.streaming.profiling.ProfilingSubgraph;
 
@@ -17,7 +16,7 @@ public class BufferSizeLogger {
 	private FileWriter out;
 
 	private ArrayList<HashSet<ManagementEdge>> edges;
-	
+
 	private long timeBase;
 
 	public BufferSizeLogger(ProfilingSubgraph profilingSubgraph) throws IOException {
@@ -50,7 +49,7 @@ public class BufferSizeLogger {
 
 	public void logBufferSizes(HashMap<ManagementEdge, BufferSizeHistory> bufferSizes) throws IOException {
 		long timestamp = System.currentTimeMillis() - timeBase;
-		
+
 		StringBuilder msg = new StringBuilder();
 		msg.append(timestamp);
 
@@ -59,11 +58,9 @@ public class BufferSizeLogger {
 			int noOfEdges = 0;
 
 			for (ManagementEdge edge : edges.get(i)) {
-				if (((EdgeCharacteristics) edge.getAttachment()).isActive()) {
-					BufferSizeHistory bufferSizeHistory = bufferSizes.get(edge);
-					bufferSizeSum += bufferSizeHistory.getLastEntry().getBufferSize();
-					noOfEdges++;
-				}
+				BufferSizeHistory bufferSizeHistory = bufferSizes.get(edge);
+				bufferSizeSum += bufferSizeHistory.getLastEntry().getBufferSize();
+				noOfEdges++;
 			}
 			int avgBufferSize = bufferSizeSum / noOfEdges;
 			msg.append(';');
