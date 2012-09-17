@@ -32,6 +32,7 @@ import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.actions.AbstractAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.streaming.listeners.StreamListenerContext;
+import eu.stratosphere.nephele.streaming.profiling.JobStreamProfilingReporter;
 
 public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 
@@ -67,9 +68,15 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	private static volatile StreamingTaskManagerPlugin INSTANCE = null;
 
 	/**
-	 * Map storing the listener context objects for the individual stream listners.
+	 * Map storing the listener context objects by stringified {@link ExecutionVertexID} for the individual stream
+	 * listeners.
 	 */
 	private final ConcurrentMap<String, StreamListenerContext> listenerContexts = new ConcurrentHashMap<String, StreamListenerContext>();
+
+	/**
+	 * Map storing the stream profiling reporter object for each job running on the task manager.
+	 */
+	private final ConcurrentMap<JobID, JobStreamProfilingReporter> profilingReporters = new ConcurrentHashMap<JobID, JobStreamProfilingReporter>();
 
 	/**
 	 * The tagging interval as specified in the plugin configuration.
@@ -141,15 +148,18 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 		environment.getTaskConfiguration().setString(StreamListenerContext.CONTEXT_CONFIGURATION_KEY, idAsString);
 
 		final JobID jobID = environment.getJobID();
+		JobStreamProfilingReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
+		profilingReporter.registerTask(id);
+
 		StreamListenerContext listenerContext = null;
 		if (environment.getNumberOfInputGates() == 0) {
-			listenerContext = StreamListenerContext.createForInputTask(jobID, id, this.communicationThread,
+			listenerContext = StreamListenerContext.createForInputTask(jobID, id, profilingReporter,
 				this.chainCoordinator, aggregationInterval, taggingInterval);
 		} else if (environment.getNumberOfOutputGates() == 0) {
-			listenerContext = StreamListenerContext.createForOutputTask(jobID, id, this.communicationThread,
+			listenerContext = StreamListenerContext.createForOutputTask(jobID, id, profilingReporter,
 				this.chainCoordinator, aggregationInterval, taggingInterval);
 		} else {
-			listenerContext = StreamListenerContext.createForRegularTask(jobID, id, this.communicationThread,
+			listenerContext = StreamListenerContext.createForRegularTask(jobID, id, profilingReporter,
 				this.chainCoordinator, aggregationInterval, taggingInterval);
 		}
 
@@ -163,6 +173,21 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	public void unregisterTask(final ExecutionVertexID id, final Environment environment) {
 
 		this.listenerContexts.remove(id.toString());
+
+		final JobID jobID = environment.getJobID();
+		JobStreamProfilingReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
+		profilingReporter.unregisterTask(id);
+		if (!profilingReporter.hasRegisteredTasks()) {
+			profilingReporters.remove(jobID);
+		}
+	}
+
+	private JobStreamProfilingReporter getOrCreateStreamProfilingReporter(JobID jobID) {
+		if (!profilingReporters.containsKey(jobID)) {
+			profilingReporters.putIfAbsent(jobID, new JobStreamProfilingReporter(jobID, communicationThread,
+				aggregationInterval));
+		}
+		return profilingReporters.get(jobID);
 	}
 
 	/**

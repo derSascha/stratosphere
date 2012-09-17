@@ -13,7 +13,7 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.types;
+package eu.stratosphere.nephele.streaming.types.profiling;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -21,14 +21,13 @@ import java.io.IOException;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
  * This class stores information about the throughput of a specific output channel.
  * 
  * @author warneke
  */
-public final class ChannelThroughput extends AbstractStreamingData {
+public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 
 	/**
 	 * The ID of the vertex which is connected to this output channel.
@@ -57,9 +56,8 @@ public final class ChannelThroughput extends AbstractStreamingData {
 	 * @param throughput
 	 *        the throughput in MBit/s
 	 */
-	public ChannelThroughput(final JobID jobID, final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
+	public ChannelThroughput(final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
 			final double throughput) {
-		super(jobID);
 
 		if (vertexID == null) {
 			throw new IllegalArgumentException("Argument vertexID must not be null");
@@ -82,7 +80,6 @@ public final class ChannelThroughput extends AbstractStreamingData {
 	 * Default constructor for deserialization.
 	 */
 	public ChannelThroughput() {
-		super(new JobID());
 		this.vertexID = new ExecutionVertexID();
 		this.sourceChannelID = new ChannelID();
 		this.throughput = 0.0;
@@ -123,8 +120,6 @@ public final class ChannelThroughput extends AbstractStreamingData {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		super.write(out);
-
 		this.vertexID.write(out);
 		this.sourceChannelID.write(out);
 		out.writeDouble(this.throughput);
@@ -135,10 +130,22 @@ public final class ChannelThroughput extends AbstractStreamingData {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		super.read(in);
-
 		this.vertexID.read(in);
 		this.sourceChannelID.read(in);
 		this.throughput = in.readDouble();
 	}
+	
+	@Override
+	public boolean equals(Object otherObj) {
+		boolean isEqual = false;
+		if (otherObj instanceof ChannelThroughput) {
+			ChannelThroughput other = (ChannelThroughput) otherObj;
+			isEqual = other.getVertexID().equals(getVertexID())
+				&& other.getSourceChannelID().equals(getSourceChannelID())
+				&& (other.getThroughput() == getThroughput());
+		}
+
+		return isEqual;
+	}
+
 }

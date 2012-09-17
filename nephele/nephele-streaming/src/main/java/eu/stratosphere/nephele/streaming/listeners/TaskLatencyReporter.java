@@ -1,12 +1,7 @@
 package eu.stratosphere.nephele.streaming.listeners;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.types.TaskLatency;
-import eu.stratosphere.nephele.util.StringUtils;
+import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 
 /**
  * Handles the measurement and reporting of task latencies.
@@ -25,9 +20,7 @@ import eu.stratosphere.nephele.util.StringUtils;
  */
 public class TaskLatencyReporter {
 
-	private static final Log LOG = LogFactory.getLog(TaskLatencyReporter.class);
-
-	private JobID jobId;
+	//private static final Log LOG = LogFactory.getLog(TaskLatencyReporter.class);
 
 	private ExecutionVertexID vertexId;
 
@@ -49,7 +42,6 @@ public class TaskLatencyReporter {
 
 	public TaskLatencyReporter(StreamListenerContext listenerContext) {
 
-		this.jobId = listenerContext.getJobID();
 		this.vertexId = listenerContext.getVertexID();
 		this.measurementIntervalInRecords = listenerContext.getTaggingInterval();
 		this.listenerContext = listenerContext;
@@ -78,7 +70,7 @@ public class TaskLatencyReporter {
 				long now = System.currentTimeMillis();
 				if (isReportDue(now)) {
 					long latency = (now - timeOfNextReport) / recordsSinceLastMeasurement;
-					doReport(new TaskLatency(jobId, vertexId, latency));
+					doReport(new TaskLatency(vertexId, latency));
 					recordsSinceLastMeasurement = 0;
 					reportSent = true;
 				}
@@ -102,12 +94,7 @@ public class TaskLatencyReporter {
 	}
 
 	private void doReport(TaskLatency taskLatency) {
-		try {
-			this.listenerContext.sendDataAsynchronously(taskLatency);
-		} catch (InterruptedException e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
-
+		this.listenerContext.getProfilingReporter().addToNextReport(taskLatency);
 		timeOfNextReport = System.currentTimeMillis() + listenerContext.getAggregationInterval();
 	}
 
@@ -121,7 +108,7 @@ public class TaskLatencyReporter {
 
 	public boolean processRecordEmitted() {
 		boolean reportSent = false;
-		
+
 		if (listenerContext.isRegularVertex()) {
 			if (measurementInProgress) {
 				long now = System.currentTimeMillis();
@@ -129,7 +116,7 @@ public class TaskLatencyReporter {
 
 				if (isReportDue(now)) {
 					long latency = accumulatedLatency / noOfMeasurements;
-					doReport(new TaskLatency(jobId, vertexId, latency));
+					doReport(new TaskLatency(vertexId, latency));
 					accumulatedLatency = 0;
 					noOfMeasurements = 0;
 					reportSent = true;
@@ -141,7 +128,7 @@ public class TaskLatencyReporter {
 				long now = System.currentTimeMillis();
 				if (isReportDue(now)) {
 					long latency = (now - timeOfNextReport) / recordsSinceLastMeasurement;
-					doReport(new TaskLatency(jobId, vertexId, latency));
+					doReport(new TaskLatency(vertexId, latency));
 					recordsSinceLastMeasurement = 0;
 					reportSent = true;
 				}

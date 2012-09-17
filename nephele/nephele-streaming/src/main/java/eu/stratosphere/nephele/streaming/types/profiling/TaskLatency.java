@@ -13,21 +13,20 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.types;
+package eu.stratosphere.nephele.streaming.types.profiling;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
  * This class stores information about the latency of a specific (sub) path from a start to an end vertex.
  * 
  * @author warneke
  */
-public final class TaskLatency extends AbstractStreamingData {
+public final class TaskLatency extends AbstractStreamProfilingRecord {
 
 	/**
 	 * The ID of the vertex this task latency information refers to
@@ -49,9 +48,7 @@ public final class TaskLatency extends AbstractStreamingData {
 	 * @param taskLatency
 	 *        the task latency in milliseconds
 	 */
-	public TaskLatency(final JobID jobID, final ExecutionVertexID vertexID, final double taskLatency) {
-
-		super(jobID);
+	public TaskLatency(final ExecutionVertexID vertexID, final double taskLatency) {
 
 		if (vertexID == null) {
 			throw new IllegalArgumentException("vertexID must not be null");
@@ -65,7 +62,6 @@ public final class TaskLatency extends AbstractStreamingData {
 	 * Default constructor for the deserialization of the object.
 	 */
 	public TaskLatency() {
-		super(new JobID());
 		this.vertexID = new ExecutionVertexID();
 		this.taskLatency = 0.0;
 	}
@@ -75,7 +71,6 @@ public final class TaskLatency extends AbstractStreamingData {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		super.write(out);
 		this.vertexID.write(out);
 		out.writeDouble(this.taskLatency);
 	}
@@ -85,7 +80,6 @@ public final class TaskLatency extends AbstractStreamingData {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		super.read(in);
 		this.vertexID.read(in);
 		this.taskLatency = in.readDouble();
 	}
@@ -109,4 +103,17 @@ public final class TaskLatency extends AbstractStreamingData {
 
 		return this.taskLatency;
 	}
+
+	@Override
+	public boolean equals(Object otherObj) {
+		boolean isEqual = false;
+		if (otherObj instanceof TaskLatency) {
+			TaskLatency other = (TaskLatency) otherObj;
+			isEqual = other.getVertexID().equals(getVertexID())
+				&& (other.getTaskLatency() == getTaskLatency());
+		}
+
+		return isEqual;
+	}
+
 }

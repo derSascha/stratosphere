@@ -13,7 +13,7 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.types;
+package eu.stratosphere.nephele.streaming.types.profiling;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -21,9 +21,8 @@ import java.io.IOException;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.jobgraph.JobID;
 
-public final class OutputBufferLatency extends AbstractStreamingData {
+public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 
 	private final ExecutionVertexID vertexID;
 
@@ -31,9 +30,8 @@ public final class OutputBufferLatency extends AbstractStreamingData {
 
 	private int bufferLatency;
 
-	public OutputBufferLatency(final JobID jobID, final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
+	public OutputBufferLatency(final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
 			final int bufferLatency) {
-		super(jobID);
 
 		if (vertexID == null) {
 			throw new IllegalArgumentException("Argument vertexID must not be null");
@@ -81,8 +79,6 @@ public final class OutputBufferLatency extends AbstractStreamingData {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		super.write(out);
-
 		this.vertexID.write(out);
 		this.sourceChannelID.write(out);
 		out.writeInt(this.bufferLatency);
@@ -93,10 +89,21 @@ public final class OutputBufferLatency extends AbstractStreamingData {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		super.read(in);
-
 		this.vertexID.read(in);
 		this.sourceChannelID.read(in);
 		this.bufferLatency = in.readInt();
+	}
+
+	@Override
+	public boolean equals(Object otherObj) {
+		boolean isEqual = false;
+		if (otherObj instanceof OutputBufferLatency) {
+			OutputBufferLatency other = (OutputBufferLatency) otherObj;
+			isEqual = other.getVertexID().equals(getVertexID())
+				&& other.getSourceChannelID().equals(getSourceChannelID())
+				&& (other.getBufferLatency() == getBufferLatency());
+		}
+
+		return isEqual;
 	}
 }

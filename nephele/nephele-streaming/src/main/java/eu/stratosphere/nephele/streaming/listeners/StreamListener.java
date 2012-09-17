@@ -35,9 +35,9 @@ import eu.stratosphere.nephele.streaming.actions.AbstractAction;
 import eu.stratosphere.nephele.streaming.actions.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.actions.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChain;
-import eu.stratosphere.nephele.streaming.types.ChannelLatency;
-import eu.stratosphere.nephele.streaming.types.ChannelThroughput;
-import eu.stratosphere.nephele.streaming.types.OutputBufferLatency;
+import eu.stratosphere.nephele.streaming.types.profiling.ChannelLatency;
+import eu.stratosphere.nephele.streaming.types.profiling.ChannelThroughput;
+import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingInputGate;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingOutputGate;
 import eu.stratosphere.nephele.types.Record;
@@ -45,11 +45,8 @@ import eu.stratosphere.nephele.util.StringUtils;
 
 public final class StreamListener {
 
-	/**
-	 * The log object.
-	 */
 	private static final Log LOG = LogFactory.getLog(StreamListener.class);
-	
+
 	private final Configuration taskConfiguration;
 
 	private StreamListenerContext listenerContext = null;
@@ -57,7 +54,7 @@ public final class StreamListener {
 	private Map<GateID, StreamingOutputGate<? extends Record>> outputGateMap = new HashMap<GateID, StreamingOutputGate<? extends Record>>();
 
 	private Map<ChannelID, AbstractOutputChannel<? extends Record>> outputChannelMap;
-	
+
 	private TaskLatencyReporter taskLatencyReporter;
 
 	public StreamListener(final Configuration taskConfiguration) {
@@ -84,7 +81,7 @@ public final class StreamListener {
 		this.listenerContext = StreamingTaskManagerPlugin.getStreamingListenerContext(listenerKey);
 
 		initOutputChannelMap();
-		
+
 		taskLatencyReporter = new TaskLatencyReporter(listenerContext);
 	}
 
@@ -117,31 +114,19 @@ public final class StreamListener {
 	}
 
 	public void reportChannelThroughput(final ChannelID sourceChannelID, final double throughput) {
-
-		try {
-			this.listenerContext.sendDataAsynchronously(new ChannelThroughput(this.listenerContext.getJobID(),
-				this.listenerContext.getVertexID(), sourceChannelID, throughput));
-		} catch (InterruptedException e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
+		this.listenerContext.getProfilingReporter().addToNextReport(
+			new ChannelThroughput(this.listenerContext.getVertexID(),
+				sourceChannelID, throughput));
 	}
 
 	public void reportBufferLatency(final ChannelID sourceChannelID, final int bufferLatency) {
-
-		try {
-			this.listenerContext.sendDataAsynchronously(new OutputBufferLatency(this.listenerContext.getJobID(),
-				this.listenerContext.getVertexID(), sourceChannelID, bufferLatency));
-		} catch (InterruptedException e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
+		this.listenerContext.getProfilingReporter().addToNextReport(
+			new OutputBufferLatency(this.listenerContext.getVertexID(),
+				sourceChannelID, bufferLatency));
 	}
-	
+
 	public void reportChannelLatency(ChannelLatency channelLatency) {
-		try {
-			this.listenerContext.sendDataAsynchronously(channelLatency);
-		} catch (InterruptedException e) {
-			LOG.warn(StringUtils.stringifyException(e));
-		}
+		this.listenerContext.getProfilingReporter().addToNextReport(channelLatency);
 	}
 
 	private void checkForPendingActions() {

@@ -13,21 +13,20 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.types;
+package eu.stratosphere.nephele.streaming.types.profiling;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
  * This class stores information about the latency of a specific channel from a source to a sink vertex.
  * 
- * @author warneke
+ * @author warneke, Bjoern Lohrmann
  */
-public final class ChannelLatency extends AbstractStreamingData {
+public final class ChannelLatency extends AbstractStreamProfilingRecord {
 
 	/**
 	 * The ID of the vertex representing the source of the channel.
@@ -47,8 +46,6 @@ public final class ChannelLatency extends AbstractStreamingData {
 	/**
 	 * Constructs a new path latency object.
 	 * 
-	 * @param jobID
-	 *        the ID of the job this channel latency information refers to
 	 * @param sourceVertexID
 	 *        the ID of the vertex representing the source of the channel
 	 * @param sinkVertexID
@@ -56,10 +53,8 @@ public final class ChannelLatency extends AbstractStreamingData {
 	 * @param pathLatency
 	 *        the path latency in milliseconds
 	 */
-	public ChannelLatency(final JobID jobID, final ExecutionVertexID sourceVertexID,
+	public ChannelLatency(final ExecutionVertexID sourceVertexID,
 			final ExecutionVertexID sinkVertexID, final double channelLatency) {
-
-		super(jobID);
 
 		if (sourceVertexID == null) {
 			throw new IllegalArgumentException("sourceVertexID must not be null");
@@ -78,7 +73,6 @@ public final class ChannelLatency extends AbstractStreamingData {
 	 * Default constructor for the deserialization of the object.
 	 */
 	public ChannelLatency() {
-		super(new JobID());
 		this.sourceVertexID = new ExecutionVertexID();
 		this.sinkVertexID = new ExecutionVertexID();
 		this.channelLatency = 0.0;
@@ -89,7 +83,6 @@ public final class ChannelLatency extends AbstractStreamingData {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		super.write(out);
 		this.sourceVertexID.write(out);
 		this.sinkVertexID.write(out);
 		out.writeDouble(this.channelLatency);
@@ -100,7 +93,6 @@ public final class ChannelLatency extends AbstractStreamingData {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		super.read(in);
 		this.sourceVertexID.read(in);
 		this.sinkVertexID.read(in);
 		this.channelLatency = in.readDouble();
@@ -150,5 +142,18 @@ public final class ChannelLatency extends AbstractStreamingData {
 		str.append(this.channelLatency);
 
 		return str.toString();
+	}
+
+	@Override
+	public boolean equals(Object otherObj) {
+		boolean isEqual = false;
+		if (otherObj instanceof ChannelLatency) {
+			ChannelLatency other = (ChannelLatency) otherObj;
+			isEqual = other.getSourceVertexID().equals(getSourceVertexID())
+				&& other.getSinkVertexID().equals(getSinkVertexID())
+				&& (other.getChannelLatency() == getChannelLatency());
+		}
+
+		return isEqual;
 	}
 }

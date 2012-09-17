@@ -22,11 +22,10 @@ import java.util.Queue;
 import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.StreamingCommunicationThread;
 import eu.stratosphere.nephele.streaming.actions.AbstractAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChain;
 import eu.stratosphere.nephele.streaming.chaining.StreamChainCoordinator;
-import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
+import eu.stratosphere.nephele.streaming.profiling.JobStreamProfilingReporter;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingInputGate;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingOutputGate;
 import eu.stratosphere.nephele.types.Record;
@@ -45,7 +44,7 @@ public final class StreamListenerContext {
 
 	private final ExecutionVertexID vertexID;
 
-	private final StreamingCommunicationThread communicationThread;
+	private final JobStreamProfilingReporter profilingReporter;
 
 	private final StreamChainCoordinator chainCoordinator;
 
@@ -56,7 +55,7 @@ public final class StreamListenerContext {
 	private final int taggingInterval;
 
 	private StreamListenerContext(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamingCommunicationThread communicationThread, final StreamChainCoordinator chainCoordinator,
+			final JobStreamProfilingReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final TaskType taskType, final int aggregationInterval, final int taggingInterval) {
 
 		if (jobID == null) {
@@ -67,8 +66,8 @@ public final class StreamListenerContext {
 			throw new IllegalArgumentException("Parameter vertexID must not be null");
 		}
 
-		if (communicationThread == null) {
-			throw new IllegalArgumentException("Parameter communicationThread must not be null");
+		if (profilingReporter == null) {
+			throw new IllegalArgumentException("Parameter profilingReporter must not be null");
 		}
 
 		if (taskType == null) {
@@ -85,7 +84,7 @@ public final class StreamListenerContext {
 
 		this.jobID = jobID;
 		this.vertexID = vertexID;
-		this.communicationThread = communicationThread;
+		this.profilingReporter = profilingReporter;
 		this.chainCoordinator = chainCoordinator;
 		this.taskType = taskType;
 		this.aggregationInterval = aggregationInterval;
@@ -93,26 +92,26 @@ public final class StreamListenerContext {
 	}
 
 	public static StreamListenerContext createForInputTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamingCommunicationThread communicationThread, final StreamChainCoordinator chainCoordinator,
+			final JobStreamProfilingReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, final int taggingInterval) {
 
-		return new StreamListenerContext(jobID, vertexID, communicationThread, chainCoordinator, TaskType.INPUT,
+		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.INPUT,
 			aggregationInterval, taggingInterval);
 	}
 
 	public static StreamListenerContext createForRegularTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamingCommunicationThread communicationThread, final StreamChainCoordinator chainCoordinator,
+			final JobStreamProfilingReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, int taggingInterval) {
 
-		return new StreamListenerContext(jobID, vertexID, communicationThread, chainCoordinator, TaskType.REGULAR,
+		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.REGULAR,
 			aggregationInterval, taggingInterval);
 	}
 
 	public static StreamListenerContext createForOutputTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamingCommunicationThread communicationThread, final StreamChainCoordinator chainCoordinator,
+			final JobStreamProfilingReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, int taggingInterval) {
 
-		return new StreamListenerContext(jobID, vertexID, communicationThread, chainCoordinator, TaskType.OUTPUT,
+		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.OUTPUT,
 			aggregationInterval, taggingInterval);
 	}
 
@@ -130,7 +129,7 @@ public final class StreamListenerContext {
 
 		return (this.taskType == TaskType.REGULAR);
 	}
-	
+
 	TaskType getTaskType() {
 		return this.taskType;
 	}
@@ -155,9 +154,8 @@ public final class StreamListenerContext {
 		return this.aggregationInterval;
 	}
 
-	void sendDataAsynchronously(final AbstractStreamingData data) throws InterruptedException {
-
-		this.communicationThread.sendDataAsynchronously(data);
+	public JobStreamProfilingReporter getProfilingReporter() {
+		return profilingReporter;
 	}
 
 	public void queuePendingAction(final AbstractAction action) {

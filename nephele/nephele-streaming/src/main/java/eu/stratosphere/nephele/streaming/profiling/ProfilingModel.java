@@ -13,11 +13,11 @@ import eu.stratosphere.nephele.managementgraph.ManagementGate;
 import eu.stratosphere.nephele.managementgraph.ManagementGraph;
 import eu.stratosphere.nephele.managementgraph.ManagementVertex;
 import eu.stratosphere.nephele.managementgraph.ManagementVertexID;
-import eu.stratosphere.nephele.streaming.types.ChannelLatency;
-import eu.stratosphere.nephele.streaming.types.ChannelThroughput;
-import eu.stratosphere.nephele.streaming.types.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.StreamingChainAnnounce;
-import eu.stratosphere.nephele.streaming.types.TaskLatency;
+import eu.stratosphere.nephele.streaming.types.profiling.ChannelLatency;
+import eu.stratosphere.nephele.streaming.types.profiling.ChannelThroughput;
+import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
+import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 
 public class ProfilingModel {
 
