@@ -18,6 +18,7 @@ package eu.stratosphere.nephele.deployment;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.HashMap;
 
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.librarycache.LibraryCacheManager;
@@ -439,13 +440,11 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 	}
 
 	/**
-	 * Returns data attached by a on the job manager and to be used by the plugin on the task manager.
+	 * Returns data attached by a on the job manager and to be used by the plugins on the task manager.
 	 * 
-	 * @param pluginID
-	 *        The ID of the plugin that attached the data.
-	 * @return The data attached by the plugin with the given ID, or null if no data was attached.
+	 * @return the attached plugin data mapped by plugin ID.
 	 */
-	public IOReadableWritable getAttachedPluginData(PluginID pluginID) {
-		return this.attachedPluginData.get(pluginID);
+	public HashMap<PluginID, IOReadableWritable> getAttachedPluginData() {
+		return this.attachedPluginData;
 	}
 }

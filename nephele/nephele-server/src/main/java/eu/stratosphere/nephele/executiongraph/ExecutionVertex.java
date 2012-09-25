@@ -1078,6 +1078,40 @@ public final class ExecutionVertex {
 
 		return this.executionPipeline.get();
 	}
+	
+	/**
+	 * Attaches the given plugin data.
+	 * 
+	 * @param pluginID
+	 *        the plugin's ID under to attach the data.
+	 * @param pluginData
+	 *        the data to attach.
+	 */
+	public void setPluginData(PluginID pluginID, IOReadableWritable pluginData) {
+		this.attachedPluginData.put(pluginID, pluginData);
+	}
+	
+	/**
+	 * Returns previously attached plugin data.
+	 * 
+	 * @param pluginID
+	 *        the plugin's ID under which the data was attached.
+	 * @return the plugin data or null, if no data was previously attached.
+	 */
+	public IOReadableWritable getPluginData(PluginID pluginID) {
+		return this.attachedPluginData.get(pluginID);
+	}
+
+	/**
+	 * Detaches data for the given plugin.
+	 * 
+	 * @param pluginID
+	 *        the plugin's ID under which the data was attached.
+	 * @return the detached plugin data or null, if no data was previously attached.
+	 */
+	public IOReadableWritable removePluginData(PluginID pluginID) {
+		return this.attachedPluginData.remove(pluginID);
+	}
 
 	/**
 	 * Constructs a new task deployment descriptor for this vertex.
