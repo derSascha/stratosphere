@@ -139,9 +139,7 @@ public final class LimitBufferSizeAction extends AbstractAction {
 	 * 
 	 * @return the ID of the vertex the initiated action applies to
 	 */
-	@Override
 	public ExecutionVertexID getVertexID() {
-
 		return this.vertexID;
 	}
 }

@@ -16,13 +16,18 @@
 package eu.stratosphere.nephele.streaming;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.stratosphere.nephele.plugins.PluginCommunication;
+import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.ipc.RPC;
+import eu.stratosphere.nephele.net.NetUtils;
+import eu.stratosphere.nephele.protocols.PluginCommunicationProtocol;
 import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
 import eu.stratosphere.nephele.util.StringUtils;
 
@@ -48,30 +53,15 @@ public final class StreamingCommunicationThread extends Thread {
 	private static final int QUEUE_CAPACITY = 128;
 
 	/**
-	 * Stub object representing the job manager component of this plugin.
-	 */
-	private final PluginCommunication jobManagerComponent;
-
-	/**
 	 * The blocking queue which is used to asynchronously exchange data with the job manager component of this plugin.
 	 */
 	private final BlockingQueue<AbstractStreamingData> dataQueue = new ArrayBlockingQueue<AbstractStreamingData>(
 		QUEUE_CAPACITY);
 
-	/**
-	 * Stores whether the communication thread has been requested to stop.
-	 */
-	private volatile boolean interrupted = false;
+	private final BlockingQueue<InstanceConnectionInfo> connectionInfoQueue = new ArrayBlockingQueue<InstanceConnectionInfo>(
+		QUEUE_CAPACITY);
 
-	/**
-	 * Constructs a new streaming communication thread.
-	 * 
-	 * @param jobManagerComponent
-	 *        the stub object for the plugin's job manager component.
-	 */
-	StreamingCommunicationThread(final PluginCommunication jobManagerComponent) {
-		this.jobManagerComponent = jobManagerComponent;
-	}
+	private HashMap<InstanceConnectionInfo, PluginCommunicationProtocol> proxies = new HashMap<InstanceConnectionInfo, PluginCommunicationProtocol>();
 
 	/**
 	 * {@inheritDoc}
@@ -79,40 +69,43 @@ public final class StreamingCommunicationThread extends Thread {
 	@Override
 	public void run() {
 
-		while (!this.interrupted) {
+		try {
+			while (!interrupted()) {
+				InstanceConnectionInfo connectionInfo = connectionInfoQueue.take();
+				AbstractStreamingData data = dataQueue.take();
 
-			if (Thread.currentThread().isInterrupted()) {
-				break;
+				try {
+					getProxy(connectionInfo).sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID, data);
+				} catch (IOException ioe) {
+					LOG.error(StringUtils.stringifyException(ioe));
+					proxies.remove(connectionInfo);
+				}
 			}
-
-			try {
-				this.jobManagerComponent.sendData(this.dataQueue.take());
-			} catch (InterruptedException e) {
-				break;
-			} catch (IOException ioe) {
-				LOG.error(StringUtils.stringifyException(ioe));
-			}
+		} catch (InterruptedException e) {
 		}
+	}
+
+	private PluginCommunicationProtocol getProxy(InstanceConnectionInfo connectionInfo) throws IOException {
+		PluginCommunicationProtocol proxy = proxies.get(connectionInfo);
+		if (proxy == null) {
+			proxy = RPC.getProxy(PluginCommunicationProtocol.class, new InetSocketAddress(connectionInfo.getAddress(),
+				connectionInfo.getIPCPort()), NetUtils.getSocketFactory());
+			proxies.put(connectionInfo, proxy);
+		}
+
+		return proxy;
 	}
 
 	/**
 	 * Stops the communication thread.
 	 */
 	void stopCommunicationThread() {
-		this.interrupted = true;
 		interrupt();
 	}
 
-	/**
-	 * Sends the given data item asynchronously to the plugin's job manager component.
-	 * 
-	 * @param data
-	 *        the data item to send to the plugin's job manager component
-	 * @throws InterruptedException
-	 *         thrown if the thread is interrupted while waiting for the communication thread to accept the data
-	 */
-	public void sendDataAsynchronously(final AbstractStreamingData data) throws InterruptedException {
-
-		this.dataQueue.put(data);
+	public void sendToTaskManagerAsynchronously(final InstanceConnectionInfo connectionInfo,
+			final AbstractStreamingData data) throws InterruptedException {
+		dataQueue.put(data);
+		connectionInfoQueue.put(connectionInfo);
 	}
 }

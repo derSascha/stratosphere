@@ -19,42 +19,40 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.types.Tag;
 
 public final class StreamingTag implements Tag {
 
-	private final ExecutionVertexID sourceID;
+	private final ChannelID sourceChannelID;
 
 	private long timestamp = 0L;
 
-	public StreamingTag(final ExecutionVertexID sourceID) {
+	public StreamingTag(final ChannelID sourceChannelID) {
 
-		if (sourceID == null) {
-			throw new IllegalArgumentException("sourceID must not be null");
+		if (sourceChannelID == null) {
+			throw new IllegalArgumentException("sourceChannelID must not be null");
 		}
 
-		this.sourceID = sourceID;
+		this.sourceChannelID = sourceChannelID;
 	}
 
 	/**
 	 * Default constructor for deserialization.
 	 */
 	public StreamingTag() {
-		this.sourceID = new ExecutionVertexID();
+		this.sourceChannelID = new ChannelID();
 	}
 
 	public void setTimestamp(final long timestamp) {
 		this.timestamp = timestamp;
 	}
 
-	public ExecutionVertexID getSourceID() {
-
-		return this.sourceID;
+	public ChannelID getSourceChannelID() {
+		return this.sourceChannelID;
 	}
 
 	public long getTimestamp() {
-
 		return this.timestamp;
 	}
 
@@ -65,7 +63,7 @@ public final class StreamingTag implements Tag {
 	public void write(final DataOutput out) throws IOException {
 		// TODO Auto-generated method stub
 
-		this.sourceID.write(out);
+		this.sourceChannelID.write(out);
 		out.writeLong(this.timestamp);
 	}
 
@@ -75,7 +73,7 @@ public final class StreamingTag implements Tag {
 	@Override
 	public void read(final DataInput in) throws IOException {
 
-		this.sourceID.read(in);
+		this.sourceChannelID.read(in);
 		this.timestamp = in.readLong();
 	}
 }

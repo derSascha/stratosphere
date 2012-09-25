@@ -68,7 +68,7 @@ public class ProfilingLogger {
 		refreshTimeOfNextLogging();
 	}
 
-	private void refreshTimeOfNextLogging() {
+	public void refreshTimeOfNextLogging() {
 		long now = System.currentTimeMillis();
 		while(timeOfNextLogging <= now) {
 			timeOfNextLogging += LOGGING_INTERVAL;

@@ -6,9 +6,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
-import eu.stratosphere.nephele.streaming.StreamingJobManagerPlugin;
+import eu.stratosphere.nephele.streaming.StreamingCommunicationThread;
 import eu.stratosphere.nephele.streaming.buffers.BufferSizeManager;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingSequence;
 import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
 import eu.stratosphere.nephele.streaming.types.StreamProfilingReport;
 import eu.stratosphere.nephele.streaming.types.StreamingChainAnnounce;
@@ -17,43 +17,39 @@ import eu.stratosphere.nephele.streaming.types.profiling.ChannelThroughput;
 import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 
-public class LatencyOptimizerThread extends Thread {
+public class JobStreamProfilingMasterThread extends Thread {
 
-	private Log LOG = LogFactory.getLog(LatencyOptimizerThread.class);
+	private Log LOG = LogFactory.getLog(JobStreamProfilingMasterThread.class);
 
 	private final LinkedBlockingQueue<AbstractStreamingData> streamingDataQueue;
-
-	private final StreamingJobManagerPlugin jobManagerPlugin;
-
-	private final ExecutionGraph executionGraph;
-
-	private final ProfilingModel profilingModel;
 
 	private ProfilingLogger logger;
 
 	private BufferSizeManager bufferSizeManager;
 
-	public LatencyOptimizerThread(StreamingJobManagerPlugin jobManagerPlugin, ExecutionGraph executionGraph) {
-		this.jobManagerPlugin = jobManagerPlugin;
-		this.executionGraph = executionGraph;
-		this.profilingModel = new ProfilingModel(executionGraph);
+	private ProfilingSequence profilingSequence;
+
+	public JobStreamProfilingMasterThread(StreamingCommunicationThread communicationThread,
+			ProfilingSequence profilingSequence) {
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamingData>();
+		this.profilingSequence = profilingSequence;
+
 		try {
 			this.logger = new ProfilingLogger();
 		} catch (IOException e) {
 			LOG.error("Error when opening profiling logger file", e);
 		}
 
-		try {
-			this.bufferSizeManager = new BufferSizeManager(200, this.profilingModel, this.jobManagerPlugin,
-				this.executionGraph);
-		} catch (IOException e) {
-			LOG.error(e.getMessage(), e);
-		}
+		// try {
+		// this.bufferSizeManager = new BufferSizeManager(200, this.profilingModel, this.jobManagerPlugin,
+		// this.executionGraph);
+		// } catch (IOException e) {
+		// LOG.error(e.getMessage(), e);
+		// }
 	}
 
 	public void run() {
-		LOG.info("Started optimizer thread for job " + executionGraph.getJobName());
+		LOG.info("Started profiling master thread.");
 
 		int totalNoOfMessages = 0;
 		int channelLats = 0;
@@ -72,44 +68,47 @@ public class LatencyOptimizerThread extends Thread {
 					StreamProfilingReport profilingReport = (StreamProfilingReport) streamingData;
 
 					for (ChannelLatency channelLatency : profilingReport.getChannelLatencies()) {
-						profilingModel.refreshEdgeLatency(now, channelLatency);
+						// profilingModel.refreshEdgeLatency(now, channelLatency);
 						channelLats++;
 					}
 
 					for (ChannelThroughput channelThroughput : profilingReport.getChannelThroughputs()) {
-						profilingModel.refreshChannelThroughput(now, channelThroughput);
+						// profilingModel.refreshChannelThroughput(now, channelThroughput);
 						throughputs++;
 					}
 
 					for (TaskLatency taskLatency : profilingReport.getTaskLatencies()) {
-						profilingModel.refreshTaskLatency(now, taskLatency);
+						// profilingModel.refreshTaskLatency(now, taskLatency);
 						taskLats++;
 					}
 
 					for (OutputBufferLatency outputBufferLatency : profilingReport.getOutputBufferLatencies()) {
-						profilingModel.refreshChannelOutputBufferLatency(now, outputBufferLatency);
+						// profilingModel.refreshChannelOutputBufferLatency(now, outputBufferLatency);
 						obls++;
 					}
 				} else if (streamingData instanceof StreamingChainAnnounce) {
-					profilingModel.announceStreamingChain((StreamingChainAnnounce) streamingData);
+					// profilingModel.announceStreamingChain((StreamingChainAnnounce) streamingData);
 				}
 
 				if (this.logger.isLoggingNecessary(now)) {
-					ProfilingSummary summary = profilingModel.computeProfilingSummary();
-					try {
-						logger.logLatencies(summary);
-					} catch (IOException e) {
-						LOG.error("Error when writing to profiling logger file", e);
-					}
+					// ProfilingSummary summary = profilingModel.computeProfilingSummary();
+					// try {
+					// logger.logLatencies(summary);
+					// } catch (IOException e) {
+					// LOG.error("Error when writing to profiling logger file", e);
+					// }
+					//
+					// if (bufferSizeManager.isAdjustmentNecessary(now)) {
+					// bufferSizeManager.adjustBufferSizes(summary);
+					// try {
+					// bufferSizeManager.logBufferSizes();
+					// } catch (IOException e) {
+					// LOG.error(e.getMessage(), e);
+					// }
+					// }
 
-					if (bufferSizeManager.isAdjustmentNecessary(now)) {
-						bufferSizeManager.adjustBufferSizes(summary);
-						try {
-							bufferSizeManager.logBufferSizes();
-						} catch (IOException e) {
-							LOG.error(e.getMessage(), e);
-						}
-					}
+					// FIXME remove me
+					this.logger.refreshTimeOfNextLogging();
 
 					LOG.info(String.format(
 						"total messages: %d (channel: %d | task: %d | throughput: %d | obl: %d) enqueued: %d\n",
@@ -126,7 +125,7 @@ public class LatencyOptimizerThread extends Thread {
 		} catch (InterruptedException e) {
 		}
 
-		LOG.info("Stopped optimizer thread for job " + executionGraph.getJobName());
+		LOG.info("Stopped profiling master thread");
 	}
 
 	public void handOffStreamingData(AbstractStreamingData data) {

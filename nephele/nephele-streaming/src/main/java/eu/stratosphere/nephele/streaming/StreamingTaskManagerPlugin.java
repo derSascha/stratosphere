@@ -29,10 +29,15 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.plugins.PluginCommunication;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
-import eu.stratosphere.nephele.streaming.actions.AbstractAction;
+import eu.stratosphere.nephele.streaming.actions.ActAsProfilingMasterAction;
+import eu.stratosphere.nephele.streaming.actions.ConstructStreamChainAction;
+import eu.stratosphere.nephele.streaming.actions.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.streaming.listeners.StreamListenerContext;
-import eu.stratosphere.nephele.streaming.profiling.JobStreamProfilingReporter;
+import eu.stratosphere.nephele.streaming.profiling.JobProfilingDataReporter;
+import eu.stratosphere.nephele.streaming.profiling.JobStreamProfilingMasterThread;
+import eu.stratosphere.nephele.streaming.types.StreamProfilingReport;
+import eu.stratosphere.nephele.streaming.types.TaskProfilingInfo;
 
 public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 
@@ -73,10 +78,14 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	private final ConcurrentMap<String, StreamListenerContext> listenerContexts = new ConcurrentHashMap<String, StreamListenerContext>();
 
+	private final ConcurrentMap<ExecutionVertexID, TaskProfilingInfo> taskProfilingInfos = new ConcurrentHashMap<ExecutionVertexID, TaskProfilingInfo>();
+
 	/**
 	 * Map storing the stream profiling reporter object for each job running on the task manager.
 	 */
-	private final ConcurrentMap<JobID, JobStreamProfilingReporter> profilingReporters = new ConcurrentHashMap<JobID, JobStreamProfilingReporter>();
+	private final ConcurrentMap<JobID, JobProfilingDataReporter> profilingReporters = new ConcurrentHashMap<JobID, JobProfilingDataReporter>();
+
+	private final ConcurrentMap<JobID, JobStreamProfilingMasterThread> profilingMasters = new ConcurrentHashMap<JobID, JobStreamProfilingMasterThread>();
 
 	/**
 	 * The tagging interval as specified in the plugin configuration.
@@ -89,7 +98,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	private final int aggregationInterval;
 
 	/**
-	 * A special thread to asynchronously send data to the job manager component without suffering from the RPC latency.
+	 * A special thread to asynchronously send data to other task managers without suffering from the RPC latency.
 	 */
 	private final StreamingCommunicationThread communicationThread;
 
@@ -101,7 +110,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 		this.aggregationInterval = pluginConfiguration.getInteger(AGGREGATION_INTERVAL_KEY,
 			DEFAULT_AGGREGATION_INTERVAL);
 
-		this.communicationThread = new StreamingCommunicationThread(jobManagerComponent);
+		this.communicationThread = new StreamingCommunicationThread();
 		this.communicationThread.start();
 
 		this.chainCoordinator = new StreamChainCoordinator();
@@ -126,7 +135,6 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void shutdown() {
-
 		this.communicationThread.stopCommunicationThread();
 	}
 
@@ -135,7 +143,14 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void registerTask(final ExecutionVertexID id, final Configuration jobConfiguration,
-			final Environment environment) {
+			final Environment environment, final IOReadableWritable pluginData) {
+
+		if (pluginData == null) {
+			return;
+		}
+
+		final TaskProfilingInfo taskProfilingInfo = (TaskProfilingInfo) pluginData;
+		taskProfilingInfos.put(taskProfilingInfo.getVertexID(), taskProfilingInfo);
 
 		// Check if user has provided a job-specific aggregation interval
 		final int aggregationInterval = jobConfiguration.getInteger(AGGREGATION_INTERVAL_KEY,
@@ -148,8 +163,8 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 		environment.getTaskConfiguration().setString(StreamListenerContext.CONTEXT_CONFIGURATION_KEY, idAsString);
 
 		final JobID jobID = environment.getJobID();
-		JobStreamProfilingReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
-		profilingReporter.registerTask(id);
+		JobProfilingDataReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
+		profilingReporter.registerProfilingInfo(taskProfilingInfo);
 
 		StreamListenerContext listenerContext = null;
 		if (environment.getNumberOfInputGates() == 0) {
@@ -174,20 +189,29 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 
 		this.listenerContexts.remove(id.toString());
 
-		final JobID jobID = environment.getJobID();
-		JobStreamProfilingReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
-		profilingReporter.unregisterTask(id);
-		if (!profilingReporter.hasRegisteredTasks()) {
-			profilingReporters.remove(jobID);
+		TaskProfilingInfo taskProfilingInfo = taskProfilingInfos.remove(id);
+
+		if (taskProfilingInfo != null) {
+			final JobID jobID = environment.getJobID();
+			JobProfilingDataReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
+			boolean isShutDown = profilingReporter.unregisterTaskProfilingInfo(taskProfilingInfo);
+			if (isShutDown) {
+				synchronized (profilingReporters) {
+					profilingReporters.remove(jobID);
+				}
+			}
 		}
 	}
 
-	private JobStreamProfilingReporter getOrCreateStreamProfilingReporter(JobID jobID) {
-		if (!profilingReporters.containsKey(jobID)) {
-			profilingReporters.putIfAbsent(jobID, new JobStreamProfilingReporter(jobID, communicationThread,
-				aggregationInterval));
+	private JobProfilingDataReporter getOrCreateStreamProfilingReporter(JobID jobID) {
+		// synchronized to prevent race conditions between containsKey() and put()
+		synchronized (profilingReporters) {
+			if (!profilingReporters.containsKey(jobID)) {
+				profilingReporters.putIfAbsent(jobID, new JobProfilingDataReporter(jobID, communicationThread,
+					aggregationInterval));
+			}
+			return profilingReporters.get(jobID);
 		}
-		return profilingReporters.get(jobID);
 	}
 
 	/**
@@ -195,15 +219,57 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void sendData(final IOReadableWritable data) throws IOException {
-
-		if (!(data instanceof AbstractAction)) {
+		if (data instanceof StreamProfilingReport) {
+			handleStreamProfilingReport((StreamProfilingReport) data);
+		} else if (data instanceof ConstructStreamChainAction) {
+			handleConstructStreamChainAction((ConstructStreamChainAction) data);
+		} else if (data instanceof LimitBufferSizeAction) {
+			handleLimitBufferSizeAction((LimitBufferSizeAction) data);
+		} else if (data instanceof ActAsProfilingMasterAction) {
+			handleActAsProfilingMasterAction((ActAsProfilingMasterAction) data);
+		} else {
 			LOG.error("Received data is of unknown type " + data.getClass());
+		}
+	}
+
+	private void handleStreamProfilingReport(StreamProfilingReport data) {
+		JobStreamProfilingMasterThread profilingMaster = profilingMasters.get(data.getJobID());
+		if (profilingMaster == null) {
+			LOG.error("Received StreamProfilingReport but could not find profiling master for job " + data.getJobID());
+			return;
+		}
+		profilingMaster.handOffStreamingData(data);
+	}
+
+	private void handleActAsProfilingMasterAction(ActAsProfilingMasterAction action) {
+		// synchronized to prevent race conditions between containsKey() and put()
+		synchronized (profilingMasters) {
+			JobID jobID = action.getJobID();
+			if (profilingMasters.containsKey(jobID)) {
+				LOG.error("This task manager is already profiling master for the given job " + jobID.toString());
+				return;
+			}
+
+			JobStreamProfilingMasterThread profilingMaster = new JobStreamProfilingMasterThread(communicationThread,
+				action.getProfilingSequence());
+			profilingMasters.put(jobID, profilingMaster);
+			profilingMaster.start();
+		}
+	}
+
+	private void handleLimitBufferSizeAction(LimitBufferSizeAction action) {
+		final StreamListenerContext listenerContext = this.listenerContexts.get(action.getVertexID().toString());
+		if (listenerContext == null) {
+			LOG.error("Cannot find listener context for vertex with ID " + action.getVertexID());
 			return;
 		}
 
-		final AbstractAction action = (AbstractAction) data;
-		final StreamListenerContext listenerContext = this.listenerContexts.get(action.getVertexID().toString());
+		// Queue the action and return
+		listenerContext.queuePendingAction(action);
+	}
 
+	private void handleConstructStreamChainAction(ConstructStreamChainAction action) {
+		final StreamListenerContext listenerContext = this.listenerContexts.get(action.getVertexID().toString());
 		if (listenerContext == null) {
 			LOG.error("Cannot find listener context for vertex with ID " + action.getVertexID());
 			return;

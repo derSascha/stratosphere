@@ -21,6 +21,9 @@ import java.util.ArrayDeque;
 
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
+import eu.stratosphere.nephele.io.channels.AbstractChannel;
+import eu.stratosphere.nephele.io.channels.AbstractInputChannel;
+import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.io.compression.CompressionException;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractInputGateWrapper;
 import eu.stratosphere.nephele.streaming.listeners.StreamListener;
@@ -82,8 +85,7 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 
 		final int numberOfInputChannels = getNumberOfInputChannels();
 
-		while (true) {
-
+		while (record == null) {
 			if (this.channelToReadFrom == -1) {
 				this.availableChannelRetVal = waitForAnyChannelToBecomeAvailable();
 				this.channelToReadFrom = this.availableChannelRetVal;
@@ -100,15 +102,11 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 
 			if (record == null && this.channelToReadFrom == this.availableChannelRetVal) {
 				this.channelToReadFrom = -1;
-				continue;
-			}
-
-			if (++this.channelToReadFrom == numberOfInputChannels) {
-				this.channelToReadFrom = 0;
-			}
-
-			if (record != null) {
-				break;
+			} else {
+				this.channelToReadFrom++;
+				if (this.channelToReadFrom == numberOfInputChannels) {
+					this.channelToReadFrom = 0;
+				}
 			}
 		}
 
@@ -117,8 +115,13 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 		return record;
 	}
 
+	/**
+	 * @param record
+	 *        The record that has been received.
+	 * @param sourceChannelID
+	 *        The ID of the source channel (output channel)
+	 */
 	public void reportRecordReceived(final Record record) {
-
 		this.streamListener.recordReceived(record);
 		this.channelLatencyReporter.reportLatencyIfNecessary((AbstractTaggableRecord) record);
 	}

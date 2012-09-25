@@ -18,7 +18,7 @@ import eu.stratosphere.nephele.managementgraph.ManagementAttachment;
 import eu.stratosphere.nephele.managementgraph.ManagementEdge;
 import eu.stratosphere.nephele.managementgraph.ManagementEdgeID;
 import eu.stratosphere.nephele.managementgraph.ManagementVertex;
-import eu.stratosphere.nephele.streaming.StreamingJobManagerPlugin;
+import eu.stratosphere.nephele.streaming.jobmanager.StreamingJobManagerPlugin;
 import eu.stratosphere.nephele.streaming.profiling.EdgeCharacteristics;
 import eu.stratosphere.nephele.streaming.profiling.ProfilingModel;
 import eu.stratosphere.nephele.streaming.profiling.ProfilingPath;
@@ -261,6 +261,26 @@ public class BufferSizeManager {
 			LOG.error("Cannot find vertex to channel ID " + vertex);
 			return;
 		}
-		this.jobManagerPlugin.limitBufferSize(vertex, sourceChannelID, bufferSize);
+		//this.jobManagerPlugin.limitBufferSize(vertex, sourceChannelID, bufferSize);
 	}
+// FIXME	
+//	public void limitBufferSize(final ExecutionVertex vertex, final ChannelID sourceChannelID, final int bufferSize) {
+//
+//		final JobID jobID = vertex.getExecutionGraph().getJobID();
+//		final ExecutionVertexID vertexID = vertex.getID();
+//
+//		final AbstractInstance instance = vertex.getAllocatedResource().getInstance();
+//		if (instance == null) {
+//			LOG.error(vertex + " has no instance assigned");
+//			return;
+//		}
+//
+//		final LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, vertexID, sourceChannelID, bufferSize);
+//		try {
+//			instance.sendData(this.pluginID, bsla);
+//		} catch (IOException e) {
+//			LOG.error(StringUtils.stringifyException(e));
+//		}
+//	}
+
 }

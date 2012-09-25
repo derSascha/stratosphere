@@ -13,12 +13,10 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming;
+package eu.stratosphere.nephele.streaming.jobmanager;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -26,14 +24,9 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
-import eu.stratosphere.nephele.executiongraph.ExecutionGraphIterator;
-import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.executiongraph.InternalJobStatus;
 import eu.stratosphere.nephele.executiongraph.JobStatusListener;
-import eu.stratosphere.nephele.instance.AbstractInstance;
 import eu.stratosphere.nephele.io.IOReadableWritable;
-import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.AbstractJobInputVertex;
 import eu.stratosphere.nephele.jobgraph.AbstractJobOutputVertex;
 import eu.stratosphere.nephele.jobgraph.JobFileInputVertex;
@@ -46,11 +39,6 @@ import eu.stratosphere.nephele.jobgraph.JobTaskVertex;
 import eu.stratosphere.nephele.plugins.JobManagerPlugin;
 import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.profiling.ProfilingListener;
-import eu.stratosphere.nephele.streaming.actions.ConstructStreamChainAction;
-import eu.stratosphere.nephele.streaming.actions.LimitBufferSizeAction;
-import eu.stratosphere.nephele.streaming.profiling.LatencyOptimizerThread;
-import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
-import eu.stratosphere.nephele.streaming.types.StreamingChainAnnounce;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingFileInputWrapper;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingFileOutputWrapper;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingInputWrapper;
@@ -58,21 +46,20 @@ import eu.stratosphere.nephele.streaming.wrappers.StreamingOutputWrapper;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingTaskWrapper;
 import eu.stratosphere.nephele.streaming.wrappers.WrapperUtils;
 import eu.stratosphere.nephele.template.AbstractInvokable;
-import eu.stratosphere.nephele.util.StringUtils;
 
 public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusListener {
 
-	/**
-	 * The log object.
-	 */
 	private static final Log LOG = LogFactory.getLog(StreamingJobManagerPlugin.class);
 
 	private final PluginID pluginID;
 
-	private ConcurrentHashMap<JobID, LatencyOptimizerThread> latencyOptimizerThreads = new ConcurrentHashMap<JobID, LatencyOptimizerThread>();
+	private final Configuration pluginConfiguration;
 
-	StreamingJobManagerPlugin(final PluginID pluginID, final Configuration pluginConfiguration) {
+	private ConcurrentHashMap<JobID, JobStreamProfilingManager> streamProfilingManagers = new ConcurrentHashMap<JobID, JobStreamProfilingManager>();
+
+	public StreamingJobManagerPlugin(final PluginID pluginID, final Configuration pluginConfiguration) {
 		this.pluginID = pluginID;
+		this.pluginConfiguration = pluginConfiguration;
 	}
 
 	/**
@@ -80,39 +67,14 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public JobGraph rewriteJobGraph(final JobGraph jobGraph) {
+		rewriteInputVertices(jobGraph);
+		rewriteTaskVertices(jobGraph);
+		rewriteOutputVertices(jobGraph);
 
-		// Rewrite input vertices
-		final Iterator<AbstractJobInputVertex> inputIt = jobGraph.getInputVertices();
-		while (inputIt.hasNext()) {
+		return jobGraph;
+	}
 
-			final AbstractJobInputVertex abstractInputVertex = inputIt.next();
-			final Class<? extends AbstractInvokable> originalClass = abstractInputVertex.getInvokableClass();
-
-			if (abstractInputVertex instanceof JobFileInputVertex) {
-				final JobFileInputVertex fileInputVertex = (JobFileInputVertex) abstractInputVertex;
-				fileInputVertex.setFileInputClass(StreamingFileInputWrapper.class);
-			} else if (abstractInputVertex instanceof JobInputVertex) {
-				final JobInputVertex inputVertex = (JobInputVertex) abstractInputVertex;
-				inputVertex.setInputClass(StreamingInputWrapper.class);
-			} else {
-				LOG.warn("Cannot wrap input task of type " + originalClass + ", skipping...");
-				continue;
-			}
-
-			abstractInputVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
-		}
-
-		// Rewrite the task vertices
-		final Iterator<JobTaskVertex> taskIt = jobGraph.getTaskVertices();
-		while (taskIt.hasNext()) {
-
-			final JobTaskVertex taskVertex = taskIt.next();
-			final Class<? extends AbstractInvokable> originalClass = taskVertex.getInvokableClass();
-			taskVertex.setTaskClass(StreamingTaskWrapper.class);
-			taskVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
-		}
-
-		// Rewrite the output vertices
+	private void rewriteOutputVertices(final JobGraph jobGraph) {
 		final Iterator<AbstractJobOutputVertex> outputIt = jobGraph.getOutputVertices();
 		while (outputIt.hasNext()) {
 
@@ -132,8 +94,39 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 
 			abstractOutputVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
 		}
+	}
 
-		return jobGraph;
+	private void rewriteTaskVertices(final JobGraph jobGraph) {
+		final Iterator<JobTaskVertex> taskIt = jobGraph.getTaskVertices();
+		while (taskIt.hasNext()) {
+
+			final JobTaskVertex taskVertex = taskIt.next();
+			final Class<? extends AbstractInvokable> originalClass = taskVertex.getInvokableClass();
+			taskVertex.setTaskClass(StreamingTaskWrapper.class);
+			taskVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
+		}
+	}
+
+	private void rewriteInputVertices(final JobGraph jobGraph) {
+		final Iterator<AbstractJobInputVertex> inputIt = jobGraph.getInputVertices();
+		while (inputIt.hasNext()) {
+
+			final AbstractJobInputVertex abstractInputVertex = inputIt.next();
+			final Class<? extends AbstractInvokable> originalClass = abstractInputVertex.getInvokableClass();
+
+			if (abstractInputVertex instanceof JobFileInputVertex) {
+				final JobFileInputVertex fileInputVertex = (JobFileInputVertex) abstractInputVertex;
+				fileInputVertex.setFileInputClass(StreamingFileInputWrapper.class);
+			} else if (abstractInputVertex instanceof JobInputVertex) {
+				final JobInputVertex inputVertex = (JobInputVertex) abstractInputVertex;
+				inputVertex.setInputClass(StreamingInputWrapper.class);
+			} else {
+				LOG.warn("Cannot wrap input task of type " + originalClass + ", skipping...");
+				continue;
+			}
+
+			abstractInputVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
+		}
 	}
 
 	/**
@@ -141,39 +134,41 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public ExecutionGraph rewriteExecutionGraph(final ExecutionGraph executionGraph) {
-
 		JobID jobId = executionGraph.getJobID();
-		LatencyOptimizerThread optimizerThread = new LatencyOptimizerThread(this, executionGraph);
-		latencyOptimizerThreads.put(jobId, optimizerThread);
-		optimizerThread.start();
+		JobStreamProfilingManager profilingManager = new JobStreamProfilingManager(executionGraph);
+		streamProfilingManagers.put(jobId, profilingManager);
+
+		// LatencyOptimizerThread optimizerThread = new LatencyOptimizerThread(this, executionGraph);
+		// latencyOptimizerThreads.put(jobId, optimizerThread);
+		// optimizerThread.start();
 
 		// Temporary code start
-		final Runnable run = new Runnable() {
-			@Override
-			public void run() {
-				try {
-					Thread.sleep(2000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-					return;
-				}
-				final Iterator<ExecutionVertex> it = new ExecutionGraphIterator(executionGraph, true);
-				while (it.hasNext()) {
-					final ExecutionVertex vertex = it.next();
-					if (vertex.getName().contains("Decoder")) {
-						final ArrayList<ExecutionVertexID> vertexIDs = new ArrayList<ExecutionVertexID>();
-						final AbstractInstance instance = vertex.getAllocatedResource().getInstance();
-						vertexIDs.add(vertex.getID());
-						vertexIDs.add(it.next().getID());
-						vertexIDs.add(it.next().getID());
-						vertexIDs.add(it.next().getID());
-						constructStreamChain(executionGraph.getJobID(), instance, vertexIDs);
-						announceStreamChainToProfiling(executionGraph.getJobID(), vertexIDs);
-					}
-				}
-			}
-		};
-		new Thread(run).start();
+		// final Runnable run = new Runnable() {
+		// @Override
+		// public void run() {
+		// try {
+		// Thread.sleep(2000);
+		// } catch (InterruptedException e) {
+		// e.printStackTrace();
+		// return;
+		// }
+		// final Iterator<ExecutionVertex> it = new ExecutionGraphIterator(executionGraph, true);
+		// while (it.hasNext()) {
+		// final ExecutionVertex vertex = it.next();
+		// if (vertex.getName().contains("Decoder")) {
+		// final ArrayList<ExecutionVertexID> vertexIDs = new ArrayList<ExecutionVertexID>();
+		// final AbstractInstance instance = vertex.getAllocatedResource().getInstance();
+		// vertexIDs.add(vertex.getID());
+		// vertexIDs.add(it.next().getID());
+		// vertexIDs.add(it.next().getID());
+		// vertexIDs.add(it.next().getID());
+		// constructStreamChain(executionGraph.getJobID(), instance, vertexIDs);
+		// announceStreamChainToProfiling(executionGraph.getJobID(), vertexIDs);
+		// }
+		// }
+		// }
+		// };
+		// new Thread(run).start();
 		// Temporary code end
 
 		return executionGraph;
@@ -184,18 +179,10 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public void shutdown() {
-		shutdownLatencyOptimizerThreads();
-	}
-
-	private void shutdownLatencyOptimizerThreads() {
-		Iterator<LatencyOptimizerThread> iter = latencyOptimizerThreads.values().iterator();
-		while (iter.hasNext()) {
-			LatencyOptimizerThread thread = iter.next();
-			thread.interrupt();
-
-			// also removes jobID mappings from underlying map
-			iter.remove();
+		for (JobStreamProfilingManager streamProfilingManager : streamProfilingManagers.values()) {
+			streamProfilingManager.shutdown();
 		}
+		streamProfilingManagers.clear();
 	}
 
 	/**
@@ -203,15 +190,7 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public void sendData(final IOReadableWritable data) throws IOException {
-
-		if (!(data instanceof AbstractStreamingData)) {
-			LOG.error("Received unexpected data of type " + data);
-			return;
-		}
-
-		AbstractStreamingData streamingData = (AbstractStreamingData) data;
-		LatencyOptimizerThread optimizerThread = latencyOptimizerThreads.get(streamingData.getJobID());
-		optimizerThread.handOffStreamingData(streamingData);
+		LOG.error("Job manger streaming plugin received unexpected data of type " + data);
 	}
 
 	/**
@@ -219,12 +198,7 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public IOReadableWritable requestData(final IOReadableWritable data) throws IOException {
-
-		if (!(data instanceof AbstractStreamingData)) {
-			LOG.error("Received unexpected data of type " + data);
-			return null;
-		}
-
+		LOG.error("Job manger streaming plugin received unexpected data request of type " + data);
 		return null;
 	}
 
@@ -237,54 +211,38 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 			|| newJobStatus == InternalJobStatus.CANCELED
 			|| newJobStatus == InternalJobStatus.FINISHED) {
 
-			LatencyOptimizerThread optimizerThread = latencyOptimizerThreads.remove(executionGraph.getJobID());
-			if (optimizerThread != null) {
-				optimizerThread.interrupt();
+			JobStreamProfilingManager streamProfilingManager = streamProfilingManagers
+				.remove(executionGraph.getJobID());
+
+			if (streamProfilingManager != null) {
+				streamProfilingManager.shutdown();
 			}
 		}
 	}
 
-	public void limitBufferSize(final ExecutionVertex vertex, final ChannelID sourceChannelID, final int bufferSize) {
-
-		final JobID jobID = vertex.getExecutionGraph().getJobID();
-		final ExecutionVertexID vertexID = vertex.getID();
-
-		final AbstractInstance instance = vertex.getAllocatedResource().getInstance();
-		if (instance == null) {
-			LOG.error(vertex + " has no instance assigned");
-			return;
-		}
-
-		final LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, vertexID, sourceChannelID, bufferSize);
-		try {
-			instance.sendData(this.pluginID, bsla);
-		} catch (IOException e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
-	}
-
-	public void constructStreamChain(final JobID jobID, final AbstractInstance instance,
-			final List<ExecutionVertexID> vertexIDs) {
-
-		final ConstructStreamChainAction csca = new ConstructStreamChainAction(jobID, vertexIDs);
-		try {
-			instance.sendData(this.pluginID, csca);
-		} catch (IOException e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
-	}
-
-	private void announceStreamChainToProfiling(JobID jobId, List<ExecutionVertexID> vertexIDs) {
-		LatencyOptimizerThread thread = latencyOptimizerThreads.get(jobId);
-		thread.handOffStreamingData(new StreamingChainAnnounce(new ArrayList<ExecutionVertexID>(vertexIDs)));
-	}
+	// FIXME: this needs to be moved to task manager plugins
+	//
+	// public void constructStreamChain(final JobID jobID, final AbstractInstance instance,
+	// final List<ExecutionVertexID> vertexIDs) {
+	//
+	// final ConstructStreamChainAction csca = new ConstructStreamChainAction(jobID, vertexIDs);
+	// try {
+	// instance.sendData(this.pluginID, csca);
+	// } catch (IOException e) {
+	// LOG.error(StringUtils.stringifyException(e));
+	// }
+	// }
+	//
+	// private void announceStreamChainToProfiling(JobID jobId, List<ExecutionVertexID> vertexIDs) {
+	// LatencyOptimizerThread thread = latencyOptimizerThreads.get(jobId);
+	// thread.handOffStreamingData(new StreamingChainAnnounce(new ArrayList<ExecutionVertexID>(vertexIDs)));
+	// }
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public boolean requiresProfiling() {
-
 		return true;
 	}
 
@@ -293,9 +251,14 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public ProfilingListener getProfilingListener(final JobID jobID) {
-
-		System.out.println("REGISTERED PROFILING LISTENER");
-
 		return null;
+	}
+
+	public PluginID getPluginID() {
+		return pluginID;
+	}
+
+	public Configuration getPluginConfiguration() {
+		return pluginConfiguration;
 	}
 }

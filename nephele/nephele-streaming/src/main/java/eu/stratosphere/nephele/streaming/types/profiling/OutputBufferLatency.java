@@ -19,23 +19,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 
 public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
-
-	private final ExecutionVertexID vertexID;
 
 	private final ChannelID sourceChannelID;
 
 	private int bufferLatency;
 
-	public OutputBufferLatency(final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
+	public OutputBufferLatency(final ChannelID sourceChannelID,
 			final int bufferLatency) {
-
-		if (vertexID == null) {
-			throw new IllegalArgumentException("Argument vertexID must not be null");
-		}
 
 		if (sourceChannelID == null) {
 			throw new IllegalArgumentException("Argument sourceChannelID must not be null");
@@ -46,7 +39,6 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 				+ bufferLatency);
 		}
 
-		this.vertexID = vertexID;
 		this.sourceChannelID = sourceChannelID;
 		this.bufferLatency = bufferLatency;
 	}
@@ -54,23 +46,15 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 	public OutputBufferLatency() {
 		super();
 
-		this.vertexID = new ExecutionVertexID();
 		this.sourceChannelID = new ChannelID();
 		this.bufferLatency = 0;
 	}
 
-	public ExecutionVertexID getVertexID() {
-
-		return this.vertexID;
-	}
-
 	public ChannelID getSourceChannelID() {
-
 		return this.sourceChannelID;
 	}
 
 	public int getBufferLatency() {
-
 		return this.bufferLatency;
 	}
 
@@ -79,7 +63,6 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		this.vertexID.write(out);
 		this.sourceChannelID.write(out);
 		out.writeInt(this.bufferLatency);
 	}
@@ -89,7 +72,6 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		this.vertexID.read(in);
 		this.sourceChannelID.read(in);
 		this.bufferLatency = in.readInt();
 	}
@@ -99,8 +81,7 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof OutputBufferLatency) {
 			OutputBufferLatency other = (OutputBufferLatency) otherObj;
-			isEqual = other.getVertexID().equals(getVertexID())
-				&& other.getSourceChannelID().equals(getSourceChannelID())
+			isEqual = other.getSourceChannelID().equals(getSourceChannelID())
 				&& (other.getBufferLatency() == getBufferLatency());
 		}
 

@@ -21,6 +21,7 @@ import eu.stratosphere.nephele.plugins.JobManagerPlugin;
 import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.plugins.PluginLookupService;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
+import eu.stratosphere.nephele.streaming.jobmanager.StreamingJobManagerPlugin;
 
 /**
  * This class implements the loader functionality for the Nephele streaming plugin.
@@ -44,7 +45,9 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	/**
 	 * The ID of this plugin.
 	 */
-	private final PluginID pluginID;
+	public static final PluginID STREAMING_PLUGIN_ID = PluginID.fromByteArray(new byte[] { 0x3c, 0x00, 0x00, -0x1b,
+		0x38, 0x4a, 0x60, -0x61, -0x25,
+		0x00, 0x00, 0x16, 0x00, 0x18, 0x7f, 0x01 });
 
 	/**
 	 * Constructs a loader for the Nephele streaming plugin.
@@ -59,9 +62,6 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	public StreamingPluginLoader(final String pluginName, final Configuration pluginConfiguration,
 			final PluginLookupService pluginLookupService) {
 		super(pluginName, pluginConfiguration, pluginLookupService);
-
-		this.pluginID = PluginID.fromByteArray(new byte[] { 0x3c, 0x00, 0x00, -0x1b, 0x38, 0x4a, 0x60, -0x61, -0x25,
-			0x00, 0x00, 0x16, 0x00, 0x18, 0x7f, 0x01 });
 	}
 
 	/**
@@ -71,7 +71,7 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	public synchronized JobManagerPlugin getJobManagerPlugin() {
 
 		if (this.jobManagerPlugin == null) {
-			this.jobManagerPlugin = new StreamingJobManagerPlugin(this.pluginID, getPluginConfiguration());
+			this.jobManagerPlugin = new StreamingJobManagerPlugin(STREAMING_PLUGIN_ID, getPluginConfiguration());
 		}
 
 		return this.jobManagerPlugin;
@@ -96,7 +96,6 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	 */
 	@Override
 	public PluginID getPluginID() {
-
-		return this.pluginID;
+		return STREAMING_PLUGIN_ID;
 	}
 }

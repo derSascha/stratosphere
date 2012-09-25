@@ -2,7 +2,7 @@ package eu.stratosphere.nephele.streaming.wrappers;
 
 import java.util.HashMap;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.streaming.StreamingTag;
 import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.streaming.types.profiling.ChannelLatency;
@@ -12,10 +12,16 @@ public class InputGateChannelLatencyReporter {
 
 	private StreamListener streamListener;
 
-	private HashMap<ExecutionVertexID, ChannelLatencyInfo> channelLatencyInfos = new HashMap<ExecutionVertexID, ChannelLatencyInfo>();
+	/**
+	 * Channel latencies by source channel ID.
+	 */
+	private HashMap<ChannelID, ChannelLatencyInfo> channelLatencyInfos = new HashMap<ChannelID, ChannelLatencyInfo>();
 
 	private class ChannelLatencyInfo {
-		long timeOfLastReportSentToJobManager;
+
+		ChannelID sourceChannelID;
+
+		long timeOfLastReport;
 
 		long timeOfLastReceivedTag;
 
@@ -23,14 +29,14 @@ public class InputGateChannelLatencyReporter {
 
 		int tagsReceived;
 
-		public boolean reportToJobManagerIsDue() {
-			return (timeOfLastReceivedTag - timeOfLastReportSentToJobManager > streamListener.getContext()
+		public boolean reportIsDue() {
+			return (timeOfLastReceivedTag - timeOfLastReport > streamListener.getContext()
 				.getAggregationInterval())
 				&& tagsReceived > 0;
 		}
 
 		public void reset(long now) {
-			timeOfLastReportSentToJobManager = now;
+			timeOfLastReport = now;
 			accumulatedLatency = 0;
 			tagsReceived = 0;
 		}
@@ -49,8 +55,8 @@ public class InputGateChannelLatencyReporter {
 
 			ChannelLatencyInfo latencyInfo = processTagLatency(tag, now);
 
-			if (latencyInfo.reportToJobManagerIsDue()) {
-				doReport(tag, now, latencyInfo);
+			if (latencyInfo.reportIsDue()) {
+				doReport(now, latencyInfo);
 				reportSent = true;
 			}
 		}
@@ -58,9 +64,8 @@ public class InputGateChannelLatencyReporter {
 		return reportSent;
 	}
 
-	private void doReport(StreamingTag tag, long now, ChannelLatencyInfo latencyInfo) {
-		ChannelLatency channelLatency = new ChannelLatency(tag.getSourceID(),
-			streamListener.getContext().getVertexID(),
+	private void doReport(long now, ChannelLatencyInfo latencyInfo) {
+		ChannelLatency channelLatency = new ChannelLatency(latencyInfo.sourceChannelID,
 			latencyInfo.accumulatedLatency / latencyInfo.tagsReceived);
 
 		streamListener.reportChannelLatency(channelLatency);
@@ -68,14 +73,15 @@ public class InputGateChannelLatencyReporter {
 	}
 
 	private ChannelLatencyInfo processTagLatency(StreamingTag tag, long now) {
-		ChannelLatencyInfo info = channelLatencyInfos.get(tag.getSourceID());
+		ChannelLatencyInfo info = channelLatencyInfos.get(tag.getSourceChannelID());
 
 		if (info == null) {
 			info = new ChannelLatencyInfo();
-			info.timeOfLastReportSentToJobManager = now;
+			info.sourceChannelID = tag.getSourceChannelID();
+			info.timeOfLastReport = now;
 			info.accumulatedLatency = 0;
 			info.tagsReceived = 0;
-			channelLatencyInfos.put(tag.getSourceID(), info);
+			channelLatencyInfos.put(tag.getSourceChannelID(), info);
 		}
 
 		info.timeOfLastReceivedTag = now;

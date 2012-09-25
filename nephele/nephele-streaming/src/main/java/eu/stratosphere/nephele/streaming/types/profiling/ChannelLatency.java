@@ -19,24 +19,19 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.io.channels.ChannelID;
 
 /**
- * This class stores information about the latency of a specific channel from a source to a sink vertex.
+ * This class stores information about the latency of a specific channel.
  * 
  * @author warneke, Bjoern Lohrmann
  */
 public final class ChannelLatency extends AbstractStreamProfilingRecord {
 
 	/**
-	 * The ID of the vertex representing the source of the channel.
+	 * The {@link ChannelID} representing the source end of the channel.
 	 */
-	private final ExecutionVertexID sourceVertexID;
-
-	/**
-	 * The ID of the vertex representing the sink of the channel.
-	 */
-	private final ExecutionVertexID sinkVertexID;
+	private final ChannelID sourceChannelID;
 
 	/**
 	 * The channel latency in milliseconds
@@ -46,26 +41,18 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	/**
 	 * Constructs a new path latency object.
 	 * 
-	 * @param sourceVertexID
-	 *        the ID of the vertex representing the source of the channel
-	 * @param sinkVertexID
-	 *        the ID of the vertex representing the sink of the channel
-	 * @param pathLatency
-	 *        the path latency in milliseconds
+	 * @param sourceChannelID
+	 *        {@link ChannelID} representing the source end of the channel
+	 * @param channelLatency
+	 *        the channel latency in milliseconds
 	 */
-	public ChannelLatency(final ExecutionVertexID sourceVertexID,
-			final ExecutionVertexID sinkVertexID, final double channelLatency) {
+	public ChannelLatency(final ChannelID sourceChannelID, final double channelLatency) {
 
-		if (sourceVertexID == null) {
-			throw new IllegalArgumentException("sourceVertexID must not be null");
+		if (sourceChannelID == null) {
+			throw new IllegalArgumentException("sourceChannelID must not be null");
 		}
 
-		if (sinkVertexID == null) {
-			throw new IllegalArgumentException("sinkVertexID must not be null");
-		}
-
-		this.sourceVertexID = sourceVertexID;
-		this.sinkVertexID = sinkVertexID;
+		this.sourceChannelID = sourceChannelID;
 		this.channelLatency = channelLatency;
 	}
 
@@ -73,9 +60,8 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 * Default constructor for the deserialization of the object.
 	 */
 	public ChannelLatency() {
-		this.sourceVertexID = new ExecutionVertexID();
-		this.sinkVertexID = new ExecutionVertexID();
-		this.channelLatency = 0.0;
+		this.sourceChannelID = new ChannelID();
+		this.channelLatency = 0;
 	}
 
 	/**
@@ -83,8 +69,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		this.sourceVertexID.write(out);
-		this.sinkVertexID.write(out);
+		this.sourceChannelID.write(out);
 		out.writeDouble(this.channelLatency);
 	}
 
@@ -93,29 +78,17 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		this.sourceVertexID.read(in);
-		this.sinkVertexID.read(in);
+		this.sourceChannelID.read(in);
 		this.channelLatency = in.readDouble();
 	}
 
 	/**
-	 * Returns the ID of the vertex representing the source of the channel.
+	 * Returns the {@link ChannelID} representing the source end of the channel.
 	 * 
-	 * @return the ID of the vertex representing the source of the channel
+	 * @return the {@link ChannelID} representing the source end of the channel.
 	 */
-	public ExecutionVertexID getSourceVertexID() {
-
-		return this.sourceVertexID;
-	}
-
-	/**
-	 * Returns the ID of the vertex representing the sink of the channel.
-	 * 
-	 * @return the ID of the vertex representing the sink of the channel
-	 */
-	public ExecutionVertexID getSinkVertexID() {
-
-		return this.sinkVertexID;
+	public ChannelID getSourceChannelID() {
+		return this.sourceChannelID;
 	}
 
 	/**
@@ -135,9 +108,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	public String toString() {
 
 		final StringBuilder str = new StringBuilder();
-		str.append(this.sourceVertexID.toString());
-		str.append(" -> ");
-		str.append(this.sinkVertexID.toString());
+		str.append(this.sourceChannelID.toString());
 		str.append(": ");
 		str.append(this.channelLatency);
 
@@ -149,8 +120,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof ChannelLatency) {
 			ChannelLatency other = (ChannelLatency) otherObj;
-			isEqual = other.getSourceVertexID().equals(getSourceVertexID())
-				&& other.getSinkVertexID().equals(getSinkVertexID())
+			isEqual = other.getSourceChannelID().equals(getSourceChannelID())
 				&& (other.getChannelLatency() == getChannelLatency());
 		}
 

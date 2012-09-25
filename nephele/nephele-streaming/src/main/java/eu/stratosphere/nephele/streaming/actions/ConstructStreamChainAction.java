@@ -82,9 +82,7 @@ public final class ConstructStreamChainAction extends AbstractAction {
 	/**
 	 * {@inheritDoc}
 	 */
-	@Override
 	public ExecutionVertexID getVertexID() {
-
 		return this.vertexIDs.get(0);
 	}
 }

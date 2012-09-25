@@ -19,7 +19,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 
 /**
@@ -28,11 +27,6 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
  * @author warneke
  */
 public final class ChannelThroughput extends AbstractStreamProfilingRecord {
-
-	/**
-	 * The ID of the vertex which is connected to this output channel.
-	 */
-	private final ExecutionVertexID vertexID;
 
 	/**
 	 * The ID of the output channel.
@@ -56,12 +50,8 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 * @param throughput
 	 *        the throughput in MBit/s
 	 */
-	public ChannelThroughput(final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
+	public ChannelThroughput(final ChannelID sourceChannelID,
 			final double throughput) {
-
-		if (vertexID == null) {
-			throw new IllegalArgumentException("Argument vertexID must not be null");
-		}
 
 		if (sourceChannelID == null) {
 			throw new IllegalArgumentException("Argument sourceChannelID must not be null");
@@ -71,7 +61,6 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 			throw new IllegalArgumentException("Argument throughput must not be positive");
 		}
 
-		this.vertexID = vertexID;
 		this.sourceChannelID = sourceChannelID;
 		this.throughput = throughput;
 	}
@@ -80,19 +69,8 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 * Default constructor for deserialization.
 	 */
 	public ChannelThroughput() {
-		this.vertexID = new ExecutionVertexID();
 		this.sourceChannelID = new ChannelID();
 		this.throughput = 0.0;
-	}
-
-	/**
-	 * The ID of the vertex which is connected to the output channel.
-	 * 
-	 * @return the ID of the vertex which is connected to the output channel
-	 */
-	public ExecutionVertexID getVertexID() {
-
-		return this.vertexID;
 	}
 
 	/**
@@ -101,7 +79,6 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 * @return the ID of the output channel.
 	 */
 	public ChannelID getSourceChannelID() {
-
 		return this.sourceChannelID;
 	}
 
@@ -111,7 +88,6 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 * @return the measured throughput in MBit/s.
 	 */
 	public double getThroughput() {
-
 		return this.throughput;
 	}
 
@@ -120,7 +96,6 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		this.vertexID.write(out);
 		this.sourceChannelID.write(out);
 		out.writeDouble(this.throughput);
 	}
@@ -130,18 +105,16 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		this.vertexID.read(in);
 		this.sourceChannelID.read(in);
 		this.throughput = in.readDouble();
 	}
-	
+
 	@Override
 	public boolean equals(Object otherObj) {
 		boolean isEqual = false;
 		if (otherObj instanceof ChannelThroughput) {
 			ChannelThroughput other = (ChannelThroughput) otherObj;
-			isEqual = other.getVertexID().equals(getVertexID())
-				&& other.getSourceChannelID().equals(getSourceChannelID())
+			isEqual = other.getSourceChannelID().equals(getSourceChannelID())
 				&& (other.getThroughput() == getThroughput());
 		}
 

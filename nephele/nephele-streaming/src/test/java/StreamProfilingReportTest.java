@@ -32,9 +32,13 @@ public class StreamProfilingReportTest {
 
 	private ExecutionVertexID vertex3;
 
-	private ChannelID channel12;
+	private ChannelID channel12Source;
 
-	private ChannelID channel13;
+	private ChannelID channel13Source;
+
+	private ChannelID channel12Target;
+
+	private ChannelID channel13Target;
 
 	private ChannelLatency channel12Latency;
 
@@ -60,14 +64,16 @@ public class StreamProfilingReportTest {
 		this.vertex1 = new ExecutionVertexID();
 		this.vertex2 = new ExecutionVertexID();
 		this.vertex3 = new ExecutionVertexID();
-		this.channel12 = new ChannelID();
-		this.channel13 = new ChannelID();
-		this.channel12Latency = new ChannelLatency(vertex1, vertex2, 13);
-		this.channel13Latency = new ChannelLatency(vertex1, vertex3, 25);
-		this.channel12Throughput = new ChannelThroughput(vertex1, channel12, 47);
-		this.channel13Throughput = new ChannelThroughput(vertex1, channel13, 5);
-		this.obl12 = new OutputBufferLatency(vertex1, channel12, 13);
-		this.obl13 = new OutputBufferLatency(vertex1, channel13, 11);
+		this.channel12Source = new ChannelID();
+		this.channel13Source = new ChannelID();
+		this.channel12Target = new ChannelID();
+		this.channel13Target = new ChannelID();
+		this.channel12Latency = new ChannelLatency(channel12Target, 13);
+		this.channel13Latency = new ChannelLatency(channel13Target, 25);
+		this.channel12Throughput = new ChannelThroughput(channel12Source, 47);
+		this.channel13Throughput = new ChannelThroughput(channel13Source, 5);
+		this.obl12 = new OutputBufferLatency(channel12Source, 13);
+		this.obl13 = new OutputBufferLatency(channel13Source, 11);
 		this.taskLatency1 = new TaskLatency(vertex1, 1);
 		this.taskLatency2 = new TaskLatency(vertex2, 1);
 		this.taskLatency3 = new TaskLatency(vertex3, 1);
@@ -180,4 +186,26 @@ public class StreamProfilingReportTest {
 		checkOutputBufferLatencies(report);
 		checkTaskLatencies(report);
 	}
+	
+	@Test
+	public void testReadWriteWhenEmpty() throws IOException {
+		StreamProfilingReport report = new StreamProfilingReport(jobID);
+
+		ByteArrayOutputStream byteArrayOutStream = new ByteArrayOutputStream();
+		DataOutput out = new DataOutputStream(byteArrayOutStream);
+		report.write(out);
+
+		// jobID + false + false + 4 * emptyMap
+		int expectedLength = 16  + 1 + 1 + (4*4);
+		byte[] serializedData = byteArrayOutStream.toByteArray();
+		assertEquals(expectedLength, serializedData.length);
+		DataInput in = new DataInputStream(new ByteArrayInputStream(serializedData));
+		report = new StreamProfilingReport();
+		report.read(in);
+		assertTrue(report.getChannelLatencies().isEmpty());
+		assertTrue(report.getChannelThroughputs().isEmpty());
+		assertTrue(report.getOutputBufferLatencies().isEmpty());
+		assertTrue(report.getTaskLatencies().isEmpty());
+	}
+
 }

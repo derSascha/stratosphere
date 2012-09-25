@@ -19,7 +19,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 
@@ -63,7 +62,6 @@ public abstract class AbstractAction implements IOReadableWritable {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-
 		this.jobID.write(out);
 	}
 
@@ -72,7 +70,6 @@ public abstract class AbstractAction implements IOReadableWritable {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-
 		this.jobID.read(in);
 	}
 
@@ -82,14 +79,6 @@ public abstract class AbstractAction implements IOReadableWritable {
 	 * @return the ID of the job the initiated action applies to
 	 */
 	public JobID getJobID() {
-
 		return this.jobID;
 	}
-	
-	/**
-	 * Returns the ID of the vertex the initiated action applies to.
-	 * 
-	 * @return the ID of the vertex the initiated action applies to
-	 */
-	public abstract ExecutionVertexID getVertexID();
 }

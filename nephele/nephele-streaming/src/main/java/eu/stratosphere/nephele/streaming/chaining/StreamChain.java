@@ -26,10 +26,9 @@ import eu.stratosphere.nephele.util.StringUtils;
 
 public final class StreamChain {
 
-	private final List<StreamChainLink<?,?>> chainLinks;
+	private final List<StreamChainLink<?, ?>> chainLinks;
 
-
-	StreamChain(final List<StreamChainLink<?,?>> chainLinks) {
+	StreamChain(final List<StreamChainLink<?, ?>> chainLinks) {
 
 		if (chainLinks.isEmpty()) {
 			throw new IllegalArgumentException("List chainLinks must not be empty");
@@ -68,8 +67,7 @@ public final class StreamChain {
 		if (chainIndex == this.chainLinks.size() - 1) {
 
 			while (!outputCollector.isEmpty()) {
-				
-				outputGate.writeRecord((Record)outputCollector.poll());
+				outputGate.writeRecord((Record) outputCollector.poll());
 			}
 
 		} else {

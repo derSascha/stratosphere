@@ -4,6 +4,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
@@ -19,23 +20,27 @@ import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 
 /**
- * Holds a report on {@link AbstractStreamProfilingRecord} data for a given job on the task manager. Instead of sending
+ * Holds a profiling data report meant to be shipped to a profiling master. Instead of sending
  * each {@link AbstractStreamProfilingRecord} individually, they are sent in batch with special serialization routines
- * with a simple compression mechanism.
+ * with a simple compression mechanism (multiple occurences of the same 16 byte ID are replaced by a four byte integer
+ * placeholder). Most internal fields of this class are initialized in a lazy fashion, thus (empty) instances of this
+ * class have a small memory footprint.
  * 
  * @author Bjoern Lohrmann
  */
 public class StreamProfilingReport extends AbstractStreamingData {
 
+	private MapperMode mapperMode;
+
 	private IdMapper<ExecutionVertexID> executionVertexIDMap;
 
 	private IdMapper<ChannelID> channelIDMap;
 
-	private HashMap<Long, ChannelLatency> channelLatencies;
+	private HashMap<Integer, ChannelLatency> channelLatencies;
 
-	private HashMap<Long, ChannelThroughput> channelThroughputs;
+	private HashMap<Integer, ChannelThroughput> channelThroughputs;
 
-	private HashMap<Long, OutputBufferLatency> outputBufferLatencies;
+	private HashMap<Integer, OutputBufferLatency> outputBufferLatencies;
 
 	private HashMap<Integer, TaskLatency> taskLatencies;
 
@@ -46,13 +51,7 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	 */
 	public StreamProfilingReport(JobID jobID) {
 		super(jobID);
-		this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(MapperMode.WRITABLE, null);
-		this.channelIDMap = new IdMapper<ChannelID>(MapperMode.WRITABLE, null);
-
-		this.channelLatencies = new HashMap<Long, ChannelLatency>();
-		this.channelThroughputs = new HashMap<Long, ChannelThroughput>();
-		this.outputBufferLatencies = new HashMap<Long, OutputBufferLatency>();
-		this.taskLatencies = new HashMap<Integer, TaskLatency>();
+		this.mapperMode = MapperMode.WRITABLE;
 	}
 
 	/**
@@ -60,87 +59,127 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	 */
 	public StreamProfilingReport() {
 		super();
+		this.mapperMode = MapperMode.READABLE;
+	}
 
-		this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(MapperMode.READABLE,
-			new IDFactory<ExecutionVertexID>() {
-				@Override
-				public ExecutionVertexID read(DataInput in) throws IOException {
-					ExecutionVertexID id = new ExecutionVertexID();
-					id.read(in);
-					return id;
-				}
-			});
-		this.channelIDMap = new IdMapper<ChannelID>(MapperMode.READABLE, new IDFactory<ChannelID>() {
-			@Override
-			public ChannelID read(DataInput in) throws IOException {
-				ChannelID id = new ChannelID();
-				id.read(in);
-				return id;
-			}
-		});
+	private HashMap<Integer, ChannelLatency> getOrCreateChannelLatencyMap() {
+		if (this.channelLatencies == null) {
+			this.channelLatencies = new HashMap<Integer, ChannelLatency>();
+		}
+		return this.channelLatencies;
+	}
 
-		this.channelLatencies = new HashMap<Long, ChannelLatency>();
-		this.channelThroughputs = new HashMap<Long, ChannelThroughput>();
-		this.outputBufferLatencies = new HashMap<Long, OutputBufferLatency>();
-		this.taskLatencies = new HashMap<Integer, TaskLatency>();
+	private HashMap<Integer, ChannelThroughput> getOrCreateChannelThroughputMap() {
+		if (this.channelThroughputs == null) {
+			this.channelThroughputs = new HashMap<Integer, ChannelThroughput>();
+		}
+		return this.channelThroughputs;
+	}
+
+	private HashMap<Integer, OutputBufferLatency> getOrCreateOutputBufferLatencyMap() {
+		if (this.outputBufferLatencies == null) {
+			this.outputBufferLatencies = new HashMap<Integer, OutputBufferLatency>();
+		}
+		return this.outputBufferLatencies;
+	}
+
+	private HashMap<Integer, TaskLatency> getOrCreateTaskLatencyMap() {
+		if (this.taskLatencies == null) {
+			this.taskLatencies = new HashMap<Integer, TaskLatency>();
+		}
+		return this.taskLatencies;
 	}
 
 	public void addChannelLatency(ChannelLatency channelLatency) {
-		int sourceVertexID = executionVertexIDMap.getIntID(channelLatency.getSourceVertexID());
-		int sinkVertexID = executionVertexIDMap.getIntID(channelLatency.getSinkVertexID());
-
-		long compositeID = createCompositeID(sourceVertexID, sinkVertexID);
-		channelLatencies.put(compositeID, channelLatency);
+		int sourceChannelID = getOrCreateChannelIDMap().getIntID(channelLatency.getSourceChannelID());
+		getOrCreateChannelLatencyMap().put(sourceChannelID, channelLatency);
 	}
 
 	public Collection<ChannelLatency> getChannelLatencies() {
-		return this.channelLatencies.values();
-	}
-
-	private long createCompositeID(int firstID, int secondID) {
-		long compositeID = ((long) firstID) << 32;
-		return compositeID | (secondID & 0xFFFFFFFFL);
-	}
-
-	private static int getFirstIDFromCompositeID(long compositeID) {
-		return (int) (compositeID >>> 32);
-	}
-
-	private static int getSecondIDFromCompositeID(long compositeID) {
-		return (int) (compositeID & 0xFFFFFFFF);
+		if (this.channelLatencies == null) {
+			return Collections.emptyList();
+		} else {
+			return this.channelLatencies.values();
+		}
 	}
 
 	public void addChannelThroughput(ChannelThroughput channelThroughput) {
-		int vertexID = executionVertexIDMap.getIntID(channelThroughput.getVertexID());
-		int sourceChannelID = channelIDMap.getIntID(channelThroughput.getSourceChannelID());
-
-		long compositeID = createCompositeID(vertexID, sourceChannelID);
-		channelThroughputs.put(compositeID, channelThroughput);
+		int sourceChannelID = getOrCreateChannelIDMap().getIntID(channelThroughput.getSourceChannelID());
+		getOrCreateChannelThroughputMap().put(sourceChannelID, channelThroughput);
 	}
-	
+
 	public Collection<ChannelThroughput> getChannelThroughputs() {
-		return this.channelThroughputs.values();
+		if (this.channelThroughputs == null) {
+			return Collections.emptyList();
+		} else {
+			return this.channelThroughputs.values();
+		}
 	}
 
 	public void addOutputBufferLatency(OutputBufferLatency outputBufferLatency) {
-		int vertexID = executionVertexIDMap.getIntID(outputBufferLatency.getVertexID());
-		int sourceChannelID = channelIDMap.getIntID(outputBufferLatency.getSourceChannelID());
-
-		long compositeID = createCompositeID(vertexID, sourceChannelID);
-		outputBufferLatencies.put(compositeID, outputBufferLatency);
+		int sourceChannelID = getOrCreateChannelIDMap().getIntID(outputBufferLatency.getSourceChannelID());
+		getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
 	}
-	
+
 	public Collection<OutputBufferLatency> getOutputBufferLatencies() {
-		return this.outputBufferLatencies.values();
+		if (this.outputBufferLatencies == null) {
+			return Collections.emptyList();
+		} else {
+			return this.outputBufferLatencies.values();
+		}
 	}
 
 	public void addTaskLatency(TaskLatency taskLatency) {
-		int vertexID = executionVertexIDMap.getIntID(taskLatency.getVertexID());
-		taskLatencies.put(vertexID, taskLatency);
+		int vertexID = getOrCreateExecutionVertexIDMap().getIntID(taskLatency.getVertexID());
+		getOrCreateTaskLatencyMap().put(vertexID, taskLatency);
 	}
-	
+
 	public Collection<TaskLatency> getTaskLatencies() {
-		return this.taskLatencies.values();
+		if (this.taskLatencies == null) {
+			return Collections.emptyList();
+		} else {
+			return this.taskLatencies.values();
+		}
+	}
+
+	private IdMapper<ChannelID> getOrCreateChannelIDMap() {
+		if (this.channelIDMap == null) {
+			if (this.mapperMode == MapperMode.WRITABLE) {
+				this.channelIDMap = new IdMapper<ChannelID>(MapperMode.WRITABLE, null);
+			} else {
+				this.channelIDMap = new IdMapper<ChannelID>(MapperMode.READABLE, new IDFactory<ChannelID>() {
+					@Override
+					public ChannelID read(DataInput in) throws IOException {
+						ChannelID id = new ChannelID();
+						id.read(in);
+						return id;
+					}
+				});
+			}
+		}
+
+		return this.channelIDMap;
+	}
+
+	private IdMapper<ExecutionVertexID> getOrCreateExecutionVertexIDMap() {
+		if (this.executionVertexIDMap == null) {
+			if (this.mapperMode == MapperMode.WRITABLE) {
+				this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(MapperMode.WRITABLE, null);
+			} else {
+				this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(MapperMode.READABLE,
+						new IDFactory<ExecutionVertexID>() {
+							@Override
+							public ExecutionVertexID read(DataInput in) throws IOException {
+								ExecutionVertexID id = new ExecutionVertexID();
+								id.read(in);
+								return id;
+							}
+						});
+
+			}
+		}
+
+		return this.executionVertexIDMap;
 	}
 
 	/**
@@ -149,44 +188,77 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		super.write(out);
-
-		executionVertexIDMap.write(out);
-		channelIDMap.write(out);
+		writeExecutionVertexIDMap(out);
+		writeChannelIDMap(out);
 		writeChannelLatencies(out);
 		writeChannelThroughputs(out);
 		writeOutputBufferLatencies(out);
 		writeTaskLatencies(out);
 	}
 
+	private void writeChannelIDMap(final DataOutput out) throws IOException {
+		if (this.channelIDMap != null) {
+			out.writeBoolean(true);
+			channelIDMap.write(out);
+		} else {
+			out.writeBoolean(false);
+		}
+	}
+
+	private void writeExecutionVertexIDMap(final DataOutput out) throws IOException {
+		if (this.executionVertexIDMap != null) {
+			out.writeBoolean(true);
+			executionVertexIDMap.write(out);
+		} else {
+			out.writeBoolean(false);
+		}
+	}
+
 	private void writeChannelLatencies(DataOutput out) throws IOException {
-		out.writeInt(channelLatencies.size());
-		for (Entry<Long, ChannelLatency> entry : channelLatencies.entrySet()) {
-			out.writeLong(entry.getKey());
-			out.writeDouble(entry.getValue().getChannelLatency());
+		if (this.channelLatencies != null) {
+			out.writeInt(this.channelLatencies.size());
+			for (Entry<Integer, ChannelLatency> entry : channelLatencies.entrySet()) {
+				out.writeInt(entry.getKey());
+				out.writeDouble(entry.getValue().getChannelLatency());
+			}
+		} else {
+			out.writeInt(0);
 		}
 	}
 
 	private void writeChannelThroughputs(DataOutput out) throws IOException {
-		out.writeInt(channelThroughputs.size());
-		for (Entry<Long, ChannelThroughput> entry : channelThroughputs.entrySet()) {
-			out.writeLong(entry.getKey());
-			out.writeDouble(entry.getValue().getThroughput());
+		if (this.channelThroughputs != null) {
+			out.writeInt(this.channelThroughputs.size());
+			for (Entry<Integer, ChannelThroughput> entry : this.channelThroughputs.entrySet()) {
+				out.writeInt(entry.getKey());
+				out.writeDouble(entry.getValue().getThroughput());
+			}
+		} else {
+			out.writeInt(0);
 		}
 	}
 
 	private void writeOutputBufferLatencies(DataOutput out) throws IOException {
-		out.writeInt(outputBufferLatencies.size());
-		for (Entry<Long, OutputBufferLatency> entry : outputBufferLatencies.entrySet()) {
-			out.writeLong(entry.getKey());
-			out.writeInt(entry.getValue().getBufferLatency());
+		if (this.outputBufferLatencies != null) {
+			out.writeInt(this.outputBufferLatencies.size());
+			for (Entry<Integer, OutputBufferLatency> entry : this.outputBufferLatencies.entrySet()) {
+				out.writeInt(entry.getKey());
+				out.writeInt(entry.getValue().getBufferLatency());
+			}
+		} else {
+			out.writeInt(0);
 		}
 	}
 
 	private void writeTaskLatencies(DataOutput out) throws IOException {
-		out.writeInt(taskLatencies.size());
-		for (Entry<Integer, TaskLatency> entry : taskLatencies.entrySet()) {
-			out.writeInt(entry.getKey());
-			out.writeDouble(entry.getValue().getTaskLatency());
+		if (this.taskLatencies != null) {
+			out.writeInt(this.taskLatencies.size());
+			for (Entry<Integer, TaskLatency> entry : this.taskLatencies.entrySet()) {
+				out.writeInt(entry.getKey());
+				out.writeDouble(entry.getValue().getTaskLatency());
+			}
+		} else {
+			out.writeInt(0);
 		}
 	}
 
@@ -196,47 +268,55 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	@Override
 	public void read(final DataInput in) throws IOException {
 		super.read(in);
-		executionVertexIDMap.read(in);
-		channelIDMap.read(in);
+		readExecutionVertexIDMap(in);
+		readChannelIDMap(in);
 		readChannelLatencies(in);
 		readChannelThroughputs(in);
 		readOutputBufferLatencies(in);
 		readTaskLatencies(in);
 	}
 
+	private void readChannelIDMap(final DataInput in) throws IOException {
+		if (in.readBoolean()) {
+			getOrCreateChannelIDMap().read(in);
+		}
+	}
+
+	private void readExecutionVertexIDMap(DataInput in) throws IOException {
+		if (in.readBoolean()) {
+			getOrCreateExecutionVertexIDMap().read(in);
+		}
+	}
+
 	private void readChannelLatencies(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
-			long compositeID = in.readLong();
-			ChannelLatency channelLatency = new ChannelLatency(
-				executionVertexIDMap.getFullID(getFirstIDFromCompositeID(compositeID)),
-				executionVertexIDMap.getFullID(getSecondIDFromCompositeID(compositeID)),
+			int sourceChannelID = in.readInt();
+			ChannelLatency channelLatency = new ChannelLatency(getOrCreateChannelIDMap().getFullID(sourceChannelID),
 				in.readDouble());
-			channelLatencies.put(compositeID, channelLatency);
+			getOrCreateChannelLatencyMap().put(sourceChannelID, channelLatency);
 		}
 	}
 
 	private void readChannelThroughputs(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
-			long compositeID = in.readLong();
-			ChannelThroughput channelThroughput = new ChannelThroughput(
-				executionVertexIDMap.getFullID(getFirstIDFromCompositeID(compositeID)),
-				channelIDMap.getFullID(getSecondIDFromCompositeID(compositeID)),
+			int sourceChannelID = in.readInt();
+			ChannelThroughput channelThroughput = new ChannelThroughput(getOrCreateChannelIDMap().getFullID(
+				sourceChannelID),
 				in.readDouble());
-			channelThroughputs.put(compositeID, channelThroughput);
+			getOrCreateChannelThroughputMap().put(sourceChannelID, channelThroughput);
 		}
 	}
 
 	private void readOutputBufferLatencies(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
-			long compositeID = in.readLong();
-			OutputBufferLatency outputBufferLatency = new OutputBufferLatency(
-				executionVertexIDMap.getFullID(getFirstIDFromCompositeID(compositeID)),
-				channelIDMap.getFullID(getSecondIDFromCompositeID(compositeID)),
+			int sourceChannelID = in.readInt();
+			OutputBufferLatency outputBufferLatency = new OutputBufferLatency(getOrCreateChannelIDMap().getFullID(
+				sourceChannelID),
 				in.readInt());
-			outputBufferLatencies.put(compositeID, outputBufferLatency);
+			getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
 		}
 	}
 
@@ -244,12 +324,13 @@ public class StreamProfilingReport extends AbstractStreamingData {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			int intTaskID = in.readInt();
-			TaskLatency taskLatency = new TaskLatency(executionVertexIDMap.getFullID(intTaskID), in.readDouble());
-			taskLatencies.put(intTaskID, taskLatency);
+			TaskLatency taskLatency = new TaskLatency(getOrCreateExecutionVertexIDMap().getFullID(intTaskID),
+				in.readDouble());
+			getOrCreateTaskLatencyMap().put(intTaskID, taskLatency);
 		}
 	}
-	
+
 	public boolean isEmpty() {
-		return executionVertexIDMap.isEmpty() && channelIDMap.isEmpty();
+		return this.executionVertexIDMap == null && this.channelIDMap == null;
 	}
 }
