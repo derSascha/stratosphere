@@ -100,30 +100,35 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		if (verticesWithPendingAllocation == 0) {
 			try {
 				setupDistributedProfiling();
-			} catch (IOException e) {
-				// FIXME does nothing at the moment
+			} catch (Exception e) {
+				LOG.error(StringUtils.stringifyException(e));
 			}
+		} else {
+			LOG.info("verticesWithPendingAllocation=" + verticesWithPendingAllocation);
 		}
 	}
 
 	private void setupDistributedProfiling() throws IOException {
 		ProfilingGroupVertex anchor = determineProfilingAnchor();
 
-		InstanceConnectionInfo profilingMaster = anchor.getGroupMembers().get(0).getProfilingDataSource();
-		LinkedList<ProfilingVertex> verticesOnProfilingMaster = new LinkedList<ProfilingVertex>();
+		final HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>> verticesByProfilingMaster = new HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>>();
 
 		for (ProfilingVertex vertex : anchor.getGroupMembers()) {
-			if (vertex.getProfilingDataSource().equals(profilingMaster)) {
-				verticesOnProfilingMaster.add(vertex);
-			} else {
-				setupProfilingMaster(anchor, verticesOnProfilingMaster);
-
-				profilingMaster = vertex.getProfilingDataSource();
-				verticesOnProfilingMaster.clear();
+			InstanceConnectionInfo profilingMaster = vertex.getProfilingDataSource();
+			LinkedList<ProfilingVertex> verticesOnProfilingMaster = verticesByProfilingMaster.get(profilingMaster);
+			if (verticesOnProfilingMaster == null) {
+				verticesOnProfilingMaster = new LinkedList<ProfilingVertex>();
+				verticesByProfilingMaster.put(profilingMaster, verticesOnProfilingMaster);
 			}
+			verticesOnProfilingMaster.add(vertex);
 		}
 
-		setupProfilingMaster(anchor, verticesOnProfilingMaster);
+		LOG.info("Setting up distributed profiling for " + profilingSequence.toString());
+		LOG.info("Number of profiling masters: " + verticesByProfilingMaster.size());
+		
+		for (LinkedList<ProfilingVertex> profilingMasterVertices : verticesByProfilingMaster.values()) {
+			setupProfilingMaster(anchor, profilingMasterVertices);
+		}
 
 		LOG.info("Successfully set up profiling for " + profilingSequence.toString());
 	}
@@ -133,10 +138,13 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 		InstanceConnectionInfo profilingMaster = anchorVerticesOnProfilingMaster.getFirst().getProfilingDataSource();
 
+		LOG.info("Setting up profiling master " + profilingMaster);
+
 		ProfilingSequence partialSequence = expandToPartialProfilingSequence(anchor,
 			anchorVerticesOnProfilingMaster);
 		registerProfilingMasterOnExecutionVertices(partialSequence, profilingMaster);
 		sendPartialProfilingSequenceToProfilingMaster(profilingMaster, partialSequence);
+		LOG.info("Successfully set up profiling master " + profilingMaster);
 	}
 
 	private void registerProfilingMasterOnExecutionVertices(ProfilingSequence partialSequence,
@@ -254,13 +262,8 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			ProfilingSequence partialSequence) throws IOException {
 
 		AbstractInstance instance = instances.get(profilingMaster);
-		try {
-			instance.sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID,
+		instance.sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID,
 				new ActAsProfilingMasterAction(executionGraph.getJobID(), partialSequence));
-		} catch (IOException e) {
-			LOG.error(StringUtils.stringifyException(e));
-			throw e;
-		}
 	}
 
 	private ProfilingGroupVertex determineProfilingAnchor() {
