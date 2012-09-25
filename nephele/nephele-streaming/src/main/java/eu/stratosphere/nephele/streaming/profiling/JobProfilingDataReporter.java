@@ -1,6 +1,7 @@
 package eu.stratosphere.nephele.streaming.profiling;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,7 +52,7 @@ public class JobProfilingDataReporter extends Thread {
 
 	private volatile boolean started;
 
-	private class PendingReport {
+	private class PendingReport implements Comparable<PendingReport> {
 		private long dueTime;
 
 		private StreamProfilingReport report;
@@ -89,6 +90,17 @@ public class JobProfilingDataReporter extends Thread {
 
 		public long getReportingOffset() {
 			return this.reportingOffset;
+		}
+
+		@Override
+		public int compareTo(PendingReport o) {
+			if (getReportingOffset() < o.getReportingOffset()) {
+				return -1;
+			} else if (getReportingOffset() > o.getReportingOffset()) {
+				return 1;
+			} else {
+				return 0;
+			}
 		}
 	}
 
@@ -282,24 +294,12 @@ public class JobProfilingDataReporter extends Thread {
 		PendingReport newReport = new PendingReport(profilingMaster, (long) (Math.random() * aggregationInterval));
 		reportByProfilingMaster.put(profilingMaster, newReport);
 
-		if (pendingReports.length == 0) {
-			this.pendingReports = new PendingReport[] { newReport };
-		} else {
-			// insert new report in pendingReports, sorted by reporting offset
-			PendingReport[] tmpPendingReports = new PendingReport[pendingReports.length + 1];
-			boolean added = false;
-			for (int i = 0; i < tmpPendingReports.length; i++) {
-				if (added) {
-					tmpPendingReports[i] = this.pendingReports[i - 1];
-				} else if (this.pendingReports[i].getReportingOffset() <= newReport.getReportingOffset()) {
-					tmpPendingReports[i] = pendingReports[i];
-				} else {
-					tmpPendingReports[i] = newReport;
-					added = true;
-				}
-			}
-			this.pendingReports = tmpPendingReports;
-		}
+		// insert new report in pendingReports, sorted by reporting offset
+		PendingReport[] newPendingReports = new PendingReport[pendingReports.length + 1];
+		System.arraycopy(this.pendingReports, 0, newPendingReports, 0, this.pendingReports.length);
+		newPendingReports[newPendingReports.length - 1] = newReport;
+		Arrays.sort(newPendingReports);
+		this.pendingReports = newPendingReports;
 
 		return newReport;
 	}
