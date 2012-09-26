@@ -55,8 +55,8 @@ public class ProfilingSequence implements IOReadableWritable {
 		cloned.setIncludeStartVertex(includeStartVertex);
 		cloned.setIncludeEndVertex(includeEndVertex);
 
-		for (int i = 0; i < sequenceVertices.size(); i++) {
-			ProfilingGroupVertex vertexToClone = sequenceVertices.get(i);
+		for (int i = 0; i < this.sequenceVertices.size(); i++) {
+			ProfilingGroupVertex vertexToClone = this.sequenceVertices.get(i);
 			ProfilingGroupVertex clonedVertex = new ProfilingGroupVertex(vertexToClone.getJobVertexID(),
 				vertexToClone.getName());
 
