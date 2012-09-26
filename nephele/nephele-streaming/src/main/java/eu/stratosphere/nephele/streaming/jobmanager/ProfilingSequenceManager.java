@@ -5,6 +5,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -101,15 +105,13 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			try {
 				setupDistributedProfiling();
 			} catch (Exception e) {
-				LOG.error(StringUtils.stringifyException(e));
+				//				LOG.error(StringUtils.stringifyException(e));
 			}
-		} else {
-			LOG.info("verticesWithPendingAllocation=" + verticesWithPendingAllocation);
 		}
 	}
 
-	private void setupDistributedProfiling() throws IOException {
-		ProfilingGroupVertex anchor = determineProfilingAnchor();
+	private void setupDistributedProfiling() throws Exception {
+		final ProfilingGroupVertex anchor = determineProfilingAnchor();
 
 		final HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>> verticesByProfilingMaster = new HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>>();
 
@@ -123,23 +125,42 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			verticesOnProfilingMaster.add(vertex);
 		}
 
-		LOG.info("Setting up distributed profiling for " + profilingSequence.toString());
-		LOG.info("Number of profiling masters: " + verticesByProfilingMaster.size());
-		
-		for (LinkedList<ProfilingVertex> profilingMasterVertices : verticesByProfilingMaster.values()) {
-			setupProfilingMaster(anchor, profilingMasterVertices);
-		}
+		LOG.info("Setting up stream profiling for " + profilingSequence.toString());
 
-		LOG.info("Successfully set up profiling for " + profilingSequence.toString());
+		ExecutorService threadPool = Executors.newFixedThreadPool(8);
+		final AtomicReference<Exception> exceptionCollector = new AtomicReference<Exception>();
+
+		for (final LinkedList<ProfilingVertex> profilingMasterVertices : verticesByProfilingMaster.values()) {
+			threadPool.execute(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						setupProfilingMaster(anchor, profilingMasterVertices);
+					} catch (Exception e) {
+						LOG.error(StringUtils.stringifyException(e));
+						exceptionCollector.set(e);
+					}
+				}
+			});
+		}
+		threadPool.shutdown();
+
+		try {
+			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+			if (exceptionCollector.get() != null) {
+				throw exceptionCollector.get();
+			}
+			LOG.info("Successfully set up stream profiling for " + profilingSequence.toString());
+		} catch (InterruptedException e) {
+			LOG.info("Interrupted while setting up stream profiling for " + profilingSequence.toString());
+			threadPool.shutdownNow();
+		}
 	}
 
 	private void setupProfilingMaster(ProfilingGroupVertex anchor,
 			LinkedList<ProfilingVertex> anchorVerticesOnProfilingMaster) throws IOException {
 
 		InstanceConnectionInfo profilingMaster = anchorVerticesOnProfilingMaster.getFirst().getProfilingDataSource();
-
-		LOG.info("Setting up profiling master " + profilingMaster);
-
 		ProfilingSequence partialSequence = expandToPartialProfilingSequence(anchor,
 			anchorVerticesOnProfilingMaster);
 		registerProfilingMasterOnExecutionVertices(partialSequence, profilingMaster);

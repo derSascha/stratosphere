@@ -3,6 +3,7 @@ package eu.stratosphere.nephele.streaming.types;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Set;
 
 import eu.stratosphere.nephele.deployment.TaskDeploymentDescriptor;
@@ -18,6 +19,7 @@ import eu.stratosphere.nephele.util.SerializableHashSet;
  * plugin on the task manager whether a certain task and which of its channels should be profiled.
  * In some situations a task may need no profiling, only some of its channels. This is indicated by an empty set
  * of {@link #taskProfilingMasters}.
+ * FIXME: thread safety
  * 
  * @author Bjoern Lohrmann
  */
@@ -47,16 +49,20 @@ public class TaskProfilingInfo implements IOReadableWritable {
 	}
 
 	public void addTaskProfilingMaster(InstanceConnectionInfo taskProfilingMaster) {
-		taskProfilingMasters.add(taskProfilingMaster);
+		synchronized (this.taskProfilingMasters) {
+			taskProfilingMasters.add(taskProfilingMaster);
+		}
 	}
 
 	public void addChannelProfilingMaster(ChannelID channelID, InstanceConnectionInfo channelProfilingMaster) {
-		SerializableHashSet<InstanceConnectionInfo> profilingMasters = this.channelProfilingMasters.get(channelID);
-		if (profilingMasters == null) {
-			profilingMasters = new SerializableHashSet<InstanceConnectionInfo>();
-			this.channelProfilingMasters.put(channelID, profilingMasters);
+		synchronized (channelProfilingMasters) {
+			SerializableHashSet<InstanceConnectionInfo> profilingMasters = this.channelProfilingMasters.get(channelID);
+			if (profilingMasters == null) {
+				profilingMasters = new SerializableHashSet<InstanceConnectionInfo>();
+				this.channelProfilingMasters.put(channelID, profilingMasters);
+			}
+			profilingMasters.add(channelProfilingMaster);
 		}
-		profilingMasters.add(channelProfilingMaster);
 	}
 
 	public ExecutionVertexID getVertexID() {
@@ -72,7 +78,7 @@ public class TaskProfilingInfo implements IOReadableWritable {
 		return taskProfilingMasters;
 	}
 
-	public Set<ChannelID> getChannelsToProfile() {
+	public Collection<ChannelID> getChannelsToProfile() {
 		return this.channelProfilingMasters.keySet();
 	}
 
