@@ -3,14 +3,22 @@ package eu.stratosphere.nephele.streaming.profiling;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 
+import eu.stratosphere.nephele.streaming.StreamingTaskManagerPlugin;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingGroupEdge;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingSequence;
 import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSequenceSummary;
 
 public class ProfilingLogger {
 
-	private final static long WAIT_BEFORE_FIRST_LOGGING = 10 * 1000;
+	/**
+	 * Provides access to the configuration entry which defines the log file location.
+	 */
+	private static final String PROFILING_LOGFILE_KEY = "streaming.profilingmaster.logging.profilingfile";
 
-	private final static long LOGGING_INTERVAL = 1000;
+	private static final String DEFAULT_LOGFILE = "/tmp/profiling_" + System.currentTimeMillis() + ".txt";
 
 	private BufferedWriter writer;
 
@@ -18,15 +26,17 @@ public class ProfilingLogger {
 
 	private long timeOfNextLogging;
 
-	private long timeBase;
+	private long loggingInterval;
 
-	public ProfilingLogger()
-			throws IOException {
+	public ProfilingLogger(long loggingInterval) throws IOException {
 
-		this.writer = new BufferedWriter(new FileWriter("profiling.txt"));
+		String logFile = StreamingTaskManagerPlugin.getPluginConfiguration()
+			.getString(PROFILING_LOGFILE_KEY, DEFAULT_LOGFILE);
+
+		this.writer = new BufferedWriter(new FileWriter(logFile));
+
+		this.loggingInterval = loggingInterval;
 		this.headersWritten = false;
-		this.timeOfNextLogging = ProfilingUtils.alignToNextFullSecond(System.currentTimeMillis() + WAIT_BEFORE_FIRST_LOGGING);
-		this.timeBase = timeOfNextLogging;
 	}
 
 	public boolean isLoggingNecessary(long now) {
@@ -34,74 +44,72 @@ public class ProfilingLogger {
 	}
 
 	public void logLatencies(ProfilingSequenceSummary summary) throws IOException {
-		// FIXME
-//		long now = System.currentTimeMillis();
-//		long timestamp = now - timeBase;
-//
-//		if (!headersWritten) {
-//			writeHeaders(summary);
-//		}
-//
-//		StringBuilder builder = new StringBuilder();
-//		builder.append(timestamp);
-//		builder.append(';');
-//		builder.append(summary.getNoOfActivePaths());
-//		builder.append(';');
-//		builder.append(summary.getNoOfInactivePaths());
-//		builder.append(';');
-//		builder.append(summary.getAvgTotalPathLatency());
-//		builder.append(';');
-//		builder.append(summary.getMedianPathLatency());
-//		builder.append(';');
-//		builder.append(summary.getMinPathLatency());
-//		builder.append(';');
-//		builder.append(summary.getMaxPathLatency());
-//
-//		for (double avgElementLatency : summary.getAvgPathElementLatencies()) {
-//			builder.append(';');
-//			builder.append(avgElementLatency);
-//		}
-//		builder.append('\n');
-//		writer.write(builder.toString());
-//		writer.flush(); // FIXME
-//
-//		refreshTimeOfNextLogging();
+		if (!headersWritten) {
+			writeHeaders(summary);
+		}
+
+		StringBuilder builder = new StringBuilder();
+		builder.append(getLogTimestamp());
+		builder.append(';');
+		builder.append(summary.getNoOfActiveSubsequences());
+		builder.append(';');
+		builder.append(summary.getNoOfInactiveSubsequences());
+		builder.append(';');
+		builder.append(summary.getAvgSubsequenceLatency());
+		builder.append(';');
+		builder.append(summary.getMinSubsequenceLatency());
+		builder.append(';');
+		builder.append(summary.getMaxSubsequenceLatency());
+
+		for (double avgElementLatency : summary.getAvgSequenceElementLatencies()) {
+			builder.append(';');
+			builder.append(avgElementLatency);
+		}
+		builder.append('\n');
+		writer.write(builder.toString());
+		writer.flush();
 	}
 
-	public void refreshTimeOfNextLogging() {
-		long now = System.currentTimeMillis();
-		while(timeOfNextLogging <= now) {
-			timeOfNextLogging += LOGGING_INTERVAL;
-		}
+	private Object getLogTimestamp() {
+		return ProfilingUtils.alignToInterval(System.currentTimeMillis(), loggingInterval);
 	}
 
 	private void writeHeaders(ProfilingSequenceSummary summary) throws IOException {
-		// FIXME
-//		StringBuilder builder = new StringBuilder();
-//		builder.append("timestamp;");
-//		builder.append("noOfActivePaths;");
-//		builder.append("noOfInactivePaths;");
-//		builder.append("avgTotalPathLatency;");
-//		builder.append("medianPathLatency;");
-//		builder.append("minPathLatency;");
-//		builder.append("maxPathLatency");
-//
-//		int nextEdgeIndex = 1;
-//		
-//		for (ManagementAttachment element : summary.getPathElements()) {
-//			builder.append(';');
-//			if (element instanceof ManagementVertex) {
-//				ManagementVertex vertex = (ManagementVertex) element;
-//				builder.append(vertex.getGroupVertex().getName());
-//			} else {
-//				builder.append("edge" + nextEdgeIndex + "obl");
-//				builder.append(';');
-//				builder.append("edge" + nextEdgeIndex);
-//				nextEdgeIndex++;
-//			}
-//		}
-//		builder.append('\n');
-//		writer.write(builder.toString());
-//		headersWritten = true;
+		StringBuilder builder = new StringBuilder();
+		builder.append("timestamp;");
+		builder.append("noOfActivePaths;");
+		builder.append("noOfInactivePaths;");
+		builder.append("avgTotalPathLatency;");
+		builder.append("minPathLatency;");
+		builder.append("maxPathLatency");
+
+		int nextEdgeIndex = 1;
+
+		ProfilingSequence sequence = summary.getProfilingSequence();
+		List<ProfilingGroupVertex> groupVertices = sequence.getSequenceVertices();
+
+		for (int i = 0; i < groupVertices.size(); i++) {
+			ProfilingGroupVertex groupVertex = groupVertices.get(i);
+
+			boolean includeVertex = (i == 0 && sequence.isIncludeStartVertex())
+				|| (i > 0 && (i < groupVertices.size() - 1))
+				|| ((i == groupVertices.size() - 1) && sequence.isIncludeEndVertex());
+
+			if (includeVertex) {
+				builder.append(';');
+				builder.append(groupVertex.getName());
+			}
+
+			ProfilingGroupEdge forwardEdge = groupVertex.getForwardEdge();
+			if (forwardEdge != null) {
+				builder.append("edge" + nextEdgeIndex + "obl");
+				builder.append(';');
+				builder.append("edge" + nextEdgeIndex);
+				nextEdgeIndex++;
+			}
+		}
+		builder.append('\n');
+		writer.write(builder.toString());
+		headersWritten = true;
 	}
 }

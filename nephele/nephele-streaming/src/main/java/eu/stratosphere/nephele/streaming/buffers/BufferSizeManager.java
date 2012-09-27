@@ -1,9 +1,6 @@
 package eu.stratosphere.nephele.streaming.buffers;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -11,59 +8,66 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.configuration.GlobalConfiguration;
-import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
-import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
 import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.managementgraph.ManagementAttachment;
-import eu.stratosphere.nephele.managementgraph.ManagementEdge;
-import eu.stratosphere.nephele.managementgraph.ManagementEdgeID;
-import eu.stratosphere.nephele.managementgraph.ManagementVertex;
-import eu.stratosphere.nephele.streaming.jobmanager.StreamingJobManagerPlugin;
+import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.streaming.StreamingCommunicationThread;
+import eu.stratosphere.nephele.streaming.StreamingTaskManagerPlugin;
+import eu.stratosphere.nephele.streaming.actions.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.profiling.EdgeCharacteristics;
 import eu.stratosphere.nephele.streaming.profiling.ProfilingModel;
-import eu.stratosphere.nephele.streaming.profiling.ProfilingPath;
-import eu.stratosphere.nephele.streaming.profiling.ProfilingSummary;
 import eu.stratosphere.nephele.streaming.profiling.ProfilingUtils;
 import eu.stratosphere.nephele.streaming.profiling.VertexLatency;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingEdge;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingVertex;
+import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSequenceSummary;
+import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSubsequenceSummary;
 import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
 public class BufferSizeManager {
 
+	private Log LOG = LogFactory.getLog(BufferSizeManager.class);
+
+	/**
+	 * Provides access to the configuration entry which defines the buffer size adjustment interval-
+	 */
+	private static final String PROFILINGMASTER_ADJUSTMENTINTERVAL_KEY = "streaming.profilingmaster.adjustmentinterval";
+
+	private static final long DEFAULT_ADJUSTMENTINTERVAL = 5000;
+
 	private final static long WAIT_BEFORE_FIRST_ADJUSTMENT = 30 * 1000;
 
-	public final static long ADJUSTMENT_INTERVAL = 5 * 1000;
-
-	private Log LOG = LogFactory.getLog(BufferSizeManager.class);
+	public long adjustmentInterval;
 
 	private long latencyGoal;
 
 	private ProfilingModel profilingModel;
 
-	private StreamingJobManagerPlugin jobManagerPlugin;
-
-	private ExecutionGraph executionGraph;
-
-	private HashMap<ManagementEdge, BufferSizeHistory> bufferSizes;
+	private StreamingCommunicationThread communicationThread;
 
 	private long timeOfNextAdjustment;
 
 	private int maximumBufferSize;
-	
+
 	private BufferSizeLogger bufferSizeLogger;
 
-	public BufferSizeManager(long latencyGoal, ProfilingModel profilingModel,
-			StreamingJobManagerPlugin jobManagerPlugin,
-			ExecutionGraph executionGraph) throws IOException {
-		
+	private JobID jobID;
+
+	public BufferSizeManager(JobID jobID, long latencyGoal, ProfilingModel profilingModel,
+			StreamingCommunicationThread communicationThread) {
+		this.jobID = jobID;
 		this.latencyGoal = latencyGoal;
 		this.profilingModel = profilingModel;
-		this.jobManagerPlugin = jobManagerPlugin;
-		this.executionGraph = executionGraph;
-		this.bufferSizes = new HashMap<ManagementEdge, BufferSizeHistory>();
-		this.timeOfNextAdjustment = ProfilingUtils.alignToNextFullSecond(System.currentTimeMillis()
-			+ WAIT_BEFORE_FIRST_ADJUSTMENT);
+		this.communicationThread = communicationThread;
+
+		this.adjustmentInterval = StreamingTaskManagerPlugin.getPluginConfiguration().getLong(
+			PROFILINGMASTER_ADJUSTMENTINTERVAL_KEY, DEFAULT_ADJUSTMENTINTERVAL);
+
+		this.timeOfNextAdjustment = ProfilingUtils.alignToInterval(System.currentTimeMillis()
+			+ WAIT_BEFORE_FIRST_ADJUSTMENT, this.adjustmentInterval);
 		initBufferSizes();
-		bufferSizeLogger = new BufferSizeLogger(profilingModel.getProfilingSubgraph());
+		// FIXME: buffer size logging only possible for ONE profiling sequence
+		// bufferSizeLogger = new BufferSizeLogger(profilingModel.getProfilingSequence());
 	}
 
 	private void initBufferSizes() {
@@ -73,127 +77,101 @@ public class BufferSizeManager {
 		this.maximumBufferSize = bufferSize;
 
 		long now = System.currentTimeMillis();
-		for (ProfilingPath path : profilingModel.getProfilingSubgraph().getProfilingPaths()) {
-			for (ManagementAttachment pathElement : path.getPathElements()) {
-				if (pathElement instanceof ManagementEdge) {
-					ManagementEdge edge = (ManagementEdge) pathElement;
-					BufferSizeHistory bufferSizeHistory = new BufferSizeHistory(edge, 2);
-					bufferSizeHistory.addToHistory(now, bufferSize);
-					bufferSizes.put(edge, bufferSizeHistory);
+		for (ProfilingGroupVertex groupVertex : profilingModel.getProfilingSequence().getSequenceVertices()) {
+			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
+				for (ProfilingEdge forwardEdge : vertex.getForwardEdges()) {
+					forwardEdge.getEdgeCharacteristics().getBufferSizeHistory().addToHistory(now, bufferSize);
 				}
 			}
 		}
 	}
 
-	
-	HashSet<ManagementEdgeID> staleEdges = new HashSet<ManagementEdgeID>();
-	public void adjustBufferSizes(ProfilingSummary summary) {
-		HashMap<ManagementEdge, Integer> edgesToAdjust = new HashMap<ManagementEdge, Integer>();
+	public long getAdjustmentInterval() {
+		return this.adjustmentInterval;
+	}
+
+	HashSet<ChannelID> staleEdges = new HashSet<ChannelID>();
+
+	public void adjustBufferSizes(ProfilingSequenceSummary summary) throws InterruptedException {
+		HashMap<ProfilingEdge, Integer> edgesToAdjust = new HashMap<ProfilingEdge, Integer>();
 
 		staleEdges.clear();
-		for (ProfilingPath activePath : summary.getActivePaths()) {
-			if (activePath.getSummary().getTotalLatency() > latencyGoal) {
-				collectEdgesToAdjust(activePath, edgesToAdjust);
+		for (ProfilingSubsequenceSummary activeSubsequence : summary.enumerateActiveSubsequences()) {
+			if (activeSubsequence.getSubsequenceLatency() > latencyGoal) {
+				collectEdgesToAdjust(activeSubsequence, edgesToAdjust);
 			}
 		}
 
 		doAdjust(edgesToAdjust);
-		
+
 		System.out.printf("adjusted edges: %d / stale edges %d\n", edgesToAdjust.size(), staleEdges.size());
-		
+
 		refreshTimeOfNextAdjustment();
 	}
-	
+
 	public void logBufferSizes() throws IOException {
-		bufferSizeLogger.logBufferSizes(bufferSizes);
+		bufferSizeLogger.logBufferSizes();
 	}
 
-	private void doAdjust(HashMap<ManagementEdge, Integer> edgesToAdjust) {
+	private void doAdjust(HashMap<ProfilingEdge, Integer> edgesToAdjust) throws InterruptedException {
 
-		for (ManagementEdge edge : edgesToAdjust.keySet()) {
+		for (ProfilingEdge edge : edgesToAdjust.keySet()) {
 			int newBufferSize = edgesToAdjust.get(edge);
 
-			BufferSizeHistory sizeHistory = bufferSizes.get(edge);
-
-//			LOG.info(String.format("New buffer size: %s new: %d (old: %d)", ProfilingUtils.formatName(edge),
-//				newBufferSize, sizeHistory.getLastEntry().getBufferSize()));
-
-			setBufferSize(edge.getSourceEdgeID(), newBufferSize);
-
+			BufferSizeHistory sizeHistory = edge.getEdgeCharacteristics().getBufferSizeHistory();
 			sizeHistory.addToHistory(timeOfNextAdjustment, newBufferSize);
+
+			// LOG.info(String.format("New buffer size: %s new: %d (old: %d)", ProfilingUtils.formatName(edge),
+			// newBufferSize, sizeHistory.getLastEntry().getBufferSize()));
+
+			setBufferSize(edge, newBufferSize);
 		}
 	}
 
 	private void refreshTimeOfNextAdjustment() {
 		long now = System.currentTimeMillis();
 		while (timeOfNextAdjustment <= now) {
-			timeOfNextAdjustment += ADJUSTMENT_INTERVAL;
+			timeOfNextAdjustment += this.adjustmentInterval;
 		}
 	}
 
-	ArrayList<ManagementEdge> edgesSortedByLatency = new ArrayList<ManagementEdge>();
+	private void collectEdgesToAdjust(ProfilingSubsequenceSummary activeSubsequence,
+			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
 
-	Comparator<ManagementEdge> edgeComparator = new Comparator<ManagementEdge>() {
-		@Override
-		public int compare(ManagementEdge first, ManagementEdge second) {
-			double firstLatency = ((EdgeCharacteristics) first.getAttachment()).getChannelLatencyInMillis();
-			double secondLatency = ((EdgeCharacteristics) second.getAttachment()).getChannelLatencyInMillis();
-
-			if (firstLatency < secondLatency) {
-				return -1;
-			} else if (firstLatency > secondLatency) {
-				return 1;
-			} else {
-				return 0;
-			}
-		}
-	};
-
-	
-	private void collectEdgesToAdjust(ProfilingPath path, HashMap<ManagementEdge, Integer> edgesToAdjust) {
-		for (ManagementAttachment element : path.getPathElements()) {
-			if (element instanceof ManagementEdge) {
-				edgesSortedByLatency.add((ManagementEdge) element);
-			}
-		}
-
-		Collections.sort(edgesSortedByLatency, edgeComparator);
-
-		for (ManagementEdge edge : edgesSortedByLatency) {
+		// FIXME: actually, sorting is unnecessary here
+		for (ProfilingEdge edge : activeSubsequence.getEdgesSortedByLatency()) {
 
 			if (edgesToAdjust.containsKey(edge)) {
 				continue;
 			}
 
-			EdgeCharacteristics edgeChar = (EdgeCharacteristics) edge.getAttachment();
+			EdgeCharacteristics edgeChar = edge.getEdgeCharacteristics();
 
-			if (!hasFreshValues(edge) || !hasFreshValues(edge.getSource().getVertex())) {
-				staleEdges.add(edge.getSourceEdgeID());
+			if (!hasFreshValues(edgeChar) || !hasFreshValues(edge.getSourceVertex().getVertexLatency())) {
+				staleEdges.add(edge.getSourceChannelID());
 				// LOG.info("Rejecting edge due to stale values: " + ProfilingUtils.formatName(edge));
 				continue;
 			}
-			
-			//double edgeLatency = edgeChar.getChannelLatencyInMillis();
-			double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
-			double sourceTaskLatency = ((VertexLatency) edge.getSource().getVertex().getAttachment()).getLatencyInMillis();
 
-//			if (avgOutputBufferLatency > 5 && avgOutputBufferLatency >= 0.05 * edgeLatency) {
+			// double edgeLatency = edgeChar.getChannelLatencyInMillis();
+			double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
+			double sourceTaskLatency = edge.getSourceVertex().getVertexLatency().getLatencyInMillis();
+
+			// if (avgOutputBufferLatency > 5 && avgOutputBufferLatency >= 0.05 * edgeLatency) {
 			if (avgOutputBufferLatency > 5 && avgOutputBufferLatency > sourceTaskLatency) {
-				reduceBufferSize(edge, edgesToAdjust);
+				reduceBufferSize(edgeChar, edgesToAdjust);
 			} else if (avgOutputBufferLatency <= 1 && !edgeChar.isInChain()) {
-				increaseBufferSize(edge, edgesToAdjust);
+				increaseBufferSize(edgeChar, edgesToAdjust);
 			}
 		}
-
-		edgesSortedByLatency.clear();
 	}
 
-	private void increaseBufferSize(ManagementEdge edge, HashMap<ManagementEdge, Integer> edgesToAdjust) {
-		int oldBufferSize = bufferSizes.get(edge).getLastEntry().getBufferSize();
+	private void increaseBufferSize(EdgeCharacteristics edgeChar, HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry().getBufferSize();
 		int newBufferSize = Math.min(proposedIncreasedBufferSize(oldBufferSize), this.maximumBufferSize);
 
 		if (isRelevantIncrease(oldBufferSize, newBufferSize)) {
-			edgesToAdjust.put(edge, newBufferSize);
+			edgesToAdjust.put(edgeChar.getEdge(), newBufferSize);
 		}
 	}
 
@@ -205,13 +183,13 @@ public class BufferSizeManager {
 		return (int) (oldBufferSize * 1.2);
 	}
 
-	private void reduceBufferSize(ManagementEdge edge, HashMap<ManagementEdge, Integer> edgesToAdjust) {
-		int oldBufferSize = bufferSizes.get(edge).getLastEntry().getBufferSize();
-		int newBufferSize = proposedReducedBufferSize(edge, oldBufferSize);
+	private void reduceBufferSize(EdgeCharacteristics edgeChar, HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry().getBufferSize();
+		int newBufferSize = proposedReducedBufferSize(edgeChar, oldBufferSize);
 
 		// filters pointless minor changes in buffer size
 		if (isRelevantReduction(newBufferSize, oldBufferSize)) {
-			edgesToAdjust.put(edge, newBufferSize);
+			edgesToAdjust.put(edgeChar.getEdge(), newBufferSize);
 		}
 
 		// else {
@@ -224,9 +202,7 @@ public class BufferSizeManager {
 		return newBufferSize < oldBufferSize * 0.98;
 	}
 
-	private int proposedReducedBufferSize(ManagementEdge edge, int oldBufferSize) {
-		EdgeCharacteristics edgeChar = (EdgeCharacteristics) edge.getAttachment();
-
+	private int proposedReducedBufferSize(EdgeCharacteristics edgeChar, int oldBufferSize) {
 		double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
 
 		double reductionFactor = Math.pow(0.98, avgOutputBufferLatency);
@@ -237,50 +213,24 @@ public class BufferSizeManager {
 		return newBufferSize;
 	}
 
-	private boolean hasFreshValues(ManagementEdge edge) {
-		EdgeCharacteristics edgeChar = (EdgeCharacteristics) edge.getAttachment();
-		long freshnessThreshold = bufferSizes.get(edge).getLastEntry().getTimestamp();
+	private boolean hasFreshValues(EdgeCharacteristics edgeChar) {
+		long freshnessThreshold = edgeChar.getBufferSizeHistory().getLastEntry().getTimestamp();
 
 		return edgeChar.isChannelLatencyFresherThan(freshnessThreshold)
 			&& (edgeChar.isInChain() || edgeChar.isOutputBufferLatencyFresherThan(freshnessThreshold));
 	}
-	
-	private boolean hasFreshValues(ManagementVertex vertex) {
-		VertexLatency vertexLatency = (VertexLatency) vertex.getAttachment();
-		return vertexLatency.getLatencyInMillis() != -1;
+
+	private boolean hasFreshValues(VertexLatency vertexLatency) {
+		return vertexLatency.isActive();
 	}
 
 	public boolean isAdjustmentNecessary(long now) {
 		return now >= timeOfNextAdjustment;
 	}
 
-	private void setBufferSize(ManagementEdgeID sourceEdgeID, int bufferSize) {
-		ChannelID sourceChannelID = sourceEdgeID.toChannelID();
-		ExecutionVertex vertex = this.executionGraph.getVertexByChannelID(sourceChannelID);
-		if (vertex == null) {
-			LOG.error("Cannot find vertex to channel ID " + vertex);
-			return;
-		}
-		//this.jobManagerPlugin.limitBufferSize(vertex, sourceChannelID, bufferSize);
+	private void setBufferSize(ProfilingEdge edge, int bufferSize) throws InterruptedException {
+		LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, edge.getSourceVertex().getID(),
+			edge.getSourceChannelID(), bufferSize);
+		this.communicationThread.sendToTaskManagerAsynchronously(edge.getSourceVertex().getProfilingDataSource(), bsla);
 	}
-// FIXME	
-//	public void limitBufferSize(final ExecutionVertex vertex, final ChannelID sourceChannelID, final int bufferSize) {
-//
-//		final JobID jobID = vertex.getExecutionGraph().getJobID();
-//		final ExecutionVertexID vertexID = vertex.getID();
-//
-//		final AbstractInstance instance = vertex.getAllocatedResource().getInstance();
-//		if (instance == null) {
-//			LOG.error(vertex + " has no instance assigned");
-//			return;
-//		}
-//
-//		final LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, vertexID, sourceChannelID, bufferSize);
-//		try {
-//			instance.sendData(this.pluginID, bsla);
-//		} catch (IOException e) {
-//			LOG.error(StringUtils.stringifyException(e));
-//		}
-//	}
-
 }

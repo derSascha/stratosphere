@@ -33,8 +33,8 @@ public class ProfilingSequenceSummary {
 	}
 
 	private void createAggregatedElementLatencies() {
-		// vertices and edges
-		int size = 2 * this.sequence.getSequenceVertices().size() - 1;
+		// 2 values per edge and one for each vertex
+		int size = 2 * (this.sequence.getSequenceVertices().size() - 1) + this.sequence.getSequenceVertices().size();
 		if (!this.sequence.isIncludeStartVertex()) {
 			size--;
 		}
@@ -57,32 +57,40 @@ public class ProfilingSequenceSummary {
 		}
 	}
 
-	public Iterable<ProfilingSubsequenceSummary> enumerateSubsequenceSummaries() {
+	public Iterable<ProfilingSubsequenceSummary> enumerateActiveSubsequences() {
 		return new Iterable<ProfilingSubsequenceSummary>() {
 			@Override
 			public Iterator<ProfilingSubsequenceSummary> iterator() {
 				return new Iterator<ProfilingSubsequenceSummary>() {
 					private boolean done = false;
 
+					private boolean hasNext = false;
+
+					private boolean currentHasBeenReturned = true;
+
 					@Override
 					public boolean hasNext() {
-						boolean hasNext = false;
-						if (!done) {
+						if (!done && currentHasBeenReturned) {
 							hasNext = enumeratingSummary.switchToNextActivePathIfPossible();
 							if (hasNext) {
 								updateAggregatedFields();
+								currentHasBeenReturned = false;
 							} else {
 								done = true;
 								finalizeAggregatedFields();
 							}
-
 						}
 						return hasNext;
 					}
 
 					@Override
 					public ProfilingSubsequenceSummary next() {
-						return enumeratingSummary;
+						if (currentHasBeenReturned) {
+							return null;
+						} else {
+							currentHasBeenReturned = true;
+							return enumeratingSummary;
+						}
 					}
 
 					@Override
@@ -99,13 +107,20 @@ public class ProfilingSequenceSummary {
 		this.avgSubsequenceLatency += latency;
 		this.minSubsequenceLatency = Math.min(latency, minSubsequenceLatency);
 		this.maxSubsequenceLatency = Math.max(latency, maxSubsequenceLatency);
-
-		// TODO: hier weitermachen.
+		this.enumeratingSummary.addCurrentSubsequenceLatencies(this.avgSequenceElementLatencies);
 	}
 
 	private void finalizeAggregatedFields() {
-		this.avgSubsequenceLatency /= enumeratingSummary.getNoOfActiveSubsequencesFound();
-
+		if (enumeratingSummary.getNoOfActiveSubsequencesFound() > 0) {
+			this.avgSubsequenceLatency /= enumeratingSummary.getNoOfActiveSubsequencesFound();
+			for (int i = 0; i < this.avgSequenceElementLatencies.length; i++) {
+				this.avgSequenceElementLatencies[i] /= enumeratingSummary.getNoOfActiveSubsequencesFound();
+			}
+		} else {
+			this.avgSubsequenceLatency = 0;
+			this.minSubsequenceLatency = 0;
+			this.maxSubsequenceLatency = 0;
+		}
 	}
 
 	public ProfilingSequence getSequence() {
@@ -138,5 +153,13 @@ public class ProfilingSequenceSummary {
 
 	public double[] getAvgSequenceElementLatencies() {
 		return this.avgSequenceElementLatencies;
+	}
+
+	public Object getNoOfActiveSubsequences() {
+		return enumeratingSummary.getNoOfActiveSubsequencesFound();
+	}
+
+	public ProfilingSequence getProfilingSequence() {
+		return sequence;
 	}
 }

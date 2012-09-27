@@ -1,5 +1,6 @@
 package eu.stratosphere.nephele.streaming.profiling;
 
+import eu.stratosphere.nephele.streaming.buffers.BufferSizeHistory;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingEdge;
 
 public class EdgeCharacteristics {
@@ -12,6 +13,8 @@ public class EdgeCharacteristics {
 
 	private ProfilingValueStatistic outputBufferLifetimeStatistic;
 
+	private BufferSizeHistory bufferSizeHistory;
+
 	private boolean isInChain;
 
 	public EdgeCharacteristics(ProfilingEdge edge) {
@@ -20,6 +23,7 @@ public class EdgeCharacteristics {
 		this.latencyInMillisStatistic = new ProfilingValueStatistic(5);
 		this.throughputInMbitStatistic = new ProfilingValueStatistic(5);
 		this.outputBufferLifetimeStatistic = new ProfilingValueStatistic(5);
+		this.bufferSizeHistory = new BufferSizeHistory(2);
 	}
 
 	public ProfilingEdge getEdge() {
@@ -93,5 +97,9 @@ public class EdgeCharacteristics {
 
 	public boolean isActive() {
 		return latencyInMillisStatistic.hasValues() && outputBufferLifetimeStatistic.hasValues();
+	}
+
+	public BufferSizeHistory getBufferSizeHistory() {
+		return bufferSizeHistory;
 	}
 }

@@ -15,12 +15,8 @@
 
 package eu.stratosphere.nephele.streaming.actions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
 
 /**
  * This class implements an abstract base class for actions the job manager component of the Nephele streaming plugin
@@ -28,12 +24,7 @@ import eu.stratosphere.nephele.jobgraph.JobID;
  * 
  * @author warneke
  */
-public abstract class AbstractAction implements IOReadableWritable {
-
-	/**
-	 * The ID of the job the initiated action applies to.
-	 */
-	private final JobID jobID;
+public abstract class AbstractAction extends AbstractStreamingData {
 
 	/**
 	 * Constructs a new abstract action object.
@@ -42,43 +33,12 @@ public abstract class AbstractAction implements IOReadableWritable {
 	 *        the ID of the job the initiated action applies to
 	 */
 	AbstractAction(final JobID jobID) {
-
-		if (jobID == null) {
-			throw new IllegalArgumentException("Argument jobID must not be null");
-		}
-
-		this.jobID = jobID;
+		super(jobID);
 	}
 
 	/**
 	 * Default constructor required for deserialization.
 	 */
 	AbstractAction() {
-		this.jobID = new JobID();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void write(final DataOutput out) throws IOException {
-		this.jobID.write(out);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void read(final DataInput in) throws IOException {
-		this.jobID.read(in);
-	}
-
-	/**
-	 * Returns the ID of the job the initiated action applies to.
-	 * 
-	 * @return the ID of the job the initiated action applies to
-	 */
-	public JobID getJobID() {
-		return this.jobID;
 	}
 }

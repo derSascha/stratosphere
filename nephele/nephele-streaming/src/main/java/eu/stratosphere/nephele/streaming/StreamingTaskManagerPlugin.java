@@ -49,7 +49,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	/**
 	 * Provides access to the configuration entry which defines the interval in which records shall be tagged.
 	 */
-	private static final String TAGGING_INTERVAL_KEY = "streaming.tagging.interval";
+	private static final String TAGGING_INTERVAL_KEY = "streaming.profilingreporter.tagginginterval";
 
 	/**
 	 * The default tagging interval.
@@ -104,8 +104,9 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 
 	private final StreamChainCoordinator chainCoordinator;
 
-	StreamingTaskManagerPlugin(final Configuration pluginConfiguration, final PluginCommunication jobManagerComponent) {
+	private static volatile Configuration PLUGIN_CONFIGURATION;
 
+	StreamingTaskManagerPlugin(final Configuration pluginConfiguration, final PluginCommunication jobManagerComponent) {
 		this.taggingInterval = pluginConfiguration.getInteger(TAGGING_INTERVAL_KEY, DEFAULT_TAGGING_INTERVAL);
 		this.aggregationInterval = pluginConfiguration.getInteger(AGGREGATION_INTERVAL_KEY,
 			DEFAULT_AGGREGATION_INTERVAL);
@@ -119,6 +120,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 			this.taggingInterval, this.aggregationInterval));
 
 		INSTANCE = this;
+		PLUGIN_CONFIGURATION = pluginConfiguration;
 	}
 
 	public static StreamListenerContext getStreamingListenerContext(final String listenerKey) {
@@ -130,12 +132,29 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 		return INSTANCE.listenerContexts.get(listenerKey);
 	}
 
+	public static Configuration getPluginConfiguration() {
+		return PLUGIN_CONFIGURATION;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public void shutdown() {
 		this.communicationThread.stopCommunicationThread();
+
+		for (JobStreamProfilingMasterThread profilingMaster : this.profilingMasters.values()) {
+			profilingMaster.shutdown();
+		}
+		this.profilingMasters.clear();
+		this.taskProfilingInfos.clear();
+		for (JobProfilingDataReporter reporter : this.profilingReporters.values()) {
+			reporter.shutdown();
+		}
+		this.profilingReporters.clear();
+
+		INSTANCE = null;
+		PLUGIN_CONFIGURATION = null;
 	}
 
 	/**
@@ -250,7 +269,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 				return;
 			}
 
-			JobStreamProfilingMasterThread profilingMaster = new JobStreamProfilingMasterThread(communicationThread,
+			JobStreamProfilingMasterThread profilingMaster = new JobStreamProfilingMasterThread(jobID, communicationThread,
 				action.getProfilingSequence());
 			profilingMasters.put(jobID, profilingMaster);
 			profilingMaster.start();

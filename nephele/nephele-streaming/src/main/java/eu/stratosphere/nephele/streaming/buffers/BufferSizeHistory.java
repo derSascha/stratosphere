@@ -1,6 +1,5 @@
 package eu.stratosphere.nephele.streaming.buffers;
 
-import eu.stratosphere.nephele.managementgraph.ManagementEdge;
 
 public class BufferSizeHistory {
 
@@ -8,17 +7,14 @@ public class BufferSizeHistory {
 
 	private int entriesInHistory;
 
-	private ManagementEdge edge;
-
-	public BufferSizeHistory(ManagementEdge edge, int noOfHistoryEntries) {
-		this.edge = edge;
+	public BufferSizeHistory(int noOfHistoryEntries) {
 		this.entries = new BufferSizeHistoryEntry[noOfHistoryEntries];
 		this.entriesInHistory = 0;
 	}
 
 	public void addToHistory(long timestamp, int newBufferSize) {
 		BufferSizeHistoryEntry newEntry = new BufferSizeHistoryEntry(Math.min(entriesInHistory, entries.length - 1),
-			edge, timestamp, newBufferSize);
+			timestamp, newBufferSize);
 
 		if (entriesInHistory < entries.length) {
 			entries[entriesInHistory] = newEntry;

@@ -123,4 +123,8 @@ public class ProfilingModel {
 			}
 		}
 	}
+
+	public ProfilingSequence getProfilingSequence() {
+		return this.profilingGroupSequence;
+	}
 }
