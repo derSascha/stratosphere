@@ -1,10 +1,10 @@
 package eu.stratosphere.nephele.streaming.profiling;
 
-import eu.stratosphere.nephele.managementgraph.ManagementEdge;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingEdge;
 
 public class EdgeCharacteristics {
 
-	private ManagementEdge edge;
+	private ProfilingEdge edge;
 
 	private ProfilingValueStatistic latencyInMillisStatistic;
 
@@ -14,7 +14,7 @@ public class EdgeCharacteristics {
 
 	private boolean isInChain;
 
-	public EdgeCharacteristics(ManagementEdge edge) {
+	public EdgeCharacteristics(ProfilingEdge edge) {
 		this.edge = edge;
 		this.isInChain = false;
 		this.latencyInMillisStatistic = new ProfilingValueStatistic(5);
@@ -22,7 +22,7 @@ public class EdgeCharacteristics {
 		this.outputBufferLifetimeStatistic = new ProfilingValueStatistic(5);
 	}
 
-	public ManagementEdge getEdge() {
+	public ProfilingEdge getEdge() {
 		return edge;
 	}
 
@@ -92,6 +92,6 @@ public class EdgeCharacteristics {
 	}
 
 	public boolean isActive() {
-		return getChannelLatencyInMillis() != -1 && getOutputBufferLifetimeInMillis() != -1;
+		return latencyInMillisStatistic.hasValues() && outputBufferLifetimeStatistic.hasValues();
 	}
 }

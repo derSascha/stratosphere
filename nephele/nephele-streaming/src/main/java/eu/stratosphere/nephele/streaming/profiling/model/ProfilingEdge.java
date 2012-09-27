@@ -1,6 +1,7 @@
 package eu.stratosphere.nephele.streaming.profiling.model;
 
 import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.streaming.profiling.EdgeCharacteristics;
 
 public class ProfilingEdge {
 
@@ -21,6 +22,11 @@ public class ProfilingEdge {
 	 * The index of this edge in the target vertex's list of backward edges.
 	 */
 	private int targetVertexEdgeIndex;
+
+	/**
+	 * Only for use on the task manager side. Will not be transferred.
+	 */
+	private transient EdgeCharacteristics edgeCharacteristics;
 
 	public ProfilingEdge(ChannelID sourceChannelID, ChannelID targetChannelID) {
 		this.sourceChannelID = sourceChannelID;
@@ -65,5 +71,13 @@ public class ProfilingEdge {
 
 	public void setTargetVertexEdgeIndex(int targetVertexEdgeIndex) {
 		this.targetVertexEdgeIndex = targetVertexEdgeIndex;
+	}
+
+	public EdgeCharacteristics getEdgeCharacteristics() {
+		return edgeCharacteristics;
+	}
+
+	public void setEdgeCharacteristics(EdgeCharacteristics edgeCharacteristics) {
+		this.edgeCharacteristics = edgeCharacteristics;
 	}
 }

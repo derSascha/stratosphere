@@ -5,6 +5,7 @@ import java.util.List;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.streaming.profiling.VertexLatency;
 
 public class ProfilingVertex {
 
@@ -21,6 +22,11 @@ public class ProfilingVertex {
 	 * A list of edges arriving at this vertex.
 	 */
 	private List<ProfilingEdge> backwardEdges = new ArrayList<ProfilingEdge>();
+	
+	/**
+	 * Only for use on the task manager side. Will not be transferred.
+	 */
+	private transient VertexLatency vertexLatency;
 
 	public ProfilingVertex(ExecutionVertexID vertexID) {
 		this.vertexID = vertexID;
@@ -53,4 +59,12 @@ public class ProfilingVertex {
 	public void setProfilingDataSource(InstanceConnectionInfo profilingDataSource) {
 		this.profilingDataSource = profilingDataSource;
 	}
+
+	public VertexLatency getVertexLatency() {
+		return vertexLatency;
+	}
+
+	public void setVertexLatency(VertexLatency vertexLatency) {
+		this.vertexLatency = vertexLatency;
+	}	
 }

@@ -1,19 +1,19 @@
 package eu.stratosphere.nephele.streaming.profiling;
 
-import eu.stratosphere.nephele.managementgraph.ManagementVertex;
+import eu.stratosphere.nephele.streaming.profiling.model.ProfilingVertex;
 
 public class VertexLatency {
 
-	private ManagementVertex vertex;
+	private ProfilingVertex vertex;
 
 	private ProfilingValueStatistic latencyStatistics;
 
-	public VertexLatency(ManagementVertex vertex) {
+	public VertexLatency(ProfilingVertex vertex) {
 		this.vertex = vertex;
 		this.latencyStatistics = new ProfilingValueStatistic(10);
 	}
 
-	public ManagementVertex getVertex() {
+	public ProfilingVertex getVertex() {
 		return vertex;
 	}
 
@@ -23,6 +23,10 @@ public class VertexLatency {
 		} else {
 			return -1;
 		}
+	}
+	
+	public boolean isActive() {
+		return latencyStatistics.hasValues();
 	}
 
 	public void addLatencyMeasurement(long timestamp, double latencyInMillis) {

@@ -4,8 +4,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.managementgraph.ManagementAttachment;
-import eu.stratosphere.nephele.managementgraph.ManagementVertex;
+import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSequenceSummary;
 
 public class ProfilingLogger {
 
@@ -34,38 +33,39 @@ public class ProfilingLogger {
 		return now >= timeOfNextLogging;
 	}
 
-	public void logLatencies(ProfilingSummary summary) throws IOException {
-		long now = System.currentTimeMillis();
-		long timestamp = now - timeBase;
-
-		if (!headersWritten) {
-			writeHeaders(summary);
-		}
-
-		StringBuilder builder = new StringBuilder();
-		builder.append(timestamp);
-		builder.append(';');
-		builder.append(summary.getNoOfActivePaths());
-		builder.append(';');
-		builder.append(summary.getNoOfInactivePaths());
-		builder.append(';');
-		builder.append(summary.getAvgTotalPathLatency());
-		builder.append(';');
-		builder.append(summary.getMedianPathLatency());
-		builder.append(';');
-		builder.append(summary.getMinPathLatency());
-		builder.append(';');
-		builder.append(summary.getMaxPathLatency());
-
-		for (double avgElementLatency : summary.getAvgPathElementLatencies()) {
-			builder.append(';');
-			builder.append(avgElementLatency);
-		}
-		builder.append('\n');
-		writer.write(builder.toString());
-		writer.flush(); // FIXME
-
-		refreshTimeOfNextLogging();
+	public void logLatencies(ProfilingSequenceSummary summary) throws IOException {
+		// FIXME
+//		long now = System.currentTimeMillis();
+//		long timestamp = now - timeBase;
+//
+//		if (!headersWritten) {
+//			writeHeaders(summary);
+//		}
+//
+//		StringBuilder builder = new StringBuilder();
+//		builder.append(timestamp);
+//		builder.append(';');
+//		builder.append(summary.getNoOfActivePaths());
+//		builder.append(';');
+//		builder.append(summary.getNoOfInactivePaths());
+//		builder.append(';');
+//		builder.append(summary.getAvgTotalPathLatency());
+//		builder.append(';');
+//		builder.append(summary.getMedianPathLatency());
+//		builder.append(';');
+//		builder.append(summary.getMinPathLatency());
+//		builder.append(';');
+//		builder.append(summary.getMaxPathLatency());
+//
+//		for (double avgElementLatency : summary.getAvgPathElementLatencies()) {
+//			builder.append(';');
+//			builder.append(avgElementLatency);
+//		}
+//		builder.append('\n');
+//		writer.write(builder.toString());
+//		writer.flush(); // FIXME
+//
+//		refreshTimeOfNextLogging();
 	}
 
 	public void refreshTimeOfNextLogging() {
@@ -75,31 +75,33 @@ public class ProfilingLogger {
 		}
 	}
 
-	private void writeHeaders(ProfilingSummary summary) throws IOException {
-		StringBuilder builder = new StringBuilder();
-		builder.append("timestamp;");
-		builder.append("noOfActivePaths;");
-		builder.append("noOfInactivePaths;");
-		builder.append("avgTotalPathLatency;");
-		builder.append("medianPathLatency;");
-		builder.append("minPathLatency;");
-		builder.append("maxPathLatency");
-
-		int nextEdgeIndex = 1;
-		for (ManagementAttachment element : summary.getPathElements()) {
-			builder.append(';');
-			if (element instanceof ManagementVertex) {
-				ManagementVertex vertex = (ManagementVertex) element;
-				builder.append(vertex.getGroupVertex().getName());
-			} else {
-				builder.append("edge" + nextEdgeIndex + "obl");
-				builder.append(';');
-				builder.append("edge" + nextEdgeIndex);
-				nextEdgeIndex++;
-			}
-		}
-		builder.append('\n');
-		writer.write(builder.toString());
-		headersWritten = true;
+	private void writeHeaders(ProfilingSequenceSummary summary) throws IOException {
+		// FIXME
+//		StringBuilder builder = new StringBuilder();
+//		builder.append("timestamp;");
+//		builder.append("noOfActivePaths;");
+//		builder.append("noOfInactivePaths;");
+//		builder.append("avgTotalPathLatency;");
+//		builder.append("medianPathLatency;");
+//		builder.append("minPathLatency;");
+//		builder.append("maxPathLatency");
+//
+//		int nextEdgeIndex = 1;
+//		
+//		for (ManagementAttachment element : summary.getPathElements()) {
+//			builder.append(';');
+//			if (element instanceof ManagementVertex) {
+//				ManagementVertex vertex = (ManagementVertex) element;
+//				builder.append(vertex.getGroupVertex().getName());
+//			} else {
+//				builder.append("edge" + nextEdgeIndex + "obl");
+//				builder.append(';');
+//				builder.append("edge" + nextEdgeIndex);
+//				nextEdgeIndex++;
+//			}
+//		}
+//		builder.append('\n');
+//		writer.write(builder.toString());
+//		headersWritten = true;
 	}
 }
