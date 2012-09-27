@@ -175,6 +175,10 @@ public class ProfilingSubsequenceTest {
 			public double getChannelLatencyInMillis() {
 				return latency;
 			}
+			
+			public double getOutputBufferLifetimeInMillis() {
+				return 40;
+			}
 		});
 		return edge;
 	}
@@ -326,6 +330,27 @@ public class ProfilingSubsequenceTest {
 		assertEquals(-1, summary.forwardEdgeIndices[3]);
 		assertEquals(0, summary.currSubsequence.size());
 		assertFalse(summary.isSubsequenceActive());
+	}
+	
+	@Test
+	public void addCurrentSubsequenceLatenciesTest() {
+		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(sequence);
+		
+		double[] aggregatedLats = new double[8];
+		summary.addCurrentSubsequenceLatencies(aggregatedLats);
+		
+		assertTrue(aggregatedLats[0] == 20);
+		assertTrue(aggregatedLats[1] == 90);
+		
+		assertTrue(aggregatedLats[2] == 3);
+		
+		assertTrue(aggregatedLats[3] == 20);
+		assertTrue(aggregatedLats[4] == 190);
+		
+		assertTrue(aggregatedLats[5] == 5);
+		
+		assertTrue(aggregatedLats[6] == 20);
+		assertTrue(aggregatedLats[7] == 290);
 	}
 
 	private void deactivateEdge(ProfilingEdge edge) {

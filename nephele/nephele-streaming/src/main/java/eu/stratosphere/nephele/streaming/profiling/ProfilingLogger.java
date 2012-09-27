@@ -18,7 +18,7 @@ public class ProfilingLogger {
 	 */
 	private static final String PROFILING_LOGFILE_KEY = "streaming.profilingmaster.logging.profilingfile";
 
-	private static final String DEFAULT_LOGFILE = "/tmp/profiling_" + System.currentTimeMillis() + ".txt";
+	private static final String DEFAULT_LOGFILE = "/tmp/profiling_" + System.getProperty("user.name") + ".txt";
 
 	private BufferedWriter writer;
 
@@ -71,7 +71,7 @@ public class ProfilingLogger {
 	}
 
 	private Object getLogTimestamp() {
-		return ProfilingUtils.alignToInterval(System.currentTimeMillis(), loggingInterval);
+		return ProfilingUtils.alignToInterval(System.currentTimeMillis(), loggingInterval) / 1000;
 	}
 
 	private void writeHeaders(ProfilingSequenceSummary summary) throws IOException {

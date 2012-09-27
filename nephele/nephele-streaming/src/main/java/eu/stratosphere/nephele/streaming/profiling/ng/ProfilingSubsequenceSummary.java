@@ -235,7 +235,11 @@ public class ProfilingSubsequenceSummary {
 		while (insertPosition < aggregatedLatencies.length) {
 			ProfilingVertex vertex = currSubsequence.get(vertexIndex);
 
-			if (vertexIndex == 0 && this.sequence.isIncludeStartVertex()) {
+			boolean includeVertex = (vertexIndex == 0 && sequence.isIncludeStartVertex())
+				|| (vertexIndex > 0 && (vertexIndex < currSubsequence.size() - 1))
+				|| ((vertexIndex == currSubsequence.size() - 1) && sequence.isIncludeEndVertex());
+
+			if (includeVertex) {
 				aggregatedLatencies[insertPosition] += vertex.getVertexLatency().getLatencyInMillis();
 				insertPosition++;
 			}

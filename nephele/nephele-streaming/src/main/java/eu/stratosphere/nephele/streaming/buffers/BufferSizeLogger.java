@@ -18,7 +18,7 @@ public class BufferSizeLogger {
 	 */
 	private static final String BUFFERSIZE_LOGFILE_KEY = "streaming.profilingmaster.logging.buffersfile";
 
-	private static final String DEFAULT_LOGFILE = "/tmp/buffersizes_" + System.currentTimeMillis() + ".txt";
+	private static final String DEFAULT_LOGFILE = "/tmp/buffersizes_" + System.getProperty("user.name") + ".txt";
 
 	private FileWriter out;
 
