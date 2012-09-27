@@ -21,13 +21,27 @@
 	  <class>eu.stratosphere.nephele.streaming.StreamingPluginLoader</class>
 	  <configuration>
 		  <property>
-			  <key>streaming.tagging.interval</key>
+			  <key>streaming.profilingreporter.tagginginterval</key>
 			  <value>10</value>
 		  </property>
 		  <property>
-			  <key>streaming.aggregation.interval</key>
+			  <key>streaming.profilingreporter.aggregationinterval</key>
 			  <value>1000</value>
 		  </property>
+		  <property>
+			  <key>streaming.profilingmaster.adjustmentinterval</key>
+			  <value>10000</value>
+		  </property>
+		  <!--  
+		  <property>
+			  <key>streaming.profilingmaster.logging.buffersfile</key>
+			  <value>/tmp/buffersizes.txt</value>
+		  </property>
+		  <property>
+			  <key>streaming.profilingmaster.logging.profilingfile</key>
+			  <value>/tmp/profiling.txt</value>
+		  </property>
+		   -->
 	  </configuration>
   </plugin>
 </plugins>
