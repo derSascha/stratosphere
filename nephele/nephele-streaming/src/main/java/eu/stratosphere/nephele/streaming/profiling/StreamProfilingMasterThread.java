@@ -20,9 +20,9 @@ import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 import eu.stratosphere.nephele.util.StringUtils;
 
-public class JobStreamProfilingMasterThread extends Thread {
+public class StreamProfilingMasterThread extends Thread {
 
-	private Log LOG = LogFactory.getLog(JobStreamProfilingMasterThread.class);
+	private Log LOG = LogFactory.getLog(StreamProfilingMasterThread.class);
 
 	private final LinkedBlockingQueue<AbstractStreamingData> streamingDataQueue;
 
@@ -36,7 +36,7 @@ public class JobStreamProfilingMasterThread extends Thread {
 
 	private JobID jobID;
 
-	public JobStreamProfilingMasterThread(JobID jobID, StreamingCommunicationThread communicationThread,
+	public StreamProfilingMasterThread(JobID jobID, StreamingCommunicationThread communicationThread,
 			ProfilingSequence profilingSequence) {
 		this.jobID = jobID;
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamingData>();

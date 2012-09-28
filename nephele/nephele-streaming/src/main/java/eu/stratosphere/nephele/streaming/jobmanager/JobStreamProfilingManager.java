@@ -46,14 +46,14 @@ public class JobStreamProfilingManager {
 			ProfilingSequenceManager sequenceManager = new ProfilingSequenceManager(profilingSequence,
 				this.executionGraph,
 				this.instances);
-			sequenceManager.attachListenersAndPluginDataToExecutionGraph();
+			sequenceManager.attachListenersToExecutionGraph();
 			this.profilingSequenceManagers.add(sequenceManager);
 		}
 	}
 
 	public void shutdown() {
 		for (ProfilingSequenceManager sequenceManager : this.profilingSequenceManagers) {
-			sequenceManager.detachListenersAndPluginDataFromExecutionGraph();
+			sequenceManager.detachListenersFromExecutionGraph();
 		}
 		this.profilingSequenceManagers.clear();
 		this.instances.clear();

@@ -26,7 +26,7 @@ import eu.stratosphere.nephele.streaming.profiling.model.ProfilingEdge;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingGroupVertex;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingSequence;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingVertex;
-import eu.stratosphere.nephele.streaming.types.TaskProfilingInfo;
+import eu.stratosphere.nephele.streaming.types.StreamProfilingReporterInfo;
 import eu.stratosphere.nephele.util.StringUtils;
 
 public class ProfilingSequenceManager implements VertexAssignmentListener {
@@ -43,6 +43,8 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 	private ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance> instances;
 
+	private ConcurrentHashMap<InstanceConnectionInfo, StreamProfilingReporterInfo> profilingReporterInfos;
+
 	public ProfilingSequenceManager(ProfilingSequence profilingSequence,
 			ExecutionGraph executionGraph,
 			ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance> instances) {
@@ -50,6 +52,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		this.profilingSequence = profilingSequence;
 		this.executionGraph = executionGraph;
 		this.instances = instances;
+		this.profilingReporterInfos = new ConcurrentHashMap<InstanceConnectionInfo, StreamProfilingReporterInfo>();
 		init();
 	}
 
@@ -58,29 +61,21 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		for (ProfilingGroupVertex groupVertex : profilingSequence.getSequenceVertices()) {
 			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
 				verticesByID.put(vertex.getID(), vertex);
-				if (vertex.getProfilingDataSource() == null) {
+				if (vertex.getProfilingReporter() == null) {
 					verticesWithPendingAllocation++;
 				}
 			}
 		}
 	}
 
-	public void attachListenersAndPluginDataToExecutionGraph() {
+	public void attachListenersToExecutionGraph() {
 		for (ExecutionVertexID vertexID : verticesByID.keySet()) {
 			ExecutionVertex vertex = executionGraph.getVertexByID(vertexID);
 			vertex.registerVertexAssignmentListener(this);
-
-			TaskProfilingInfo pluginData = (TaskProfilingInfo) vertex
-				.getPluginData(StreamingPluginLoader.STREAMING_PLUGIN_ID);
-
-			if (pluginData == null) {
-				pluginData = new TaskProfilingInfo(vertexID);
-				vertex.setPluginData(StreamingPluginLoader.STREAMING_PLUGIN_ID, pluginData);
-			}
 		}
 	}
 
-	public void detachListenersAndPluginDataFromExecutionGraph() {
+	public void detachListenersFromExecutionGraph() {
 		for (ExecutionVertexID vertexID : verticesByID.keySet()) {
 			ExecutionVertex vertex = executionGraph.getVertexByID(vertexID);
 			vertex.unregisterVertexAssignmentListener(this);
@@ -95,28 +90,85 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 	@Override
 	public synchronized void vertexAssignmentChanged(ExecutionVertexID id, AllocatedResource newAllocatedResource) {
 		ProfilingVertex vertex = verticesByID.get(id);
-		if (vertex.getProfilingDataSource() == null) {
+		if (vertex.getProfilingReporter() == null) {
 			verticesWithPendingAllocation--;
 		}
 		AbstractInstance instance = newAllocatedResource.getInstance();
 		instances.putIfAbsent(instance.getInstanceConnectionInfo(), instance);
-		vertex.setProfilingDataSource(instance.getInstanceConnectionInfo());
+		vertex.setProfilingReporter(instance.getInstanceConnectionInfo());
 		if (verticesWithPendingAllocation == 0) {
 			try {
-				setupDistributedProfiling();
+				setupProfilingMasters();
+				setupProfilingReporters();
 			} catch (Exception e) {
-				//				LOG.error(StringUtils.stringifyException(e));
+				LOG.error(StringUtils.stringifyException(e));
 			}
+
+			// clear large memory structures
+			profilingReporterInfos = null;
+			verticesByID = null;
 		}
 	}
 
-	private void setupDistributedProfiling() throws Exception {
+	private void setupProfilingReporters() throws Exception {
+		ExecutorService threadPool = Executors.newFixedThreadPool(8);
+		final AtomicReference<Exception> exceptionCollector = new AtomicReference<Exception>();
+
+		for (final StreamProfilingReporterInfo reporterInfo : this.profilingReporterInfos.values()) {
+			threadPool.execute(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						setupProfilingReporter(reporterInfo);
+					} catch (Exception e) {
+						LOG.error(StringUtils.stringifyException(e));
+						exceptionCollector.set(e);
+					}
+				}
+			});
+		}
+		threadPool.shutdown();
+
+		try {
+			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+			if (exceptionCollector.get() != null) {
+				throw exceptionCollector.get();
+			}
+			LOG.info("Successfully set up profiling reporters for " + profilingSequence.toString());
+		} catch (InterruptedException e) {
+			LOG.info("Interrupted while setting up profiling reporters for " + profilingSequence.toString());
+			threadPool.shutdownNow();
+		}
+	}
+
+	private void setupProfilingReporter(StreamProfilingReporterInfo reporterInfo) throws IOException {
+		int attempts = 0;
+		boolean success = false;
+		while (!success) {
+			attempts++;
+			AbstractInstance instance = instances.get(reporterInfo.getReporterConnectionInfo());
+			try {
+				instance.sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID, reporterInfo);
+				success = true;
+			} catch (IOException e) {
+				if (attempts > 10) {
+					LOG.error(String.format(
+						"Received 10 IOExceptions when trying to setup profiling reporter on %s. Giving up",
+						reporterInfo.getReporterConnectionInfo().toString()));
+					throw e;
+				}
+			}
+		}
+		LOG.info("Successfully set up profiling reporter on " + reporterInfo.getReporterConnectionInfo());
+	}
+
+	private void setupProfilingMasters() throws Exception {
 		final ProfilingGroupVertex anchor = determineProfilingAnchor();
 
 		final HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>> verticesByProfilingMaster = new HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>>();
 
 		for (ProfilingVertex vertex : anchor.getGroupMembers()) {
-			InstanceConnectionInfo profilingMaster = vertex.getProfilingDataSource();
+			InstanceConnectionInfo profilingMaster = vertex.getProfilingReporter();
 			LinkedList<ProfilingVertex> verticesOnProfilingMaster = verticesByProfilingMaster.get(profilingMaster);
 			if (verticesOnProfilingMaster == null) {
 				verticesOnProfilingMaster = new LinkedList<ProfilingVertex>();
@@ -124,8 +176,6 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			}
 			verticesOnProfilingMaster.add(vertex);
 		}
-
-		LOG.info("Setting up stream profiling for " + profilingSequence.toString());
 
 		ExecutorService threadPool = Executors.newFixedThreadPool(8);
 		final AtomicReference<Exception> exceptionCollector = new AtomicReference<Exception>();
@@ -150,9 +200,9 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			if (exceptionCollector.get() != null) {
 				throw exceptionCollector.get();
 			}
-			LOG.info("Successfully set up stream profiling for " + profilingSequence.toString());
+			LOG.info("Successfully set up profiling masters for " + profilingSequence.toString());
 		} catch (InterruptedException e) {
-			LOG.info("Interrupted while setting up stream profiling for " + profilingSequence.toString());
+			LOG.info("Interrupted while setting up profiling masters for " + profilingSequence.toString());
 			threadPool.shutdownNow();
 		}
 	}
@@ -160,7 +210,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 	private void setupProfilingMaster(ProfilingGroupVertex anchor,
 			LinkedList<ProfilingVertex> anchorVerticesOnProfilingMaster) throws IOException {
 
-		InstanceConnectionInfo profilingMaster = anchorVerticesOnProfilingMaster.getFirst().getProfilingDataSource();
+		InstanceConnectionInfo profilingMaster = anchorVerticesOnProfilingMaster.getFirst().getProfilingReporter();
 		ProfilingSequence partialSequence = expandToPartialProfilingSequence(anchor,
 			anchorVerticesOnProfilingMaster);
 		registerProfilingMasterOnExecutionVertices(partialSequence, profilingMaster);
@@ -183,27 +233,39 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			}
 
 			for (ProfilingVertex vertex : groupVertices.get(i).getGroupMembers()) {
-				ExecutionVertex executionVertex = executionGraph.getVertexByID(vertex.getID());
-				TaskProfilingInfo pluginData = (TaskProfilingInfo) executionVertex
-					.getPluginData(StreamingPluginLoader.STREAMING_PLUGIN_ID);
+				StreamProfilingReporterInfo tmProfilingInfo = getProfilingReporterInfo(vertex.getProfilingReporter());
 
 				if (includeVertexInProfiling) {
-					pluginData.addTaskProfilingMaster(profilingMaster);
+					tmProfilingInfo.addTaskProfilingMaster(vertex.getID(), profilingMaster);
 				}
 
+				// register for channel throughput and output buffer lifetimes (measured at output channel)
 				if (!isEndVertex) {
 					for (ProfilingEdge forwardEdge : vertex.getForwardEdges()) {
-						pluginData.addChannelProfilingMaster(forwardEdge.getSourceChannelID(), profilingMaster);
+						tmProfilingInfo.addChannelProfilingMaster(forwardEdge.getSourceChannelID(), profilingMaster);
 					}
 				}
 
+				// register for channel latencies (measured an input channel)
 				if (!isStartVertex) {
 					for (ProfilingEdge backwardEdge : vertex.getBackwardEdges()) {
-						pluginData.addChannelProfilingMaster(backwardEdge.getSourceChannelID(), profilingMaster);
+						tmProfilingInfo.addChannelProfilingMaster(backwardEdge.getSourceChannelID(), profilingMaster);
 					}
 				}
 			}
 		}
+	}
+
+	private StreamProfilingReporterInfo getProfilingReporterInfo(InstanceConnectionInfo reporter) {
+		StreamProfilingReporterInfo profilingInfo = profilingReporterInfos.get(reporter);
+		if (profilingInfo == null) {
+			profilingInfo = new StreamProfilingReporterInfo(executionGraph.getJobID(), reporter);
+			StreamProfilingReporterInfo previous = this.profilingReporterInfos.putIfAbsent(reporter, profilingInfo);
+			if (previous != null) {
+				profilingInfo = previous;
+			}
+		}
+		return profilingInfo;
 	}
 
 	private ProfilingSequence expandToPartialProfilingSequence(ProfilingGroupVertex anchor,
@@ -225,7 +287,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 		if (cloned == null) {
 			cloned = new ProfilingVertex(toClone.getID());
-			cloned.setProfilingDataSource(toClone.getProfilingDataSource());
+			cloned.setProfilingReporter(toClone.getProfilingReporter());
 			groupVertex.addGroupMember(cloned);
 		}
 
@@ -260,7 +322,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			ProfilingVertex toClone) {
 
 		ProfilingVertex cloned = new ProfilingVertex(toClone.getID());
-		cloned.setProfilingDataSource(toClone.getProfilingDataSource());
+		cloned.setProfilingReporter(toClone.getProfilingReporter());
 		groupVertex.addGroupMember(cloned);
 
 		for (ProfilingEdge edgeToClone : toClone.getForwardEdges()) {
@@ -281,10 +343,22 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 	private void sendPartialProfilingSequenceToProfilingMaster(InstanceConnectionInfo profilingMaster,
 			ProfilingSequence partialSequence) throws IOException {
-
-		AbstractInstance instance = instances.get(profilingMaster);
-		instance.sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID,
-				new ActAsProfilingMasterAction(executionGraph.getJobID(), partialSequence));
+		int attempts = 0;
+		boolean success = false;
+		while (!success) {
+			attempts++;
+			AbstractInstance instance = instances.get(profilingMaster);
+			try {
+				instance.sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID,
+					new ActAsProfilingMasterAction(executionGraph.getJobID(), partialSequence));
+				success = true;
+			} catch (IOException e) {
+				if (attempts > 10) {
+					LOG.error("Received 10 IOException when trying to contact task manager. Giving up.");
+					throw e;
+				}
+			}
+		}
 	}
 
 	private ProfilingGroupVertex determineProfilingAnchor() {

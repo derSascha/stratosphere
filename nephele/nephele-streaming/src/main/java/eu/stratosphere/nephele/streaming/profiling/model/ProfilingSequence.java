@@ -90,7 +90,7 @@ public class ProfilingSequence implements IOReadableWritable {
 				ProfilingVertex member = new ProfilingVertex(vertexID);
 				InstanceConnectionInfo profilingDataSource = new InstanceConnectionInfo();
 				profilingDataSource.read(in);
-				member.setProfilingDataSource(profilingDataSource);
+				member.setProfilingReporter(profilingDataSource);
 				groupVertex.getGroupMembers().add(member);
 			}
 		}
@@ -129,7 +129,7 @@ public class ProfilingSequence implements IOReadableWritable {
 				ProfilingVertex member = members.get(i);
 				id2MemberPosition.put(member.getID(), i);
 				member.getID().write(out);
-				member.getProfilingDataSource().write(out);
+				member.getProfilingReporter().write(out);
 			}
 		}
 

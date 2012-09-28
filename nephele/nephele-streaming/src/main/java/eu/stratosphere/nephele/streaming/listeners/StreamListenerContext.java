@@ -25,7 +25,7 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.actions.AbstractAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChain;
 import eu.stratosphere.nephele.streaming.chaining.StreamChainCoordinator;
-import eu.stratosphere.nephele.streaming.profiling.JobProfilingDataReporter;
+import eu.stratosphere.nephele.streaming.profiling.StreamProfilingReporterThread;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingInputGate;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingOutputGate;
 import eu.stratosphere.nephele.types.Record;
@@ -44,7 +44,7 @@ public final class StreamListenerContext {
 
 	private final ExecutionVertexID vertexID;
 
-	private final JobProfilingDataReporter profilingReporter;
+	private final StreamProfilingReporterThread profilingReporter;
 
 	private final StreamChainCoordinator chainCoordinator;
 
@@ -55,7 +55,7 @@ public final class StreamListenerContext {
 	private final int taggingInterval;
 
 	private StreamListenerContext(final JobID jobID, final ExecutionVertexID vertexID,
-			final JobProfilingDataReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
+			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final TaskType taskType, final int aggregationInterval, final int taggingInterval) {
 
 		if (jobID == null) {
@@ -92,7 +92,7 @@ public final class StreamListenerContext {
 	}
 
 	public static StreamListenerContext createForInputTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final JobProfilingDataReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
+			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, final int taggingInterval) {
 
 		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.INPUT,
@@ -100,7 +100,7 @@ public final class StreamListenerContext {
 	}
 
 	public static StreamListenerContext createForRegularTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final JobProfilingDataReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
+			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, int taggingInterval) {
 
 		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.REGULAR,
@@ -108,7 +108,7 @@ public final class StreamListenerContext {
 	}
 
 	public static StreamListenerContext createForOutputTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final JobProfilingDataReporter profilingReporter, final StreamChainCoordinator chainCoordinator,
+			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, int taggingInterval) {
 
 		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.OUTPUT,
@@ -154,7 +154,7 @@ public final class StreamListenerContext {
 		return this.aggregationInterval;
 	}
 
-	public JobProfilingDataReporter getProfilingReporter() {
+	public StreamProfilingReporterThread getProfilingReporter() {
 		return profilingReporter;
 	}
 

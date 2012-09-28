@@ -81,7 +81,7 @@ public class ProfilingGroupVertex {
 	private void countExecutingInstances() {
 		HashSet<InstanceConnectionInfo> instances = new HashSet<InstanceConnectionInfo>();
 		for (ProfilingVertex memberVertex : getGroupMembers()) {
-			instances.add(memberVertex.getProfilingDataSource());
+			instances.add(memberVertex.getProfilingReporter());
 		}
 		this.noOfExecutingInstances = instances.size();
 	}

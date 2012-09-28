@@ -34,10 +34,10 @@ import eu.stratosphere.nephele.streaming.actions.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.actions.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.streaming.listeners.StreamListenerContext;
-import eu.stratosphere.nephele.streaming.profiling.JobProfilingDataReporter;
-import eu.stratosphere.nephele.streaming.profiling.JobStreamProfilingMasterThread;
+import eu.stratosphere.nephele.streaming.profiling.StreamProfilingReporterThread;
+import eu.stratosphere.nephele.streaming.profiling.StreamProfilingMasterThread;
 import eu.stratosphere.nephele.streaming.types.StreamProfilingReport;
-import eu.stratosphere.nephele.streaming.types.TaskProfilingInfo;
+import eu.stratosphere.nephele.streaming.types.StreamProfilingReporterInfo;
 
 public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 
@@ -78,14 +78,12 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	private final ConcurrentMap<String, StreamListenerContext> listenerContexts = new ConcurrentHashMap<String, StreamListenerContext>();
 
-	private final ConcurrentMap<ExecutionVertexID, TaskProfilingInfo> taskProfilingInfos = new ConcurrentHashMap<ExecutionVertexID, TaskProfilingInfo>();
-
 	/**
 	 * Map storing the stream profiling reporter object for each job running on the task manager.
 	 */
-	private final ConcurrentMap<JobID, JobProfilingDataReporter> profilingReporters = new ConcurrentHashMap<JobID, JobProfilingDataReporter>();
+	private final ConcurrentMap<JobID, StreamProfilingReporterThread> profilingReporters = new ConcurrentHashMap<JobID, StreamProfilingReporterThread>();
 
-	private final ConcurrentMap<JobID, JobStreamProfilingMasterThread> profilingMasters = new ConcurrentHashMap<JobID, JobStreamProfilingMasterThread>();
+	private final ConcurrentMap<JobID, StreamProfilingMasterThread> profilingMasters = new ConcurrentHashMap<JobID, StreamProfilingMasterThread>();
 
 	/**
 	 * The tagging interval as specified in the plugin configuration.
@@ -143,12 +141,11 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	public void shutdown() {
 		this.communicationThread.stopCommunicationThread();
 
-		for (JobStreamProfilingMasterThread profilingMaster : this.profilingMasters.values()) {
+		for (StreamProfilingMasterThread profilingMaster : this.profilingMasters.values()) {
 			profilingMaster.shutdown();
 		}
 		this.profilingMasters.clear();
-		this.taskProfilingInfos.clear();
-		for (JobProfilingDataReporter reporter : this.profilingReporters.values()) {
+		for (StreamProfilingReporterThread reporter : this.profilingReporters.values()) {
 			reporter.shutdown();
 		}
 		this.profilingReporters.clear();
@@ -164,13 +161,6 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	public void registerTask(final ExecutionVertexID id, final Configuration jobConfiguration,
 			final Environment environment, final IOReadableWritable pluginData) {
 
-		if (pluginData == null) {
-			return;
-		}
-
-		final TaskProfilingInfo taskProfilingInfo = (TaskProfilingInfo) pluginData;
-		taskProfilingInfos.put(taskProfilingInfo.getVertexID(), taskProfilingInfo);
-
 		// Check if user has provided a job-specific aggregation interval
 		final int aggregationInterval = jobConfiguration.getInteger(AGGREGATION_INTERVAL_KEY,
 			this.aggregationInterval);
@@ -182,8 +172,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 		environment.getTaskConfiguration().setString(StreamListenerContext.CONTEXT_CONFIGURATION_KEY, idAsString);
 
 		final JobID jobID = environment.getJobID();
-		JobProfilingDataReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
-		profilingReporter.registerProfilingInfo(taskProfilingInfo);
+		StreamProfilingReporterThread profilingReporter = getOrCreateStreamProfilingReporter(jobID);
 
 		StreamListenerContext listenerContext = null;
 		if (environment.getNumberOfInputGates() == 0) {
@@ -205,28 +194,14 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void unregisterTask(final ExecutionVertexID id, final Environment environment) {
-
-		this.listenerContexts.remove(id.toString());
-
-		TaskProfilingInfo taskProfilingInfo = taskProfilingInfos.remove(id);
-
-		if (taskProfilingInfo != null) {
-			final JobID jobID = environment.getJobID();
-			JobProfilingDataReporter profilingReporter = getOrCreateStreamProfilingReporter(jobID);
-			boolean isShutDown = profilingReporter.unregisterTaskProfilingInfo(taskProfilingInfo);
-			if (isShutDown) {
-				synchronized (profilingReporters) {
-					profilingReporters.remove(jobID);
-				}
-			}
-		}
+		this.listenerContexts.remove(id.toString());		
 	}
 
-	private JobProfilingDataReporter getOrCreateStreamProfilingReporter(JobID jobID) {
+	private StreamProfilingReporterThread getOrCreateStreamProfilingReporter(JobID jobID) {
 		// synchronized to prevent race conditions between containsKey() and put()
 		synchronized (profilingReporters) {
 			if (!profilingReporters.containsKey(jobID)) {
-				profilingReporters.putIfAbsent(jobID, new JobProfilingDataReporter(jobID, communicationThread,
+				profilingReporters.putIfAbsent(jobID, new StreamProfilingReporterThread(jobID, communicationThread,
 					aggregationInterval));
 			}
 			return profilingReporters.get(jobID);
@@ -246,13 +221,21 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 			handleLimitBufferSizeAction((LimitBufferSizeAction) data);
 		} else if (data instanceof ActAsProfilingMasterAction) {
 			handleActAsProfilingMasterAction((ActAsProfilingMasterAction) data);
-		} else {
+		} else if(data instanceof StreamProfilingReporterInfo) {
+			handleStreamProfilingReporterInfo((StreamProfilingReporterInfo)data);
+			
+		}else {
 			LOG.error("Received data is of unknown type " + data.getClass());
 		}
 	}
 
+	private void handleStreamProfilingReporterInfo(StreamProfilingReporterInfo reporterInfo) {
+		StreamProfilingReporterThread profilingReporter = getOrCreateStreamProfilingReporter(reporterInfo.getJobID());
+		profilingReporter.registerProfilingReporterInfo(reporterInfo);
+	}
+
 	private void handleStreamProfilingReport(StreamProfilingReport data) {
-		JobStreamProfilingMasterThread profilingMaster = profilingMasters.get(data.getJobID());
+		StreamProfilingMasterThread profilingMaster = profilingMasters.get(data.getJobID());
 		if (profilingMaster == null) {
 			LOG.error("Received StreamProfilingReport but could not find profiling master for job " + data.getJobID());
 			return;
@@ -269,7 +252,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 				return;
 			}
 
-			JobStreamProfilingMasterThread profilingMaster = new JobStreamProfilingMasterThread(jobID, communicationThread,
+			StreamProfilingMasterThread profilingMaster = new StreamProfilingMasterThread(jobID, communicationThread,
 				action.getProfilingSequence());
 			profilingMasters.put(jobID, profilingMaster);
 			profilingMaster.start();

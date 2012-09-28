@@ -231,6 +231,6 @@ public class BufferSizeManager {
 	private void setBufferSize(ProfilingEdge edge, int bufferSize) throws InterruptedException {
 		LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, edge.getSourceVertex().getID(),
 			edge.getSourceChannelID(), bufferSize);
-		this.communicationThread.sendToTaskManagerAsynchronously(edge.getSourceVertex().getProfilingDataSource(), bsla);
+		this.communicationThread.sendToTaskManagerAsynchronously(edge.getSourceVertex().getProfilingReporter(), bsla);
 	}
 }

@@ -11,7 +11,7 @@ public class ProfilingVertex {
 
 	private final ExecutionVertexID vertexID;
 
-	private InstanceConnectionInfo profilingDataSource;
+	private InstanceConnectionInfo profilingReporter;
 
 	/**
 	 * A list of edges originating from this vertex.
@@ -52,12 +52,12 @@ public class ProfilingVertex {
 		this.backwardEdges.add(backwardEdge);
 	}
 
-	public InstanceConnectionInfo getProfilingDataSource() {
-		return profilingDataSource;
+	public InstanceConnectionInfo getProfilingReporter() {
+		return profilingReporter;
 	}
 
-	public void setProfilingDataSource(InstanceConnectionInfo profilingDataSource) {
-		this.profilingDataSource = profilingDataSource;
+	public void setProfilingReporter(InstanceConnectionInfo profilingReporter) {
+		this.profilingReporter = profilingReporter;
 	}
 
 	public VertexLatency getVertexLatency() {
