@@ -243,7 +243,7 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public boolean requiresProfiling() {
-		return true;
+		return false;
 	}
 
 	/**
