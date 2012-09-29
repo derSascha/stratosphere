@@ -187,24 +187,6 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 		}
 	}
 
-	// FIXME: this needs to be moved to task manager plugins
-	//
-	// public void constructStreamChain(final JobID jobID, final AbstractInstance instance,
-	// final List<ExecutionVertexID> vertexIDs) {
-	//
-	// final ConstructStreamChainAction csca = new ConstructStreamChainAction(jobID, vertexIDs);
-	// try {
-	// instance.sendData(this.pluginID, csca);
-	// } catch (IOException e) {
-	// LOG.error(StringUtils.stringifyException(e));
-	// }
-	// }
-	//
-	// private void announceStreamChainToProfiling(JobID jobId, List<ExecutionVertexID> vertexIDs) {
-	// LatencyOptimizerThread thread = latencyOptimizerThreads.get(jobId);
-	// thread.handOffStreamingData(new StreamingChainAnnounce(new ArrayList<ExecutionVertexID>(vertexIDs)));
-	// }
-
 	/**
 	 * {@inheritDoc}
 	 */

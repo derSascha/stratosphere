@@ -1,7 +1,6 @@
 package eu.stratosphere.nephele.streaming.profiling;
 
 import java.util.HashMap;
-import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -9,7 +8,6 @@ import org.apache.commons.logging.LogFactory;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.managementgraph.ManagementVertexID;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingEdge;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingGroupVertex;
 import eu.stratosphere.nephele.streaming.profiling.model.ProfilingSequence;
@@ -107,20 +105,13 @@ public class ProfilingModel {
 		return new ProfilingSequenceSummary(profilingGroupSequence);
 	}
 
-	public void announceStreamingChain(StreamingChainAnnounce streamingData) {
-		HashSet<ManagementVertexID> vertexIdsInChain = new HashSet<ManagementVertexID>();
-		for (ExecutionVertexID vertexId : streamingData.getChainedVertices()) {
-			vertexIdsInChain.add(vertexId.toManagementVertexID());
-		}
+	public void announceStreamingChain(StreamingChainAnnounce announce) {
 
-		for (ManagementVertexID vertexId : vertexIdsInChain) {
-			ProfilingVertex vertex = this.vertexLatencies.get(vertexId).getVertex();
+		ProfilingVertex currentVertex = this.vertexLatencies.get(announce.getChainBeginVertexID()).getVertex();
 
-			for (ProfilingEdge edge : vertex.getForwardEdges()) {
-				if (vertexIdsInChain.contains(edge.getTargetVertex().getID())) {
-					this.edgeCharacteristics.get(edge.getSourceChannelID()).setIsInChain(true);
-				}
-			}
+		while (!currentVertex.getID().equals(announce.getChainEndVertexID())) {
+			currentVertex.getForwardEdges().get(0).getEdgeCharacteristics().setIsInChain(true);
+			currentVertex = currentVertex.getBackwardEdges().get(0).getTargetVertex();
 		}
 	}
 

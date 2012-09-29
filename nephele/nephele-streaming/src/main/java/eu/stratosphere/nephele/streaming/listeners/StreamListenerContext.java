@@ -15,9 +15,8 @@
 
 package eu.stratosphere.nephele.streaming.listeners;
 
-import java.util.ArrayDeque;
 import java.util.List;
-import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
@@ -38,7 +37,7 @@ public final class StreamListenerContext {
 		INPUT, REGULAR, OUTPUT
 	};
 
-	private final Queue<AbstractAction> pendingActions = new ArrayDeque<AbstractAction>();
+	private final LinkedBlockingQueue<AbstractAction> pendingActions = new LinkedBlockingQueue<AbstractAction>();
 
 	private final JobID jobID;
 
@@ -159,14 +158,10 @@ public final class StreamListenerContext {
 	}
 
 	public void queuePendingAction(final AbstractAction action) {
-
-		synchronized (this.pendingActions) {
-			this.pendingActions.add(action);
-		}
+		this.pendingActions.add(action);
 	}
 
-	Queue<AbstractAction> getPendingActionsQueue() {
-
+	LinkedBlockingQueue<AbstractAction> getPendingActionsQueue() {
 		return this.pendingActions;
 	}
 

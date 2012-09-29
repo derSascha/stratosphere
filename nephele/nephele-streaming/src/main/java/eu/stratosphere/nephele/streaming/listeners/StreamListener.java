@@ -19,7 +19,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -129,21 +129,17 @@ public final class StreamListener {
 
 	private void checkForPendingActions() {
 
-		final Queue<AbstractAction> pendingActions = this.listenerContext.getPendingActionsQueue();
+		LinkedBlockingQueue<AbstractAction> pendingActions = this.listenerContext.getPendingActionsQueue();
 
-		synchronized (pendingActions) {
+		AbstractAction action;
 
-			while (!pendingActions.isEmpty()) {
-
-				final AbstractAction action = pendingActions.poll();
-
-				if (action instanceof LimitBufferSizeAction) {
-					limitBufferSize((LimitBufferSizeAction) action);
-				} else if (action instanceof ConstructStreamChainAction) {
-					constructStreamChain((ConstructStreamChainAction) action);
-				} else {
-					LOG.error("Ignoring unknown action of type " + action.getClass());
-				}
+		while ((action = pendingActions.poll()) != null) {
+			if (action instanceof LimitBufferSizeAction) {
+				limitBufferSize((LimitBufferSizeAction) action);
+			} else if (action instanceof ConstructStreamChainAction) {
+				constructStreamChain((ConstructStreamChainAction) action);
+			} else {
+				LOG.error("Ignoring unknown action of type " + action.getClass());
 			}
 		}
 	}
