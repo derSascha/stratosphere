@@ -60,12 +60,12 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 * Provides access to the configuration entry which defines the interval in which received tags shall be aggregated
 	 * and sent to the job manager plugin component.
 	 */
-	private static final String AGGREGATION_INTERVAL_KEY = "streaming.aggregation.interval";
+	private static final String AGGREGATION_INTERVAL_KEY = "streaming.profilingreporter.aggregationinterval";
 
 	/**
 	 * The default aggregation interval.
 	 */
-	private static final int DEFAULT_AGGREGATION_INTERVAL = 10;
+	private static final int DEFAULT_AGGREGATION_INTERVAL = 1000;
 
 	/**
 	 * Stores the instance of the streaming task manager plugin.
