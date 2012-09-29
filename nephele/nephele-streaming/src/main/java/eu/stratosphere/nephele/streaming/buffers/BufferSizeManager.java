@@ -104,7 +104,7 @@ public class BufferSizeManager {
 
 		doAdjust(edgesToAdjust);
 
-		LOG.info(String.format("Adjusted edges: %d | Edges with stale profiling data: %d\n", edgesToAdjust.size(),
+		LOG.info(String.format("Adjusted edges: %d | Edges with stale profiling data: %d", edgesToAdjust.size(),
 			staleEdges.size()));
 
 		refreshTimeOfNextAdjustment();
