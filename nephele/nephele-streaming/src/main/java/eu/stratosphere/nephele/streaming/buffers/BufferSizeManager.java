@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.stratosphere.nephele.configuration.GlobalConfiguration;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
@@ -23,7 +26,7 @@ import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
 public class BufferSizeManager {
 
-	// private Log LOG = LogFactory.getLog(BufferSizeManager.class);
+	private Log LOG = LogFactory.getLog(BufferSizeManager.class);
 
 	/**
 	 * Provides access to the configuration entry which defines the buffer size adjustment interval-
@@ -101,7 +104,8 @@ public class BufferSizeManager {
 
 		doAdjust(edgesToAdjust);
 
-		System.out.printf("adjusted edges: %d / stale edges %d\n", edgesToAdjust.size(), staleEdges.size());
+		LOG.info(String.format("Adjusted edges: %d | Edges with stale profiling data: %d\n", edgesToAdjust.size(),
+			staleEdges.size()));
 
 		refreshTimeOfNextAdjustment();
 	}
@@ -117,9 +121,6 @@ public class BufferSizeManager {
 
 			BufferSizeHistory sizeHistory = edge.getEdgeCharacteristics().getBufferSizeHistory();
 			sizeHistory.addToHistory(timeOfNextAdjustment, newBufferSize);
-
-			// LOG.info(String.format("New buffer size: %s new: %d (old: %d)", ProfilingUtils.formatName(edge),
-			// newBufferSize, sizeHistory.getLastEntry().getBufferSize()));
 
 			setBufferSize(edge, newBufferSize);
 		}

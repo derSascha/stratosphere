@@ -34,8 +34,8 @@ import eu.stratosphere.nephele.streaming.actions.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.actions.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.streaming.listeners.StreamListenerContext;
-import eu.stratosphere.nephele.streaming.profiling.StreamProfilingReporterThread;
 import eu.stratosphere.nephele.streaming.profiling.StreamProfilingMasterThread;
+import eu.stratosphere.nephele.streaming.profiling.StreamProfilingReporterThread;
 import eu.stratosphere.nephele.streaming.types.StreamProfilingReport;
 import eu.stratosphere.nephele.streaming.types.StreamProfilingReporterInfo;
 

@@ -8,6 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.io.channels.ChannelID;
@@ -30,12 +33,13 @@ import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
  * {@link #registerProfilingReporterInfo(StreamProfilingReporterInfo)}) and can be shut down by invoking
  * {@link #shutdown()}.
  * This class is threadsafe. Any profiling data added after shutdown will be ignored.
- *
  * FIXME: lifecycle. When does does thread get stopped?
  * 
  * @author Bjoern Lohrmann
  */
 public class StreamProfilingReporterThread extends Thread {
+
+	private Log LOG = LogFactory.getLog(StreamProfilingReporterThread.class);
 
 	private JobID jobID;
 
@@ -220,6 +224,8 @@ public class StreamProfilingReporterThread extends Thread {
 
 	public void registerProfilingReporterInfo(StreamProfilingReporterInfo reporterInfo) {
 		synchronized (this.pendingReports) {
+			int tasks = 0;
+			int channels = 0;
 
 			for (ExecutionVertexID vertexID : reporterInfo.getTasksToProfile()) {
 				Set<PendingReport> vertexReports = getOrCreateVertexReports(vertexID);
@@ -227,6 +233,8 @@ public class StreamProfilingReporterThread extends Thread {
 				for (InstanceConnectionInfo profilingMaster : reporterInfo.getTaskProfilingMasters(vertexID)) {
 					vertexReports.add(getOrCreateProfilingReport(profilingMaster));
 				}
+
+				tasks++;
 			}
 
 			for (ChannelID channelID : reporterInfo.getChannelsToProfile()) {
@@ -237,7 +245,12 @@ public class StreamProfilingReporterThread extends Thread {
 
 					channelReports.add(getOrCreateProfilingReport(channelProfilingMaster));
 				}
+
+				channels++;
 			}
+			LOG.info(String.format("Added %d tasks and %d channels. Altogether (max) %d reports each interval", tasks,
+				channels, reportByProfilingMaster.size()));
+
 			if (!started) {
 				start();
 				started = true;

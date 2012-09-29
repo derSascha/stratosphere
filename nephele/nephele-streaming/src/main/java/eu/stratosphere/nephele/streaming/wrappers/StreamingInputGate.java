@@ -21,9 +21,6 @@ import java.util.ArrayDeque;
 
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
-import eu.stratosphere.nephele.io.channels.AbstractChannel;
-import eu.stratosphere.nephele.io.channels.AbstractInputChannel;
-import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.io.compression.CompressionException;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractInputGateWrapper;
 import eu.stratosphere.nephele.streaming.listeners.StreamListener;
@@ -93,8 +90,6 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 			try {
 				record = this.getInputChannel(this.channelToReadFrom).readRecord(target);
 			} catch (EOFException e) {
-				// System.out.println("### Caught EOF exception at channel " + channelToReadFrom + "(" +
-				// this.getInputChannel(channelToReadFrom).getType().toString() + ")");
 				if (this.isClosed()) {
 					return null;
 				}

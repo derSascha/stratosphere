@@ -235,12 +235,6 @@ public class ProfilingSubsequenceSummary {
 			- outputBufferLatency);
 		this.subsequenceElementLatencies[insertPosition + 1] += remainingChannelLatency;
 		this.subsequenceLatency += remainingChannelLatency;
-
-		if (this.subsequenceElementLatencies[insertPosition + 1] < 0) {
-			System.out.printf("%s   oblt:%.1f || lat:%.1f\n", fwEdgeCharacteristics.getEdge().toString(),
-				outputBufferLatency,
-				fwEdgeCharacteristics.getChannelLatencyInMillis());
-		}
 	}
 
 	private void addLatency(int insertPosition, double vertexLatency) {
