@@ -227,8 +227,13 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			boolean isStartVertex = (i == 0);
 			boolean isEndVertex = (i == (groupVertices.size() - 1));
 			boolean includeVertexInProfiling = true;
-			if ((isStartVertex && !partialSequence.isIncludeStartVertex())
-					|| (isEndVertex && !partialSequence.isIncludeEndVertex())) {
+			/**
+			 * For end vertices that are not part of a profiling sequence we do not need
+			 * profiling data. Note however that for start vertices we need profiling data
+			 * whether or they are included in the profiling sequence. This is due to the
+			 * channel buffers are resized (see BufferSizeManager.collectEdgesToAdjust()).
+			 */
+			if (isEndVertex && !partialSequence.isIncludeEndVertex()) {
 				includeVertexInProfiling = false;
 			}
 
