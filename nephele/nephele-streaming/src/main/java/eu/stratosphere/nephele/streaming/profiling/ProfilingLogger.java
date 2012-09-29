@@ -55,19 +55,23 @@ public class ProfilingLogger {
 		builder.append(';');
 		builder.append(summary.getNoOfInactiveSubsequences());
 		builder.append(';');
-		builder.append(summary.getAvgSubsequenceLatency());
+		builder.append(formatDouble(summary.getAvgSubsequenceLatency()));
 		builder.append(';');
-		builder.append(summary.getMinSubsequenceLatency());
+		builder.append(formatDouble(summary.getMinSubsequenceLatency()));
 		builder.append(';');
-		builder.append(summary.getMaxSubsequenceLatency());
+		builder.append(formatDouble(summary.getMaxSubsequenceLatency()));
 
 		for (double avgElementLatency : summary.getAvgSequenceElementLatencies()) {
 			builder.append(';');
-			builder.append(avgElementLatency);
+			builder.append(formatDouble(avgElementLatency));
 		}
 		builder.append('\n');
 		writer.write(builder.toString());
 		writer.flush();
+	}
+
+	private String formatDouble(double doubleValue) {
+		return String.format("%.2f", doubleValue);
 	}
 
 	private Object getLogTimestamp() {
