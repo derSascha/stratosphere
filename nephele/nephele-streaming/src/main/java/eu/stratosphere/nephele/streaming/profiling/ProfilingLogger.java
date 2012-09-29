@@ -102,6 +102,7 @@ public class ProfilingLogger {
 
 			ProfilingGroupEdge forwardEdge = groupVertex.getForwardEdge();
 			if (forwardEdge != null) {
+				builder.append(';');
 				builder.append("edge" + nextEdgeIndex + "obl");
 				builder.append(';');
 				builder.append("edge" + nextEdgeIndex);
