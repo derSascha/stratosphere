@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import eu.stratosphere.nephele.configuration.GlobalConfiguration;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
@@ -26,7 +23,7 @@ import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
 public class BufferSizeManager {
 
-	private Log LOG = LogFactory.getLog(BufferSizeManager.class);
+	// private Log LOG = LogFactory.getLog(BufferSizeManager.class);
 
 	/**
 	 * Provides access to the configuration entry which defines the buffer size adjustment interval-
@@ -141,11 +138,11 @@ public class BufferSizeManager {
 		// FIXME: actually, sorting is unnecessary here
 		for (ProfilingEdge edge : activeSubsequence.getEdgesSortedByLatency()) {
 
-			if (edgesToAdjust.containsKey(edge)) {
+			EdgeCharacteristics edgeChar = edge.getEdgeCharacteristics();
+
+			if (edgesToAdjust.containsKey(edge) || edgeChar.isInChain()) {
 				continue;
 			}
-
-			EdgeCharacteristics edgeChar = edge.getEdgeCharacteristics();
 
 			if (!hasFreshValues(edgeChar) || !hasFreshValues(edge.getSourceVertex().getVertexLatency())) {
 				staleEdges.add(edge.getSourceChannelID());
@@ -160,7 +157,7 @@ public class BufferSizeManager {
 			// if (avgOutputBufferLatency > 5 && avgOutputBufferLatency >= 0.05 * edgeLatency) {
 			if (avgOutputBufferLatency > 5 && avgOutputBufferLatency > sourceTaskLatency) {
 				reduceBufferSize(edgeChar, edgesToAdjust);
-			} else if (avgOutputBufferLatency <= 1 && !edgeChar.isInChain()) {
+			} else if (avgOutputBufferLatency <= 1) {
 				increaseBufferSize(edgeChar, edgesToAdjust);
 			}
 		}
