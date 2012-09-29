@@ -147,15 +147,9 @@ public final class StreamListener {
 	private void constructStreamChain(final ConstructStreamChainAction csca) {
 
 		final StreamChain streamChain = this.listenerContext.constructStreamChain(csca.getVertexIDs());
-		if (streamChain == null) {
-			return;
-		}
-
 		final StreamingOutputGate<? extends Record> outputGate = streamChain.getFirstOutputGate();
 		try {
-
 			outputGate.flush();
-
 			outputGate.redirectToStreamChain(streamChain);
 		} catch (Exception e) {
 			LOG.error(StringUtils.stringifyException(e));

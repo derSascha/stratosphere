@@ -110,8 +110,9 @@ public class ProfilingModel {
 		ProfilingVertex currentVertex = this.vertexLatencies.get(announce.getChainBeginVertexID()).getVertex();
 
 		while (!currentVertex.getID().equals(announce.getChainEndVertexID())) {
-			currentVertex.getForwardEdges().get(0).getEdgeCharacteristics().setIsInChain(true);
-			currentVertex = currentVertex.getBackwardEdges().get(0).getTargetVertex();
+			ProfilingEdge forwardEdge = currentVertex.getForwardEdges().get(0);
+			forwardEdge.getEdgeCharacteristics().setIsInChain(true);
+			currentVertex = forwardEdge.getTargetVertex();
 		}
 	}
 

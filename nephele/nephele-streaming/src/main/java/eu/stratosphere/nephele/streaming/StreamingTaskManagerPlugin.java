@@ -215,10 +215,10 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	public void sendData(final IOReadableWritable data) throws IOException {
 		if (data instanceof StreamProfilingReport) {
 			handleStreamProfilingReport((StreamProfilingReport) data);
-		} else if (data instanceof ConstructStreamChainAction) {
-			handleConstructStreamChainAction((ConstructStreamChainAction) data);
 		} else if (data instanceof LimitBufferSizeAction) {
 			handleLimitBufferSizeAction((LimitBufferSizeAction) data);
+		} else if (data instanceof ConstructStreamChainAction) {
+			handleConstructStreamChainAction((ConstructStreamChainAction) data);
 		} else if (data instanceof ActAsProfilingMasterAction) {
 			handleActAsProfilingMasterAction((ActAsProfilingMasterAction) data);
 		} else if(data instanceof StreamProfilingReporterInfo) {

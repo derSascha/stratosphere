@@ -47,10 +47,9 @@ public class EdgeCharacteristics {
 	}
 
 	public double getOutputBufferLifetimeInMillis() {
-		if (isInChain) {
+		if (isInChain()) {
 			return 0;
 		} else {
-
 			if (outputBufferLifetimeStatistic.hasValues()) {
 				return outputBufferLifetimeStatistic.getArithmeticMean();
 			} else {
@@ -79,16 +78,15 @@ public class EdgeCharacteristics {
 	}
 
 	public boolean isOutputBufferLatencyFresherThan(long freshnessThreshold) {
-		return outputBufferLifetimeStatistic.getOldestValue().getTimestamp() >= freshnessThreshold;
+		if (isInChain()) {
+			return true;
+		} else {
+			return outputBufferLifetimeStatistic.getOldestValue().getTimestamp() >= freshnessThreshold;
+		}
 	}
 
 	public void setIsInChain(boolean isInChain) {
 		this.isInChain = isInChain;
-		if (isInChain) {
-			outputBufferLifetimeStatistic = null;
-		} else {
-			outputBufferLifetimeStatistic = new ProfilingValueStatistic(5);
-		}
 	}
 
 	public boolean isInChain() {
@@ -96,7 +94,7 @@ public class EdgeCharacteristics {
 	}
 
 	public boolean isActive() {
-		return latencyInMillisStatistic.hasValues() && outputBufferLifetimeStatistic.hasValues();
+		return latencyInMillisStatistic.hasValues() && (isInChain() || outputBufferLifetimeStatistic.hasValues());
 	}
 
 	public BufferSizeHistory getBufferSizeHistory() {

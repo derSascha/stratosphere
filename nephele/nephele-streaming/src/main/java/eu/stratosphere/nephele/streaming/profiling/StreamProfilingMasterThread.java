@@ -70,7 +70,7 @@ public class StreamProfilingMasterThread extends Thread {
 		int throughputs = 0;
 		int obls = 0;
 
-		// triggerChainingDelayed(30000);
+		triggerChainingDelayed(30000);
 		try {
 			while (!interrupted()) {
 				AbstractStreamingData streamingData = streamingDataQueue.take();
@@ -119,7 +119,7 @@ public class StreamProfilingMasterThread extends Thread {
 					long buffersizeAdjustmentOverhead = System.currentTimeMillis() - beginTime;
 					LOG.info(String
 						.format(
-							"total messages: %d (channel: %d | task: %d | throughput: %d | obl: %d) || enqueued: %d || buffersizeAdjustmentOverhead: %d\n",
+							"total messages: %d (channel: %d | task: %d | throughput: %d | obl: %d) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
 							totalNoOfMessages, channelLats, taskLats, throughputs, obls, streamingDataQueue.size(),
 							buffersizeAdjustmentOverhead));
 
@@ -184,6 +184,8 @@ public class StreamProfilingMasterThread extends Thread {
 						communicationThread.sendToTaskManagerAsynchronously(actionReceiver, csca);
 					} catch (InterruptedException e) {
 					}
+					LOG.info(String.format("Triggered chaining for %d tasks on %s", chain.size(),
+						actionReceiver.toString()));
 				}
 			}
 		};

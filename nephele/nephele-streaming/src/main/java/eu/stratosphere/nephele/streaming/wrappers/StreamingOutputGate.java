@@ -36,7 +36,7 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 //
 //	private long[] lastSentBytes = null;
 
-	private StreamChain streamChain = null;
+	private volatile StreamChain streamChain = null;
 
 	private Map<ChannelID, BufferLatency> bufferLatencyMap = new HashMap<ChannelID, BufferLatency>();
 	
