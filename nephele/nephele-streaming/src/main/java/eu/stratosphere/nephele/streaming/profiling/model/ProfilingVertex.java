@@ -22,14 +22,17 @@ public class ProfilingVertex {
 	 * A list of edges arriving at this vertex.
 	 */
 	private List<ProfilingEdge> backwardEdges = new ArrayList<ProfilingEdge>();
-	
+
+	private String name;
+
 	/**
 	 * Only for use on the task manager side. Will not be transferred.
 	 */
 	private transient VertexLatency vertexLatency;
 
-	public ProfilingVertex(ExecutionVertexID vertexID) {
+	public ProfilingVertex(ExecutionVertexID vertexID, String name) {
 		this.vertexID = vertexID;
+		this.name = name;
 	}
 
 	public ExecutionVertexID getID() {
@@ -66,5 +69,13 @@ public class ProfilingVertex {
 
 	public void setVertexLatency(VertexLatency vertexLatency) {
 		this.vertexLatency = vertexLatency;
-	}	
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String toString() {
+		return name;
+	}
 }

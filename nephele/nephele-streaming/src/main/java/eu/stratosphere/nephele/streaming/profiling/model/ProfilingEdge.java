@@ -80,4 +80,8 @@ public class ProfilingEdge {
 	public void setEdgeCharacteristics(EdgeCharacteristics edgeCharacteristics) {
 		this.edgeCharacteristics = edgeCharacteristics;
 	}
+
+	public String toString() {
+		return String.format("%s->%s", sourceVertex.getName(), targetVertex.getName());
+	}
 }
