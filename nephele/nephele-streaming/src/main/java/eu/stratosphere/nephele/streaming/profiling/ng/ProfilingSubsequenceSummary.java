@@ -59,6 +59,8 @@ public class ProfilingSubsequenceSummary {
 
 	protected long subsequenceLatency;
 
+	protected double[] subsequenceElementLatencies;
+
 	protected int noOfActiveSubsequencesFound;
 
 	public ProfilingSubsequenceSummary(ProfilingSequence sequence) {
@@ -69,9 +71,21 @@ public class ProfilingSubsequenceSummary {
 		initForwardEdgeCounts();
 		initForwardEdgeIndices();
 		initEdgesSortedByLatency();
+		initSubsequenceElementLatencies();
 
 		// find first active path
 		findNextActivePath(false);
+	}
+
+	private void initSubsequenceElementLatencies() {
+		int size = 2 * (this.sequence.getSequenceVertices().size() - 1) + this.sequence.getSequenceVertices().size();
+		if (!this.sequence.isIncludeStartVertex()) {
+			size--;
+		}
+		if (!this.sequence.isIncludeEndVertex()) {
+			size--;
+		}
+		this.subsequenceElementLatencies = new double[size];
 	}
 
 	private void initEdgesSortedByLatency() {
@@ -200,19 +214,58 @@ public class ProfilingSubsequenceSummary {
 	private void computeLatency() {
 		this.subsequenceLatency = 0;
 
-		int loopEnd = this.currSubsequence.size();
-		if (!sequence.isIncludeEndVertex()) {
-			loopEnd--;
+		int vertexIndex = 0;
+		int insertPosition = 0;
+
+		if (sequence.isIncludeStartVertex()) {
+			addLatency(insertPosition, currSubsequence.get(vertexIndex).getVertexLatency().getLatencyInMillis());
+			insertPosition++;
 		}
-		for (int i = 0; i < loopEnd; i++) {
-			ProfilingVertex vertex = this.currSubsequence.get(i);
-			if (i > 0 || this.sequence.isIncludeStartVertex()) {
-				this.subsequenceLatency += vertex.getVertexLatency().getLatencyInMillis();
+		addChannelAndOutputBufferLatency(insertPosition, currSubsequence.get(vertexIndex).getForwardEdges()
+			.get(this.forwardEdgeIndices[vertexIndex + 1]).getEdgeCharacteristics());
+		insertPosition += 2;
+		vertexIndex++;
+
+		while (insertPosition < this.subsequenceElementLatencies.length) {
+			ProfilingVertex vertex = currSubsequence.get(vertexIndex);
+
+			addLatency(insertPosition, vertex.getVertexLatency().getLatencyInMillis());
+			insertPosition++;
+
+			if (vertex.getForwardEdges() != null) {
+				EdgeCharacteristics fwEdgeCharacteristics = vertex.getForwardEdges()
+					.get(this.forwardEdgeIndices[vertexIndex + 1]).getEdgeCharacteristics();
+
+				addChannelAndOutputBufferLatency(insertPosition, fwEdgeCharacteristics);
+				insertPosition += 2;
 			}
 
-			ProfilingEdge edge = vertex.getForwardEdges().get(this.forwardEdgeIndices[i + 1]);
-			this.subsequenceLatency += edge.getEdgeCharacteristics().getChannelLatencyInMillis();
+			vertexIndex++;
 		}
+	}
+
+	private void addChannelAndOutputBufferLatency(int insertPosition, EdgeCharacteristics fwEdgeCharacteristics) {
+		double outputBufferLatency = fwEdgeCharacteristics.getOutputBufferLifetimeInMillis() / 2;
+		this.subsequenceElementLatencies[insertPosition] += outputBufferLatency;
+		this.subsequenceLatency += outputBufferLatency;
+
+		// channel latency includes output buffer latency, hence we subtract the output buffer latency
+		// in order not to count it twice
+		double remainingChannelLatency = Math.max(0, fwEdgeCharacteristics.getChannelLatencyInMillis()
+			- outputBufferLatency);
+		this.subsequenceElementLatencies[insertPosition + 1] += remainingChannelLatency;
+		this.subsequenceLatency += remainingChannelLatency;
+
+		if (this.subsequenceElementLatencies[insertPosition + 1] < 0) {
+			System.out.printf("%s   oblt:%.1f || lat:%.1f\n", fwEdgeCharacteristics.getEdge().toString(),
+				outputBufferLatency,
+				fwEdgeCharacteristics.getChannelLatencyInMillis());
+		}
+	}
+
+	private void addLatency(int insertPosition, double vertexLatency) {
+		this.subsequenceElementLatencies[insertPosition] = vertexLatency;
+		this.subsequenceLatency += vertexLatency;
 	}
 
 	public List<ProfilingVertex> getVertices() {
@@ -228,37 +281,8 @@ public class ProfilingSubsequenceSummary {
 	}
 
 	public void addCurrentSubsequenceLatencies(double[] aggregatedLatencies) {
-
-		int vertexIndex = 0;
-		int insertPosition = 0;
-
-		while (insertPosition < aggregatedLatencies.length) {
-			ProfilingVertex vertex = currSubsequence.get(vertexIndex);
-
-			boolean includeVertex = (vertexIndex == 0 && sequence.isIncludeStartVertex())
-				|| (vertexIndex > 0 && (vertexIndex < currSubsequence.size() - 1))
-				|| ((vertexIndex == currSubsequence.size() - 1) && sequence.isIncludeEndVertex());
-
-			if (includeVertex) {
-				aggregatedLatencies[insertPosition] += vertex.getVertexLatency().getLatencyInMillis();
-				insertPosition++;
-			}
-
-			if (vertex.getForwardEdges() != null) {
-				EdgeCharacteristics fwEdgeCharacteristics = vertex.getForwardEdges()
-					.get(this.forwardEdgeIndices[vertexIndex + 1]).getEdgeCharacteristics();
-
-				aggregatedLatencies[insertPosition] += fwEdgeCharacteristics.getOutputBufferLifetimeInMillis() / 2;
-				insertPosition++;
-
-				// channel latency includes output buffer latency, hence we subtract the output buffer latency
-				// in order not to count it twice
-				aggregatedLatencies[insertPosition] += fwEdgeCharacteristics.getChannelLatencyInMillis()
-					- aggregatedLatencies[insertPosition - 1];
-				insertPosition++;
-			}
-
-			vertexIndex++;
+		for (int i = 0; i < aggregatedLatencies.length; i++) {
+			aggregatedLatencies[i] += this.subsequenceElementLatencies[i];
 		}
 	}
 
