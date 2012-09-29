@@ -1,8 +1,6 @@
 package eu.stratosphere.nephele.streaming.profiling.ng;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import eu.stratosphere.nephele.streaming.profiling.EdgeCharacteristics;
@@ -20,23 +18,7 @@ public class ProfilingSubsequenceSummary {
 	 * For an active subsequence, this list contains all the sequence's edges, sorted
 	 * by descending latency.
 	 */
-	protected ArrayList<ProfilingEdge> edgesSortedByLatency;
-
-	private Comparator<ProfilingEdge> edgeComparator = new Comparator<ProfilingEdge>() {
-		@Override
-		public int compare(ProfilingEdge first, ProfilingEdge second) {
-			double firstLatency = first.getEdgeCharacteristics().getChannelLatencyInMillis();
-			double secondLatency = second.getEdgeCharacteristics().getChannelLatencyInMillis();
-
-			if (firstLatency < secondLatency) {
-				return 1;
-			} else if (firstLatency > secondLatency) {
-				return -1;
-			} else {
-				return 0;
-			}
-		}
-	};
+	protected ArrayList<ProfilingEdge> edges;
 
 	/**
 	 * The i-th element is the forward edge index that connects the currSubsequence.get(i-1)
@@ -70,7 +52,7 @@ public class ProfilingSubsequenceSummary {
 		this.currSubsequence = new ArrayList<ProfilingVertex>();
 		initForwardEdgeCounts();
 		initForwardEdgeIndices();
-		initEdgesSortedByLatency();
+		initEdges();
 		initSubsequenceElementLatencies();
 
 		// find first active path
@@ -88,12 +70,12 @@ public class ProfilingSubsequenceSummary {
 		this.subsequenceElementLatencies = new double[size];
 	}
 
-	private void initEdgesSortedByLatency() {
-		this.edgesSortedByLatency = new ArrayList<ProfilingEdge>();
+	private void initEdges() {
+		this.edges = new ArrayList<ProfilingEdge>();
 		// init with nulls, so that sortEdgesByLatency() can use ArrayList.set()
 		// without clearing the list
 		for (int i = 0; i < this.sequenceDepth - 1; i++) {
-			this.edgesSortedByLatency.add(null);
+			this.edges.add(null);
 		}
 	}
 
@@ -121,16 +103,14 @@ public class ProfilingSubsequenceSummary {
 		if (this.currSubsequenceActive) {
 			this.noOfActiveSubsequencesFound++;
 			computeLatency();
-			sortEdgesByLatency();
+			collectEdges();
 		}
 	}
 
-	private void sortEdgesByLatency() {
+	private void collectEdges() {
 		for (int i = 0; i < this.sequenceDepth - 1; i++) {
-			edgesSortedByLatency.set(i,
-				this.currSubsequence.get(i).getForwardEdges().get(this.forwardEdgeIndices[i + 1]));
+			edges.set(i, this.currSubsequence.get(i).getForwardEdges().get(this.forwardEdgeIndices[i + 1]));
 		}
-		Collections.sort(edgesSortedByLatency, edgeComparator);
 	}
 
 	/**
@@ -286,7 +266,7 @@ public class ProfilingSubsequenceSummary {
 		}
 	}
 
-	public List<ProfilingEdge> getEdgesSortedByLatency() {
-		return this.edgesSortedByLatency;
+	public List<ProfilingEdge> getEdges() {
+		return this.edges;
 	}
 }

@@ -201,10 +201,10 @@ public class ProfilingSubsequenceTest {
 		assertTrue(summary.currSubsequence.get(3) == vertex30);
 		assertTrue(summary.isSubsequenceActive());
 		assertTrue(summary.getSubsequenceLatency() == 638.0);
-		assertTrue(summary.getEdgesSortedByLatency().size() == 3);
-		assertTrue(summary.getEdgesSortedByLatency().get(0) == edge2030);
-		assertTrue(summary.getEdgesSortedByLatency().get(1) == edge1020);
-		assertTrue(summary.getEdgesSortedByLatency().get(2) == edge0010);
+		assertTrue(summary.getEdges().size() == 3);
+		assertTrue(summary.getEdges().get(0) == edge0010);
+		assertTrue(summary.getEdges().get(1) == edge1020);
+		assertTrue(summary.getEdges().get(2) == edge2030);
 	}
 
 	@Test
@@ -232,10 +232,10 @@ public class ProfilingSubsequenceTest {
 		assertTrue(summary.currSubsequence.get(3) == vertex32);
 		assertTrue(summary.isSubsequenceActive());
 		assertTrue(summary.getSubsequenceLatency() == 730.0);
-		assertTrue(summary.getEdgesSortedByLatency().size() == 3);
-		assertTrue(summary.getEdgesSortedByLatency().get(0) == edge2132);
-		assertTrue(summary.getEdgesSortedByLatency().get(1) == edge1121);
-		assertTrue(summary.getEdgesSortedByLatency().get(2) == edge0111);
+		assertTrue(summary.getEdges().size() == 3);
+		assertTrue(summary.getEdges().get(0) == edge0111);
+		assertTrue(summary.getEdges().get(1) == edge1121);
+		assertTrue(summary.getEdges().get(2) == edge2132);
 	}
 
 	@Test
@@ -279,10 +279,10 @@ public class ProfilingSubsequenceTest {
 		assertTrue(summary.currSubsequence.get(2) == vertex20);
 		assertTrue(summary.currSubsequence.get(3) == vertex31);
 		assertTrue(summary.getSubsequenceLatency() == 648.0);
-		assertTrue(summary.getEdgesSortedByLatency().size() == 3);
-		assertTrue(summary.getEdgesSortedByLatency().get(0) == edge2031);
-		assertTrue(summary.getEdgesSortedByLatency().get(1) == edge1020);
-		assertTrue(summary.getEdgesSortedByLatency().get(2) == edge0010);
+		assertTrue(summary.getEdges().size() == 3);
+		assertTrue(summary.getEdges().get(0) == edge0010);
+		assertTrue(summary.getEdges().get(1) == edge1020);
+		assertTrue(summary.getEdges().get(2) == edge2031);
 
 
 		assertTrue(summary.switchToNextActivePathIfPossible());
@@ -297,10 +297,10 @@ public class ProfilingSubsequenceTest {
 		assertTrue(summary.currSubsequence.get(2) == vertex20);
 		assertTrue(summary.currSubsequence.get(3) == vertex31);
 		assertTrue(summary.getSubsequenceLatency() == 668.0);
-		assertTrue(summary.getEdgesSortedByLatency().size() == 3);
-		assertTrue(summary.getEdgesSortedByLatency().get(0) == edge2031);
-		assertTrue(summary.getEdgesSortedByLatency().get(1) == edge1020);
-		assertTrue(summary.getEdgesSortedByLatency().get(2) == edge0110);
+		assertTrue(summary.getEdges().size() == 3);
+		assertTrue(summary.getEdges().get(0) == edge0110);
+		assertTrue(summary.getEdges().get(1) == edge1020);
+		assertTrue(summary.getEdges().get(2) == edge2031);
 
 		assertTrue(summary.switchToNextActivePathIfPossible());
 		assertEquals(1, summary.forwardEdgeIndices[0]);
@@ -314,10 +314,10 @@ public class ProfilingSubsequenceTest {
 		assertTrue(summary.currSubsequence.get(2) == vertex21);
 		assertTrue(summary.currSubsequence.get(3) == vertex32);
 		assertTrue(summary.getSubsequenceLatency() == 730.0);
-		assertTrue(summary.getEdgesSortedByLatency().size() == 3);
-		assertTrue(summary.getEdgesSortedByLatency().get(0) == edge2132);
-		assertTrue(summary.getEdgesSortedByLatency().get(1) == edge1121);
-		assertTrue(summary.getEdgesSortedByLatency().get(2) == edge0111);
+		assertTrue(summary.getEdges().size() == 3);
+		assertTrue(summary.getEdges().get(0) == edge0111);
+		assertTrue(summary.getEdges().get(1) == edge1121);
+		assertTrue(summary.getEdges().get(2) == edge2132);
 
 		assertFalse(summary.switchToNextActivePathIfPossible());
 		assertEquals(-1, summary.forwardEdgeIndices[0]);

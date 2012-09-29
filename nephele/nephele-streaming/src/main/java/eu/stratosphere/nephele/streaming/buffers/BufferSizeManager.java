@@ -135,8 +135,7 @@ public class BufferSizeManager {
 	private void collectEdgesToAdjust(ProfilingSubsequenceSummary activeSubsequence,
 			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
 
-		// FIXME: actually, sorting is unnecessary here
-		for (ProfilingEdge edge : activeSubsequence.getEdgesSortedByLatency()) {
+		for (ProfilingEdge edge : activeSubsequence.getEdges()) {
 
 			EdgeCharacteristics edgeChar = edge.getEdgeCharacteristics();
 
