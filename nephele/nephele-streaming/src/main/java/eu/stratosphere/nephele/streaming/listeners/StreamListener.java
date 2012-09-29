@@ -118,7 +118,7 @@ public final class StreamListener {
 			new ChannelThroughput(sourceChannelID, throughput));
 	}
 
-	public void reportBufferLatency(final ChannelID sourceChannelID, final int bufferLatency) {
+	public void reportBufferLatency(final ChannelID sourceChannelID, final double bufferLatency) {
 		this.listenerContext.getProfilingReporter().addToNextReport(
 			new OutputBufferLatency(sourceChannelID, bufferLatency));
 	}

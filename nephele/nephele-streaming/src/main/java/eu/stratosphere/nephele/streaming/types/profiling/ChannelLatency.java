@@ -31,7 +31,9 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	/**
 	 * The {@link ChannelID} representing the source end of the channel.
 	 */
-	private final ChannelID sourceChannelID;
+	private ChannelID sourceChannelID;
+
+	private int counter;
 
 	/**
 	 * The channel latency in milliseconds
@@ -54,14 +56,18 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 
 		this.sourceChannelID = sourceChannelID;
 		this.channelLatency = channelLatency;
+		this.counter = 1;
 	}
 
 	/**
 	 * Default constructor for the deserialization of the object.
 	 */
 	public ChannelLatency() {
-		this.sourceChannelID = new ChannelID();
-		this.channelLatency = 0;
+	}
+
+	public void add(ChannelLatency other) {
+		this.counter++;
+		this.channelLatency += other.getChannelLatency();
 	}
 
 	/**
@@ -70,7 +76,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.sourceChannelID.write(out);
-		out.writeDouble(this.channelLatency);
+		out.writeDouble(getChannelLatency());
 	}
 
 	/**
@@ -78,8 +84,10 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
+		this.sourceChannelID = new ChannelID();
 		this.sourceChannelID.read(in);
 		this.channelLatency = in.readDouble();
+		this.counter = 1;
 	}
 
 	/**
@@ -98,7 +106,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 */
 	public double getChannelLatency() {
 
-		return this.channelLatency;
+		return this.channelLatency / this.counter;
 	}
 
 	/**

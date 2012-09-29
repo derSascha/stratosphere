@@ -31,7 +31,9 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	/**
 	 * The ID of the vertex this task latency information refers to
 	 */
-	private final ExecutionVertexID vertexID;
+	private ExecutionVertexID vertexID;
+
+	private int counter;
 
 	/**
 	 * The task latency in milliseconds
@@ -56,32 +58,13 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 
 		this.vertexID = vertexID;
 		this.taskLatency = taskLatency;
+		this.counter = 1;
 	}
 
 	/**
 	 * Default constructor for the deserialization of the object.
 	 */
 	public TaskLatency() {
-		this.vertexID = new ExecutionVertexID();
-		this.taskLatency = 0.0;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void write(final DataOutput out) throws IOException {
-		this.vertexID.write(out);
-		out.writeDouble(this.taskLatency);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void read(final DataInput in) throws IOException {
-		this.vertexID.read(in);
-		this.taskLatency = in.readDouble();
 	}
 
 	/**
@@ -90,7 +73,6 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	 * @return the ID of the vertex this task latency information refers to
 	 */
 	public ExecutionVertexID getVertexID() {
-
 		return this.vertexID;
 	}
 
@@ -100,8 +82,12 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	 * @return the task latency in milliseconds
 	 */
 	public double getTaskLatency() {
+		return this.taskLatency / this.counter;
+	}
 
-		return this.taskLatency;
+	public void add(TaskLatency taskLatency) {
+		this.counter++;
+		this.taskLatency += taskLatency.getTaskLatency();
 	}
 
 	@Override
@@ -116,4 +102,22 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 		return isEqual;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void write(final DataOutput out) throws IOException {
+		this.vertexID.write(out);
+		out.writeDouble(getTaskLatency());
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void read(final DataInput in) throws IOException {
+		this.vertexID = new ExecutionVertexID();
+		this.vertexID.read(in);
+		this.taskLatency = in.readDouble();
+	}
 }

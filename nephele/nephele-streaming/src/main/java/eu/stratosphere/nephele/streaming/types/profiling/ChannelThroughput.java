@@ -31,12 +31,14 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	/**
 	 * The ID of the output channel.
 	 */
-	private final ChannelID sourceChannelID;
+	private ChannelID sourceChannelID;
 
 	/**
 	 * The throughput in MBit/s.
 	 */
 	private double throughput;
+
+	private int counter;
 
 	/**
 	 * Constructs a new channel throughput object.
@@ -63,14 +65,13 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 
 		this.sourceChannelID = sourceChannelID;
 		this.throughput = throughput;
+		this.counter = 1;
 	}
 
 	/**
 	 * Default constructor for deserialization.
 	 */
 	public ChannelThroughput() {
-		this.sourceChannelID = new ChannelID();
-		this.throughput = 0.0;
 	}
 
 	/**
@@ -88,7 +89,12 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 * @return the measured throughput in MBit/s.
 	 */
 	public double getThroughput() {
-		return this.throughput;
+		return this.throughput / this.counter;
+	}
+
+	public void add(ChannelThroughput channelThroughput) {
+		this.counter++;
+		this.throughput += channelThroughput.getThroughput();
 	}
 
 	/**
@@ -97,7 +103,7 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.sourceChannelID.write(out);
-		out.writeDouble(this.throughput);
+		out.writeDouble(getThroughput());
 	}
 
 	/**
@@ -105,8 +111,10 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
+		this.sourceChannelID = new ChannelID();
 		this.sourceChannelID.read(in);
 		this.throughput = in.readDouble();
+		this.counter = 1;
 	}
 
 	@Override

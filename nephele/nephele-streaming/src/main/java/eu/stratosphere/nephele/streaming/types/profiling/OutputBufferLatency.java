@@ -23,12 +23,14 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 
 public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 
-	private final ChannelID sourceChannelID;
+	private ChannelID sourceChannelID;
 
-	private int bufferLatency;
+	private double bufferLatency;
+
+	private int counter;
 
 	public OutputBufferLatency(final ChannelID sourceChannelID,
-			final int bufferLatency) {
+			final double bufferLatency) {
 
 		if (sourceChannelID == null) {
 			throw new IllegalArgumentException("Argument sourceChannelID must not be null");
@@ -41,21 +43,23 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 
 		this.sourceChannelID = sourceChannelID;
 		this.bufferLatency = bufferLatency;
+		this.counter = 1;
 	}
 
 	public OutputBufferLatency() {
-		super();
-
-		this.sourceChannelID = new ChannelID();
-		this.bufferLatency = 0;
 	}
 
 	public ChannelID getSourceChannelID() {
 		return this.sourceChannelID;
 	}
 
-	public int getBufferLatency() {
-		return this.bufferLatency;
+	public double getBufferLatency() {
+		return this.bufferLatency / this.counter;
+	}
+
+	public void add(OutputBufferLatency obl) {
+		this.counter++;
+		this.bufferLatency += obl.getBufferLatency();
 	}
 
 	/**
@@ -64,7 +68,7 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.sourceChannelID.write(out);
-		out.writeInt(this.bufferLatency);
+		out.writeDouble(getBufferLatency());
 	}
 
 	/**
@@ -72,8 +76,10 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
+		this.sourceChannelID = new ChannelID();
 		this.sourceChannelID.read(in);
-		this.bufferLatency = in.readInt();
+		this.bufferLatency = in.readDouble();
+		this.counter = 1;
 	}
 
 	@Override

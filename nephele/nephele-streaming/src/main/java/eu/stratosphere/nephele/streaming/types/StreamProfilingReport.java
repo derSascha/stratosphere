@@ -92,7 +92,13 @@ public class StreamProfilingReport extends AbstractStreamingData {
 
 	public void addChannelLatency(ChannelLatency channelLatency) {
 		int sourceChannelID = getOrCreateChannelIDMap().getIntID(channelLatency.getSourceChannelID());
-		getOrCreateChannelLatencyMap().put(sourceChannelID, channelLatency);
+
+		ChannelLatency existing = getOrCreateChannelLatencyMap().get(sourceChannelID);
+		if (existing == null) {
+			getOrCreateChannelLatencyMap().put(sourceChannelID, channelLatency);
+		} else {
+			existing.add(channelLatency);
+		}
 	}
 
 	public Collection<ChannelLatency> getChannelLatencies() {
@@ -105,7 +111,13 @@ public class StreamProfilingReport extends AbstractStreamingData {
 
 	public void addChannelThroughput(ChannelThroughput channelThroughput) {
 		int sourceChannelID = getOrCreateChannelIDMap().getIntID(channelThroughput.getSourceChannelID());
-		getOrCreateChannelThroughputMap().put(sourceChannelID, channelThroughput);
+
+		ChannelThroughput existing = getOrCreateChannelThroughputMap().get(sourceChannelID);
+		if (existing == null) {
+			getOrCreateChannelThroughputMap().put(sourceChannelID, channelThroughput);
+		} else {
+			existing.add(channelThroughput);
+		}
 	}
 
 	public Collection<ChannelThroughput> getChannelThroughputs() {
@@ -118,7 +130,13 @@ public class StreamProfilingReport extends AbstractStreamingData {
 
 	public void addOutputBufferLatency(OutputBufferLatency outputBufferLatency) {
 		int sourceChannelID = getOrCreateChannelIDMap().getIntID(outputBufferLatency.getSourceChannelID());
-		getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
+
+		OutputBufferLatency existing = getOrCreateOutputBufferLatencyMap().get(sourceChannelID);
+		if (existing == null) {
+			getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
+		} else {
+			existing.add(outputBufferLatency);
+		}
 	}
 
 	public Collection<OutputBufferLatency> getOutputBufferLatencies() {
@@ -131,7 +149,12 @@ public class StreamProfilingReport extends AbstractStreamingData {
 
 	public void addTaskLatency(TaskLatency taskLatency) {
 		int vertexID = getOrCreateExecutionVertexIDMap().getIntID(taskLatency.getVertexID());
-		getOrCreateTaskLatencyMap().put(vertexID, taskLatency);
+		TaskLatency existing = getOrCreateTaskLatencyMap().get(vertexID);
+		if (existing == null) {
+			getOrCreateTaskLatencyMap().put(vertexID, taskLatency);
+		} else {
+			existing.add(taskLatency);
+		}
 	}
 
 	public Collection<TaskLatency> getTaskLatencies() {
@@ -243,7 +266,7 @@ public class StreamProfilingReport extends AbstractStreamingData {
 			out.writeInt(this.outputBufferLatencies.size());
 			for (Entry<Integer, OutputBufferLatency> entry : this.outputBufferLatencies.entrySet()) {
 				out.writeInt(entry.getKey());
-				out.writeInt(entry.getValue().getBufferLatency());
+				out.writeDouble(entry.getValue().getBufferLatency());
 			}
 		} else {
 			out.writeInt(0);
@@ -315,7 +338,7 @@ public class StreamProfilingReport extends AbstractStreamingData {
 			int sourceChannelID = in.readInt();
 			OutputBufferLatency outputBufferLatency = new OutputBufferLatency(getOrCreateChannelIDMap().getFullID(
 				sourceChannelID),
-				in.readInt());
+				in.readDouble());
 			getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
 		}
 	}
