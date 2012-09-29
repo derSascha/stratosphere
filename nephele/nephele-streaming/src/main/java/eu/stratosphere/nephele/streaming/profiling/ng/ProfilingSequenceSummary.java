@@ -26,10 +26,13 @@ public class ProfilingSequenceSummary {
 		this.sequence = sequence;
 		countTotalNoOfSubsequences();
 		createAggregatedElementLatencies();
-		this.enumeratingSummary = new ProfilingSubsequenceSummary(sequence);
 		this.avgSubsequenceLatency = 0;
 		this.minSubsequenceLatency = Double.MAX_VALUE;
-		this.minSubsequenceLatency = Double.MIN_VALUE;
+		this.maxSubsequenceLatency = Double.MIN_VALUE;
+		this.enumeratingSummary = new ProfilingSubsequenceSummary(sequence);
+		if (this.enumeratingSummary.isSubsequenceActive()) {
+			updateAggregatedFields();
+		}
 	}
 
 	private void createAggregatedElementLatencies() {
@@ -62,11 +65,11 @@ public class ProfilingSequenceSummary {
 			@Override
 			public Iterator<ProfilingSubsequenceSummary> iterator() {
 				return new Iterator<ProfilingSubsequenceSummary>() {
-					private boolean done = false;
+					private boolean done = !enumeratingSummary.isSubsequenceActive();
 
-					private boolean hasNext = false;
+					private boolean hasNext = enumeratingSummary.isSubsequenceActive();
 
-					private boolean currentHasBeenReturned = true;
+					private boolean currentHasBeenReturned = false;
 
 					@Override
 					public boolean hasNext() {
@@ -105,8 +108,8 @@ public class ProfilingSequenceSummary {
 	private void updateAggregatedFields() {
 		double latency = this.enumeratingSummary.getSubsequenceLatency();
 		this.avgSubsequenceLatency += latency;
-		this.minSubsequenceLatency = Math.min(latency, minSubsequenceLatency);
-		this.maxSubsequenceLatency = Math.max(latency, maxSubsequenceLatency);
+		this.minSubsequenceLatency = Math.min(latency, this.minSubsequenceLatency);
+		this.maxSubsequenceLatency = Math.max(latency, this.maxSubsequenceLatency);
 		this.enumeratingSummary.addCurrentSubsequenceLatencies(this.avgSequenceElementLatencies);
 	}
 
