@@ -85,9 +85,10 @@ public class ProfilingSequence implements IOReadableWritable {
 		for (ProfilingGroupVertex groupVertex : sequenceVertices) {
 			int memberCount = in.readInt();
 			for (int i = 0; i < memberCount; i++) {
+				String name = in.readUTF();
 				ExecutionVertexID vertexID = new ExecutionVertexID();
 				vertexID.read(in);
-				ProfilingVertex member = new ProfilingVertex(vertexID);
+				ProfilingVertex member = new ProfilingVertex(vertexID, name);
 				InstanceConnectionInfo profilingDataSource = new InstanceConnectionInfo();
 				profilingDataSource.read(in);
 				member.setProfilingReporter(profilingDataSource);
@@ -128,6 +129,7 @@ public class ProfilingSequence implements IOReadableWritable {
 			for (int i = 0; i < members.size(); i++) {
 				ProfilingVertex member = members.get(i);
 				id2MemberPosition.put(member.getID(), i);
+				out.writeUTF(member.getName());
 				member.getID().write(out);
 				member.getProfilingReporter().write(out);
 			}

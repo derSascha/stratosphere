@@ -139,11 +139,7 @@ public class ProfilingSubsequenceTest {
 	}
 
 	private ProfilingVertex createVertex(final boolean active, final String name, final double latency) {
-		ProfilingVertex vertex = new ProfilingVertex(new ExecutionVertexID()) {
-			public String toString() {
-				return name;
-			}
-		};
+		ProfilingVertex vertex = new ProfilingVertex(new ExecutionVertexID(), name);
 		VertexLatency vertexLatency = new VertexLatency(vertex) {
 			@Override
 			public boolean isActive() {

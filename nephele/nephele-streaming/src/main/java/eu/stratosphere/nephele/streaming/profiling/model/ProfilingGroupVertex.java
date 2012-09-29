@@ -86,4 +86,7 @@ public class ProfilingGroupVertex {
 		this.noOfExecutingInstances = instances.size();
 	}
 	
+	public String toString() {
+		return this.name;
+	}
 }
