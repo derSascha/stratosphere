@@ -274,20 +274,23 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		ProfilingSequence partialProfilingSequence = profilingSequence.cloneWithoutGroupMembers();
 		ProfilingGroupVertex clonedAnchor = getClonedAnchor(partialProfilingSequence, anchor);
 
+		HashMap<ExecutionVertexID, ProfilingVertex> alreadyClonedVertices = new HashMap<ExecutionVertexID, ProfilingVertex>();
 		for (ProfilingVertex anchorMemberToClone : anchorMembersToExpand) {
-			ProfilingVertex clonedAnchorMember = cloneForward(clonedAnchor, anchorMemberToClone);
-			cloneBackward(clonedAnchor, anchorMemberToClone, clonedAnchorMember);
+			cloneForward(clonedAnchor, anchorMemberToClone, alreadyClonedVertices);
+			cloneBackward(clonedAnchor, anchorMemberToClone, alreadyClonedVertices);
 		}
 
 		return partialProfilingSequence;
 	}
 
 	private ProfilingVertex cloneBackward(ProfilingGroupVertex groupVertex, ProfilingVertex toClone,
-			ProfilingVertex cloned) {
+			HashMap<ExecutionVertexID, ProfilingVertex> alreadyClonedVertices) {
 
+		ProfilingVertex cloned = alreadyClonedVertices.get(toClone.getID());
 		if (cloned == null) {
-			cloned = new ProfilingVertex(toClone.getID());
+			cloned = new ProfilingVertex(toClone.getID(), toClone.getName());
 			cloned.setProfilingReporter(toClone.getProfilingReporter());
+			alreadyClonedVertices.put(toClone.getID(), cloned);
 			groupVertex.addGroupMember(cloned);
 		}
 
@@ -298,7 +301,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			clonedEdge.setTargetVertexEdgeIndex(cloned.getBackwardEdges().size());
 			cloned.addBackwardEdge(clonedEdge);
 			ProfilingVertex clonedSource = cloneBackward(groupVertex.getBackwardEdge().getSourceVertex(),
-				edgeToClone.getSourceVertex(), null);
+				edgeToClone.getSourceVertex(), alreadyClonedVertices);
 			clonedEdge.setSourceVertex(clonedSource);
 			clonedEdge.setSourceVertexEdgeIndex(clonedSource.getForwardEdges().size());
 			clonedSource.addForwardEdge(clonedEdge);
@@ -319,11 +322,16 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 	}
 
 	private ProfilingVertex cloneForward(ProfilingGroupVertex groupVertex,
-			ProfilingVertex toClone) {
+			ProfilingVertex toClone,
+			HashMap<ExecutionVertexID, ProfilingVertex> alreadyClonedVertices) {
 
-		ProfilingVertex cloned = new ProfilingVertex(toClone.getID());
-		cloned.setProfilingReporter(toClone.getProfilingReporter());
-		groupVertex.addGroupMember(cloned);
+		ProfilingVertex cloned = alreadyClonedVertices.get(toClone.getID());
+		if (cloned == null) {
+			cloned = new ProfilingVertex(toClone.getID(), toClone.getName());
+			cloned.setProfilingReporter(toClone.getProfilingReporter());
+			alreadyClonedVertices.put(toClone.getID(), cloned);
+			groupVertex.addGroupMember(cloned);
+		}
 
 		for (ProfilingEdge edgeToClone : toClone.getForwardEdges()) {
 			ProfilingEdge clonedEdge = new ProfilingEdge(edgeToClone.getSourceChannelID(),
@@ -332,7 +340,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			clonedEdge.setSourceVertexEdgeIndex(cloned.getForwardEdges().size());
 			cloned.addForwardEdge(clonedEdge);
 			ProfilingVertex clonedTarget = cloneForward(groupVertex.getForwardEdge().getTargetVertex(),
-				edgeToClone.getTargetVertex());
+				edgeToClone.getTargetVertex(), alreadyClonedVertices);
 			clonedEdge.setTargetVertex(clonedTarget);
 			clonedEdge.setTargetVertexEdgeIndex(clonedTarget.getBackwardEdges().size());
 			clonedTarget.addBackwardEdge(clonedEdge);
