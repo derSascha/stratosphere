@@ -18,8 +18,8 @@ package eu.stratosphere.nephele.streaming;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,11 +55,9 @@ public final class StreamingCommunicationThread extends Thread {
 	/**
 	 * The blocking queue which is used to asynchronously exchange data with the job manager component of this plugin.
 	 */
-	private final BlockingQueue<AbstractStreamingData> dataQueue = new ArrayBlockingQueue<AbstractStreamingData>(
-		QUEUE_CAPACITY);
+	private final BlockingQueue<AbstractStreamingData> dataQueue = new LinkedBlockingQueue<AbstractStreamingData>();
 
-	private final BlockingQueue<InstanceConnectionInfo> connectionInfoQueue = new ArrayBlockingQueue<InstanceConnectionInfo>(
-		QUEUE_CAPACITY);
+	private final BlockingQueue<InstanceConnectionInfo> connectionInfoQueue = new LinkedBlockingQueue<InstanceConnectionInfo>();
 
 	private HashMap<InstanceConnectionInfo, PluginCommunicationProtocol> proxies = new HashMap<InstanceConnectionInfo, PluginCommunicationProtocol>();
 

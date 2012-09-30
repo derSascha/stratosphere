@@ -70,7 +70,7 @@ public class StreamProfilingMasterThread extends Thread {
 		int throughputs = 0;
 		int obls = 0;
 
-		triggerChainingDelayed(30000);
+		//triggerChainingDelayed(30000);
 		try {
 			while (!interrupted()) {
 				AbstractStreamingData streamingData = streamingDataQueue.take();
