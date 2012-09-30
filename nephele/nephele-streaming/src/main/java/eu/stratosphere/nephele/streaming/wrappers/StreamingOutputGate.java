@@ -36,7 +36,7 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 //
 //	private long[] lastSentBytes = null;
 
-	private volatile StreamChain streamChain = null;
+	private StreamChain streamChain = null;
 
 	private Map<ChannelID, BufferLatency> bufferLatencyMap = new HashMap<ChannelID, BufferLatency>();
 	
@@ -104,12 +104,11 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 		}
 	}
 	
-	public void reportRecordEmitted(final Record record) {
-		
-		this.streamListener.recordEmitted(record);
-		
+	public void reportRecordEmitted(final Record record) throws InterruptedException {
 		AbstractTaggableRecord taggableRecord = (AbstractTaggableRecord) record;
 		this.recordTagger.tagRecordIfNecessary(taggableRecord);
+		
+		this.streamListener.recordEmitted(record);
 	
 		// FIXME: do throughput reporting on a time basis ("once every second")
 		// not based on whether records are tagged (this will create WAY to many

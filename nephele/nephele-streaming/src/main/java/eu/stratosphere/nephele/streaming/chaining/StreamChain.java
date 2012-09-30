@@ -19,12 +19,17 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Queue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingOutputGate;
 import eu.stratosphere.nephele.types.Record;
 import eu.stratosphere.nephele.util.StringUtils;
 
 public final class StreamChain {
+
+	private static final Log LOG = LogFactory.getLog(StreamChain.class);
 
 	private final List<StreamChainLink<?, ?>> chainLinks;
 
@@ -78,5 +83,25 @@ public final class StreamChain {
 				executeMapper(RecordUtils.createCopy(outputRecord), chainIndex + 1);
 			}
 		}
+	}
+
+	public void waitUntilFlushed() throws InterruptedException {
+		try {
+			LOG.info("Locking task threads in chain");
+			for (int i = 0; i < chainLinks.size(); i++) {
+				StreamChainLink<?, ?> chainLink = chainLinks.get(i);
+				if (i == 0) {
+					chainLink.getOutputGate().flush();
+					chainLink.getOutputGate().redirectToStreamChain(this);
+				} else {
+					chainLink.getInputGate().haltTaskThread();
+					chainLink.getOutputGate().flush();
+				}
+			}
+			LOG.info("Task threads chain in successfully locked");
+		} catch (Exception e) {
+			LOG.error(StringUtils.stringifyException(e));
+		}
+
 	}
 }

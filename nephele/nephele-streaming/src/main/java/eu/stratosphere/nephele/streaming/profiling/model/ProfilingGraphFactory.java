@@ -142,7 +142,8 @@ public class ProfilingGraphFactory {
 
 		for (int i = 0; i < executionGroupVertex.getCurrentNumberOfGroupMembers(); i++) {
 			ExecutionVertex executionVertex = executionGroupVertex.getGroupMember(i);
-			profilingGroupVertex.addGroupMember(new ProfilingVertex(executionVertex.getID(), executionVertex.getName()));
+			profilingGroupVertex.addGroupMember(new ProfilingVertex(executionVertex.getID(), executionVertex.getName()
+				+ executionVertex.getIndexInVertexGroup()));
 		}
 	}
 

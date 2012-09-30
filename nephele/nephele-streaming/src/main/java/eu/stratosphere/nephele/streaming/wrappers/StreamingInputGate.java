@@ -18,6 +18,7 @@ package eu.stratosphere.nephele.streaming.wrappers;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
@@ -53,6 +54,10 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 
 	private InputGateChannelLatencyReporter channelLatencyReporter;
 
+	private volatile boolean isInChain = false;
+
+	private AtomicBoolean taskThreadHalted = new AtomicBoolean(false);
+
 	StreamingInputGate(final InputGate<T> wrappedInputGate, final StreamListener streamListener) {
 		super(wrappedInputGate);
 
@@ -84,7 +89,7 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 
 		while (record == null) {
 			if (this.channelToReadFrom == -1) {
-				this.availableChannelRetVal = waitForAnyChannelToBecomeAvailable();
+				this.availableChannelRetVal = waitForAnyChannelToBecomeAvailable(target);
 				this.channelToReadFrom = this.availableChannelRetVal;
 			}
 			try {
@@ -126,17 +131,61 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 	 * one record available. The method may block until at least one
 	 * channel has become ready.
 	 * 
+	 * @param target
 	 * @return the index of the channel which has at least one record available
+	 * @throws IOException
 	 */
-	public int waitForAnyChannelToBecomeAvailable() throws InterruptedException {
+	public int waitForAnyChannelToBecomeAvailable(T target) throws InterruptedException {
 
 		synchronized (this.availableChannels) {
-
+			boolean haltTask = false;
 			while (this.availableChannels.isEmpty()) {
+				if (isInChain) {
+					haltTask = true;
+					break;
+				}
 				this.availableChannels.wait();
 			}
 
-			return this.availableChannels.removeFirst().intValue();
+			if (!haltTask) {
+				return this.availableChannels.removeFirst().intValue();
+			}
+		}
+
+		// This piece of code will only be reached if this input gate
+		// is inside a chain and the task thread (doing this call)
+		// should therefore be halted (unless interrupted)
+		signalThatTaskHasHalted();
+
+		// this should never return unless the task is interrupted
+		dumpIncomingData(target);
+
+		throw new RuntimeException("Failed to halt chained task, this is a bug.");
+	}
+
+	private void dumpIncomingData(T target) throws InterruptedException {
+		while (true) {
+			synchronized (this.availableChannels) {
+				while (this.availableChannels.isEmpty()) {
+					this.availableChannels.wait();
+				}
+			}
+
+			int channelToDump = this.availableChannels.removeFirst().intValue();
+			try {
+				while (this.getInputChannel(channelToDump).readRecord(target) != null) {
+					// FIXME: this silently dumps data that was in transit at the time of task locking
+					// also this MAY be unsafe if invoking target.read() multipled times throws exceptions
+				}
+			} catch (IOException e) {
+			}
+		}
+	}
+
+	private void signalThatTaskHasHalted() {
+		synchronized (taskThreadHalted) {
+			taskThreadHalted.set(true);
+			taskThreadHalted.notify();
 		}
 	}
 
@@ -177,5 +226,14 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 	@Override
 	public void initializeDecompressors() throws CompressionException {
 		getWrappedInputGate().initializeDecompressors();
+	}
+
+	public void haltTaskThread() throws InterruptedException {
+		this.isInChain = true;
+		synchronized (this.taskThreadHalted) {
+			if (!this.taskThreadHalted.get()) {
+				this.taskThreadHalted.wait();
+			}
+		}
 	}
 }

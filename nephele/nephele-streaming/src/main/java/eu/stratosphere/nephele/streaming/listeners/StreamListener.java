@@ -101,7 +101,7 @@ public final class StreamListener {
 		this.outputChannelMap = Collections.unmodifiableMap(tmpMap);
 	}
 
-	public void recordEmitted(final Record record) {
+	public void recordEmitted(final Record record) throws InterruptedException {
 
 		taskLatencyReporter.processRecordEmitted();
 
@@ -127,7 +127,7 @@ public final class StreamListener {
 		this.listenerContext.getProfilingReporter().addToNextReport(channelLatency);
 	}
 
-	private void checkForPendingActions() {
+	private void checkForPendingActions() throws InterruptedException {
 
 		LinkedBlockingQueue<AbstractAction> pendingActions = this.listenerContext.getPendingActionsQueue();
 
@@ -144,16 +144,10 @@ public final class StreamListener {
 		}
 	}
 
-	private void constructStreamChain(final ConstructStreamChainAction csca) {
+	private void constructStreamChain(final ConstructStreamChainAction csca) throws InterruptedException {
 
-		final StreamChain streamChain = this.listenerContext.constructStreamChain(csca.getVertexIDs());
-		final StreamingOutputGate<? extends Record> outputGate = streamChain.getFirstOutputGate();
-		try {
-			outputGate.flush();
-			outputGate.redirectToStreamChain(streamChain);
-		} catch (Exception e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
+		final StreamChain streamChain = this.listenerContext.constructStreamChain(csca.getVertexIDs());		
+		streamChain.waitUntilFlushed();
 	}
 
 	private void limitBufferSize(final LimitBufferSizeAction bsla) {

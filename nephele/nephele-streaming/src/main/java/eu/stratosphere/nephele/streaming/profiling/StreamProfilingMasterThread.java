@@ -70,7 +70,7 @@ public class StreamProfilingMasterThread extends Thread {
 		int throughputs = 0;
 		int obls = 0;
 
-		//triggerChainingDelayed(30000);
+		triggerChainingDelayed(45000);
 		try {
 			while (!interrupted()) {
 				AbstractStreamingData streamingData = streamingDataQueue.take();
@@ -145,6 +145,7 @@ public class StreamProfilingMasterThread extends Thread {
 		for (ProfilingGroupVertex groupVertex : this.profilingSequence.getSequenceVertices()) {
 			if (groupVertex.getName().startsWith("Decoder")) {
 
+				LOG.info("Decoder group members: " + groupVertex.getGroupMembers().size());
 				for (ProfilingVertex decoder : groupVertex.getGroupMembers()) {
 					instances.put(decoder.getID(), decoder.getProfilingReporter());
 					LinkedList<ExecutionVertexID> chain = new LinkedList<ExecutionVertexID>();
@@ -163,6 +164,8 @@ public class StreamProfilingMasterThread extends Thread {
 				break;
 			}
 		}
+
+		LOG.info("Number of chains to announce: " + chainList.size());
 
 		final Runnable run = new Runnable() {
 			@Override
