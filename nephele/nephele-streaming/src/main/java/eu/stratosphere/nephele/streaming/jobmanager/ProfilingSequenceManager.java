@@ -376,13 +376,15 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 	private ProfilingGroupVertex determineProfilingAnchor() {
 		// find anchoring GroupVertex G with highest instanceCount
-
-		int anchorVertexInstanceCount = -1;
+		// FIXME
+		double anchorTaskToNodeRatio = Double.MIN_VALUE;
 		ProfilingGroupVertex anchorVertex = null;
 
 		for (ProfilingGroupVertex groupVertex : profilingSequence.getSequenceVertices()) {
-			if (groupVertex.getNumberOfExecutingInstances() > anchorVertexInstanceCount) {
-				anchorVertexInstanceCount = groupVertex.getNumberOfExecutingInstances();
+			double taskToNodeRatio = ((double) groupVertex.getGroupMembers().size())
+				/ groupVertex.getNumberOfExecutingInstances();
+			if (taskToNodeRatio > anchorTaskToNodeRatio) {
+				anchorTaskToNodeRatio = taskToNodeRatio;
 				anchorVertex = groupVertex;
 			}
 		}
