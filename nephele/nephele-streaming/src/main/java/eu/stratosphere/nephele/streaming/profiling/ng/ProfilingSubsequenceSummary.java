@@ -226,14 +226,14 @@ public class ProfilingSubsequenceSummary {
 
 	private void addChannelAndOutputBufferLatency(int insertPosition, EdgeCharacteristics fwEdgeCharacteristics) {
 		double outputBufferLatency = fwEdgeCharacteristics.getOutputBufferLifetimeInMillis() / 2;
-		this.subsequenceElementLatencies[insertPosition] += outputBufferLatency;
+		this.subsequenceElementLatencies[insertPosition] = outputBufferLatency;
 		this.subsequenceLatency += outputBufferLatency;
 
 		// channel latency includes output buffer latency, hence we subtract the output buffer latency
 		// in order not to count it twice
 		double remainingChannelLatency = Math.max(0, fwEdgeCharacteristics.getChannelLatencyInMillis()
 			- outputBufferLatency);
-		this.subsequenceElementLatencies[insertPosition + 1] += remainingChannelLatency;
+		this.subsequenceElementLatencies[insertPosition + 1] = remainingChannelLatency;
 		this.subsequenceLatency += remainingChannelLatency;
 	}
 
