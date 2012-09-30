@@ -214,7 +214,7 @@ public class BufferSizeManager {
 		long freshnessThreshold = edgeChar.getBufferSizeHistory().getLastEntry().getTimestamp();
 
 		return edgeChar.isChannelLatencyFresherThan(freshnessThreshold)
-			&& (edgeChar.isInChain() || edgeChar.isOutputBufferLatencyFresherThan(freshnessThreshold));
+			&& edgeChar.isOutputBufferLatencyFresherThan(freshnessThreshold);
 	}
 
 	private boolean hasFreshValues(VertexLatency vertexLatency) {
