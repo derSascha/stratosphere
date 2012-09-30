@@ -32,6 +32,8 @@ public class ProfilingSequenceSummary {
 		this.enumeratingSummary = new ProfilingSubsequenceSummary(sequence);
 		if (this.enumeratingSummary.isSubsequenceActive()) {
 			updateAggregatedFields();
+		} else {
+			finalizeAggregatedFields();
 		}
 	}
 
