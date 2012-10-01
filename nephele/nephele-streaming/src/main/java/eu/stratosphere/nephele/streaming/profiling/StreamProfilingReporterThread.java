@@ -1,5 +1,6 @@
 package eu.stratosphere.nephele.streaming.profiling;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
@@ -16,6 +17,7 @@ import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.StreamingCommunicationThread;
+import eu.stratosphere.nephele.streaming.StreamingTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.types.StreamProfilingReport;
 import eu.stratosphere.nephele.streaming.types.StreamProfilingReporterInfo;
 import eu.stratosphere.nephele.streaming.types.profiling.AbstractStreamProfilingRecord;
@@ -23,6 +25,7 @@ import eu.stratosphere.nephele.streaming.types.profiling.ChannelLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.ChannelThroughput;
 import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
+import eu.stratosphere.nephele.util.StringUtils;
 
 /**
  * For a given Nephele job, this class aggregates and reports stream profiling data (latencies, throughput, etc) of
@@ -58,6 +61,8 @@ public class StreamProfilingReporterThread extends Thread {
 	private LinkedBlockingQueue<AbstractStreamProfilingRecord> pendingProfilingRecords;
 
 	private volatile boolean started;
+
+	private InstanceConnectionInfo localhost;
 
 	private class PendingReport implements Comparable<PendingReport> {
 		private long dueTime;
@@ -149,8 +154,16 @@ public class StreamProfilingReporterThread extends Thread {
 				processPendingProfilingData();
 
 				if (!currentReport.getReport().isEmpty()) {
-					communicationThread.sendToTaskManagerAsynchronously(currentReport.getProfilingMaster(),
+					if (currentReport.getProfilingMaster().equals(localhost)) {
+						try {
+							StreamingTaskManagerPlugin.getInstance().sendData(currentReport.getReport());
+						} catch (IOException e) {
+							LOG.error(StringUtils.stringifyException(e));
+						}
+					} else {
+						communicationThread.sendToTaskManagerAsynchronously(currentReport.getProfilingMaster(),
 							currentReport.getReport());
+					}
 				}
 				currentReport.refreshReport();
 
@@ -224,6 +237,7 @@ public class StreamProfilingReporterThread extends Thread {
 
 	public void registerProfilingReporterInfo(StreamProfilingReporterInfo reporterInfo) {
 		synchronized (this.pendingReports) {
+			this.localhost = reporterInfo.getReporterConnectionInfo();
 			int tasks = 0;
 			int channels = 0;
 
@@ -233,7 +247,7 @@ public class StreamProfilingReporterThread extends Thread {
 				for (InstanceConnectionInfo profilingMaster : reporterInfo.getTaskProfilingMasters(vertexID)) {
 					vertexReports.add(getOrCreateProfilingReport(profilingMaster));
 				}
-
+				LOG.info(String.format("Registered %d reports for vertex %s", vertexReports.size(), vertexID.toString()));
 				tasks++;
 			}
 
@@ -245,7 +259,8 @@ public class StreamProfilingReporterThread extends Thread {
 
 					channelReports.add(getOrCreateProfilingReport(channelProfilingMaster));
 				}
-
+				LOG.info(String.format("Registered %d reports for channel %s", channelReports.size(),
+					channelID.toString()));
 				channels++;
 			}
 			LOG.info(String.format("Added %d tasks and %d channels. Altogether (max) %d reports each interval", tasks,

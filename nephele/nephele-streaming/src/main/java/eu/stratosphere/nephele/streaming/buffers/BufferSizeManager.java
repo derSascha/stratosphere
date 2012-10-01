@@ -23,6 +23,7 @@ import eu.stratosphere.nephele.streaming.profiling.model.ProfilingVertex;
 import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSequenceSummary;
 import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSubsequenceSummary;
 import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
+import eu.stratosphere.nephele.util.StringUtils;
 
 public class BufferSizeManager {
 
@@ -228,6 +229,17 @@ public class BufferSizeManager {
 	private void setBufferSize(ProfilingEdge edge, int bufferSize) throws InterruptedException {
 		LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, edge.getSourceVertex().getID(),
 			edge.getSourceChannelID(), bufferSize);
-		this.communicationThread.sendToTaskManagerAsynchronously(edge.getSourceVertex().getProfilingReporter(), bsla);
+
+		if (this.profilingModel.getProfilingSequence().getProfilingMaster()
+			.equals(edge.getSourceVertex().getProfilingReporter())) {
+			try {
+				StreamingTaskManagerPlugin.getInstance().sendData(bsla);
+			} catch (IOException e) {
+				LOG.error(StringUtils.stringifyException(e));
+			}
+		} else {
+			this.communicationThread.sendToTaskManagerAsynchronously(edge.getSourceVertex().getProfilingReporter(),
+				bsla);
+		}
 	}
 }

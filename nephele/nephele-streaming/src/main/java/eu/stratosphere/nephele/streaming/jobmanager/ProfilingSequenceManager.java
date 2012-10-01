@@ -213,6 +213,8 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		InstanceConnectionInfo profilingMaster = anchorVerticesOnProfilingMaster.getFirst().getProfilingReporter();
 		ProfilingSequence partialSequence = expandToPartialProfilingSequence(anchor,
 			anchorVerticesOnProfilingMaster);
+		partialSequence.setProfilingMaster(profilingMaster);
+		
 		registerProfilingMasterOnExecutionVertices(partialSequence, profilingMaster);
 		sendPartialProfilingSequenceToProfilingMaster(profilingMaster, partialSequence);
 		LOG.info("Successfully set up profiling master " + profilingMaster);

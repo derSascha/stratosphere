@@ -121,6 +121,13 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 		PLUGIN_CONFIGURATION = pluginConfiguration;
 	}
 
+	public static StreamingTaskManagerPlugin getInstance() {
+		if (INSTANCE == null) {
+			throw new IllegalStateException("StreamingTaskManagerPlugin has not been initialized");
+		}
+		return INSTANCE;
+	}
+
 	public static StreamListenerContext getStreamingListenerContext(final String listenerKey) {
 
 		if (INSTANCE == null) {
@@ -194,7 +201,7 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void unregisterTask(final ExecutionVertexID id, final Environment environment) {
-		this.listenerContexts.remove(id.toString());		
+		this.listenerContexts.remove(id.toString());
 	}
 
 	private StreamProfilingReporterThread getOrCreateStreamProfilingReporter(JobID jobID) {
@@ -221,10 +228,10 @@ public class StreamingTaskManagerPlugin implements TaskManagerPlugin {
 			handleConstructStreamChainAction((ConstructStreamChainAction) data);
 		} else if (data instanceof ActAsProfilingMasterAction) {
 			handleActAsProfilingMasterAction((ActAsProfilingMasterAction) data);
-		} else if(data instanceof StreamProfilingReporterInfo) {
-			handleStreamProfilingReporterInfo((StreamProfilingReporterInfo)data);
-			
-		}else {
+		} else if (data instanceof StreamProfilingReporterInfo) {
+			handleStreamProfilingReporterInfo((StreamProfilingReporterInfo) data);
+
+		} else {
 			LOG.error("Received data is of unknown type " + data.getClass());
 		}
 	}

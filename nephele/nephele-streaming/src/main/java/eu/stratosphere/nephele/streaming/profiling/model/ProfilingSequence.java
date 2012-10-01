@@ -22,8 +22,18 @@ public class ProfilingSequence implements IOReadableWritable {
 
 	private boolean includeEndVertex;
 
+	private InstanceConnectionInfo profilingMaster;
+
 	public ProfilingSequence() {
 		this.sequenceVertices = new ArrayList<ProfilingGroupVertex>();
+	}
+
+	public InstanceConnectionInfo getProfilingMaster() {
+		return profilingMaster;
+	}
+
+	public void setProfilingMaster(InstanceConnectionInfo profilingMaster) {
+		this.profilingMaster = profilingMaster;
 	}
 
 	public List<ProfilingGroupVertex> getSequenceVertices() {
@@ -76,10 +86,10 @@ public class ProfilingSequence implements IOReadableWritable {
 	public void write(DataOutput out) throws IOException {
 		out.writeBoolean(includeStartVertex);
 		out.writeBoolean(includeEndVertex);
+		this.profilingMaster.write(out);
 		writeGroupVerticesWithoutMembers(out);
 		writeMemberVertices(out);
 	}
-
 
 	private void readMemberVertices(DataInput in) throws IOException {
 		for (ProfilingGroupVertex groupVertex : sequenceVertices) {
@@ -119,7 +129,7 @@ public class ProfilingSequence implements IOReadableWritable {
 			}
 		}
 	}
-	
+
 	private void writeMemberVertices(DataOutput out) throws IOException {
 		HashMap<ExecutionVertexID, Integer> id2MemberPosition = new HashMap<ExecutionVertexID, Integer>();
 
@@ -148,7 +158,6 @@ public class ProfilingSequence implements IOReadableWritable {
 		}
 	}
 
-
 	private void writeGroupVerticesWithoutMembers(DataOutput out) throws IOException {
 		out.writeInt(sequenceVertices.size());
 		for (ProfilingGroupVertex groupVertex : sequenceVertices) {
@@ -164,6 +173,8 @@ public class ProfilingSequence implements IOReadableWritable {
 	public void read(DataInput in) throws IOException {
 		this.includeStartVertex = in.readBoolean();
 		this.includeEndVertex = in.readBoolean();
+		this.profilingMaster = new InstanceConnectionInfo();
+		this.profilingMaster.read(in);
 		readGroupVerticesWithoutMembers(in);
 		readMemberVertices(in);
 	}
