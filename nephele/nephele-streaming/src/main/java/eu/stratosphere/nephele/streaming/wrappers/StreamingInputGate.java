@@ -230,6 +230,11 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 
 	public void haltTaskThread() throws InterruptedException {
 		this.isInChain = true;
+		synchronized(this.availableChannels) {
+			// wake up any task thread that is waiting on available channels
+			// so that it realizes it should be halted.
+			this.availableChannels.notify();
+		}
 		synchronized (this.taskThreadHalted) {
 			if (!this.taskThreadHalted.get()) {
 				this.taskThreadHalted.wait();
