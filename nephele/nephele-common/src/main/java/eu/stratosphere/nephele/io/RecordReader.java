@@ -186,10 +186,7 @@ public class RecordReader<T extends Record> extends AbstractRecordReader<T> impl
 		}
 
 		final T retVal = this.lastRead;
-		this.lastRead = getInputGate().readRecord(null);
-		if (this.lastRead == null) {
-			this.noMoreRecordsWillFollow = true;
-		}
+		this.lastRead = null;
 
 		return retVal;
 	}
