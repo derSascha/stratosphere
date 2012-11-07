@@ -17,7 +17,6 @@ package eu.stratosphere.nephele.streaming.wrappers;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import eu.stratosphere.nephele.io.InputGate;
@@ -28,24 +27,12 @@ import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
 
-public final class StreamingInputGate<T extends Record> extends AbstractInputGateWrapper<T> {
+public final class StreamingInputGate<T extends Record> extends
+		AbstractInputGateWrapper<T> {
 
 	private final StreamListener streamListener;
 
-	/**
-	 * Queue with indices of channels that store at least one available record.
-	 */
-	private final ArrayDeque<Integer> availableChannels = new ArrayDeque<Integer>();
-
-	/**
-	 * The channel to read from next.
-	 */
-	private int channelToReadFrom = -1;
-
-	/**
-	 * The value returned by the last call of waitForAnyChannelToBecomeAvailable
-	 */
-	private int availableChannelRetVal = -1;
+	private final InputChannelChooser channelChooser = new InputChannelChooser();
 
 	/**
 	 * The thread which executes the task connected to the input gate.
@@ -54,128 +41,116 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 
 	private InputGateChannelLatencyReporter channelLatencyReporter;
 
-	private volatile boolean isInChain = false;
-
 	private AtomicBoolean taskThreadHalted = new AtomicBoolean(false);
 
-	StreamingInputGate(final InputGate<T> wrappedInputGate, final StreamListener streamListener) {
+	StreamingInputGate(final InputGate<T> wrappedInputGate,
+			final StreamListener streamListener) {
 		super(wrappedInputGate);
 
 		if (streamListener == null) {
-			throw new IllegalArgumentException("Argument streamListener must not be null");
+			throw new IllegalArgumentException(
+					"Argument streamListener must not be null");
 		}
 
 		this.streamListener = streamListener;
-		this.channelLatencyReporter = new InputGateChannelLatencyReporter(streamListener);
+		this.channelLatencyReporter = new InputGateChannelLatencyReporter(
+				streamListener);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public T readRecord(final T target) throws IOException, InterruptedException {
-
-		T record = null;
-
+	public T readRecord(final T target) throws IOException,
+			InterruptedException {
 		if (this.executingThread == null) {
 			this.executingThread = Thread.currentThread();
+		}
+
+		if (isClosed()) {
+			return null;
 		}
 
 		if (this.executingThread.isInterrupted()) {
 			throw new InterruptedException();
 		}
 
-		final int numberOfInputChannels = getNumberOfInputChannels();
+		T record = null;
+		do {
+			int channelToReadFrom = this.channelChooser
+					.chooseNextAvailableChannel();
 
-		while (record == null) {
-			if (this.channelToReadFrom == -1) {
-				this.availableChannelRetVal = waitForAnyChannelToBecomeAvailable(target);
-				this.channelToReadFrom = this.availableChannelRetVal;
-			}
-			try {
-				record = this.getInputChannel(this.channelToReadFrom).readRecord(target);
-			} catch (EOFException e) {
-				if (this.isClosed()) {
-					return null;
-				}
-			}
-
-			if (record == null && this.channelToReadFrom == this.availableChannelRetVal) {
-				this.channelToReadFrom = -1;
+			if (channelToReadFrom != -1) {
+				// regular reading
+				record = readFromChannel(channelToReadFrom, target);
 			} else {
-				this.channelToReadFrom++;
-				if (this.channelToReadFrom == numberOfInputChannels) {
-					this.channelToReadFrom = 0;
-				}
+				// never returns and dumps any incoming data
+				trapTaskThread(target);
 			}
-		}
+		} while (record == null);
 
 		reportRecordReceived(record);
 
 		return record;
 	}
 
-	/**
-	 * @param record
-	 *        The record that has been received.
-	 * @param sourceChannelID
-	 *        The ID of the source channel (output channel)
-	 */
-	public void reportRecordReceived(final Record record) {
-		this.streamListener.recordReceived(record);
-		this.channelLatencyReporter.reportLatencyIfNecessary((AbstractTaggableRecord) record);
+	private T readFromChannel(int channelToReadFrom, T targetRecord)
+			throws IOException {
+		T returnValue = null;
+		try {
+			returnValue = this.getInputChannel(channelToReadFrom).readRecord(
+					targetRecord);
+		} catch (EOFException e) {
+		}
+		if (returnValue == null) {
+			this.channelChooser.markCurrentChannelUnavailable();
+		}
+
+		return returnValue;
 	}
 
 	/**
-	 * This method returns the index of a channel which has at least
-	 * one record available. The method may block until at least one
-	 * channel has become ready.
+	 * @param record
+	 *            The record that has been received.
+	 * @param sourceChannelID
+	 *            The ID of the source channel (output channel)
+	 */
+	public void reportRecordReceived(final Record record) {
+		this.streamListener.recordReceived(record);
+		this.channelLatencyReporter
+				.reportLatencyIfNecessary((AbstractTaggableRecord) record);
+	}
+
+	/**
+	 * This method should only be called if this input gate is inside a chain
+	 * and the task thread (doing this call) should therefore be halted (unless
+	 * interrupted).
 	 * 
 	 * @param target
-	 * @return the index of the channel which has at least one record available
-	 * @throws IOException
+	 * @throws InterruptedException
+	 *             if task thread is interrupted.
 	 */
-	public int waitForAnyChannelToBecomeAvailable(T target) throws InterruptedException {
-
-		synchronized (this.availableChannels) {
-			boolean haltTask = false;
-			while (this.availableChannels.isEmpty()) {
-				if (isInChain) {
-					haltTask = true;
-					break;
-				}
-				this.availableChannels.wait();
-			}
-
-			if (!haltTask) {
-				return this.availableChannels.removeFirst().intValue();
-			}
-		}
-
-		// This piece of code will only be reached if this input gate
-		// is inside a chain and the task thread (doing this call)
-		// should therefore be halted (unless interrupted)
+	private void trapTaskThread(T target) throws InterruptedException {
 		signalThatTaskHasHalted();
 
 		// this should never return unless the task is interrupted
 		dumpIncomingData(target);
 
-		throw new RuntimeException("Failed to halt chained task, this is a bug.");
+		throw new RuntimeException(
+				"Failed to halt chained task, this is a bug.");
 	}
 
 	private void dumpIncomingData(T target) throws InterruptedException {
+		this.channelChooser.setBlockIfNoChannelAvailable(true);
 		while (true) {
-			synchronized (this.availableChannels) {
-				while (this.availableChannels.isEmpty()) {
-					this.availableChannels.wait();
-				}
-			}
-
-			int channelToDump = this.availableChannels.removeFirst().intValue();
+			int channelToDump = this.channelChooser
+					.chooseNextAvailableChannel();
 			try {
+				// FIXME: this silently dumps data that was in transit at the
+				// time of task locking
+				// also this MAY be unsafe if invoking target.read() multipled
+				// times throws exceptions
 				while (this.getInputChannel(channelToDump).readRecord(target) != null) {
-					// FIXME: this silently dumps data that was in transit at the time of task locking
-					// also this MAY be unsafe if invoking target.read() multipled times throws exceptions
 				}
 			} catch (IOException e) {
 			}
@@ -183,9 +158,9 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 	}
 
 	private void signalThatTaskHasHalted() {
-		synchronized (taskThreadHalted) {
-			taskThreadHalted.set(true);
-			taskThreadHalted.notify();
+		synchronized (this.taskThreadHalted) {
+			this.taskThreadHalted.set(true);
+			this.taskThreadHalted.notify();
 		}
 	}
 
@@ -194,19 +169,15 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 	 */
 	@Override
 	public void notifyRecordIsAvailable(final int channelIndex) {
-
-		synchronized (this.availableChannels) {
-
-			this.availableChannels.add(Integer.valueOf(channelIndex));
-			this.availableChannels.notify();
-		}
+		this.channelChooser.addIncomingAvailableChannel(channelIndex);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void registerRecordAvailabilityListener(final RecordAvailabilityListener<T> listener) {
+	public void registerRecordAvailabilityListener(
+			final RecordAvailabilityListener<T> listener) {
 		getWrappedInputGate().registerRecordAvailabilityListener(listener);
 	}
 
@@ -214,7 +185,8 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 	 * {@inheritDoc}
 	 */
 	@Override
-	public boolean hasRecordAvailable() throws IOException, InterruptedException {
+	public boolean hasRecordAvailable() throws IOException,
+			InterruptedException {
 		return getWrappedInputGate().hasRecordAvailable();
 	}
 
@@ -229,12 +201,7 @@ public final class StreamingInputGate<T extends Record> extends AbstractInputGat
 	}
 
 	public void haltTaskThread() throws InterruptedException {
-		this.isInChain = true;
-		synchronized(this.availableChannels) {
-			// wake up any task thread that is waiting on available channels
-			// so that it realizes it should be halted.
-			this.availableChannels.notify();
-		}
+		this.channelChooser.setBlockIfNoChannelAvailable(false);
 		synchronized (this.taskThreadHalted) {
 			if (!this.taskThreadHalted.get()) {
 				this.taskThreadHalted.wait();
