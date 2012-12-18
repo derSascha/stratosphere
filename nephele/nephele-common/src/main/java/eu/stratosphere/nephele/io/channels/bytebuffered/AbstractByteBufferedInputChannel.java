@@ -115,30 +115,33 @@ public abstract class AbstractByteBufferedInputChannel<T extends Record> extends
 	 */
 	private T deserializeNextRecord(final T target) throws IOException {
 
-		if (this.dataBuffer == null) {
+		T nextRecord = null;
+		requestReadBufferIfNecessary();
 
-			if (this.ioException != null) {
-				throw this.ioException;
+		while (nextRecord == null && this.dataBuffer != null) {
+			nextRecord = this.deserializer.readData(target, this.dataBuffer);
+
+			if (!this.dataBuffer.hasRemaining()) {
+				releaseConsumedReadBuffer();
+				requestReadBufferIfNecessary();
 			}
-
-			requestReadBufferFromBroker();
-
-			if (this.dataBuffer == null) {
-				return null;
-			}
-
-			if (this.decompressor != null) {
-				this.dataBuffer = this.decompressor.decompress(this.dataBuffer);
-			}
-		}
-
-		final T nextRecord = this.deserializer.readData(target, this.dataBuffer);
-
-		if (this.dataBuffer.remaining() == 0) {
-			releasedConsumedReadBuffer();
 		}
 
 		return nextRecord;
+	}
+
+	
+	private void requestReadBufferIfNecessary() throws IOException {
+		if (this.ioException != null) {
+			throw this.ioException;
+		}
+
+		if (this.dataBuffer == null) {
+			requestReadBufferFromBroker();
+			if (this.dataBuffer != null && this.decompressor != null) {
+				this.dataBuffer = this.decompressor.decompress(this.dataBuffer);
+			}
+		}
 	}
 
 	private void requestReadBufferFromBroker() {
@@ -195,7 +198,7 @@ public abstract class AbstractByteBufferedInputChannel<T extends Record> extends
 
 		this.deserializer.clear();
 		if (this.dataBuffer != null) {
-			releasedConsumedReadBuffer();
+			releaseConsumedReadBuffer();
 		}
 
 		// This code fragment makes sure the isClosed method works in case the channel input has not been fully consumed
@@ -203,7 +206,7 @@ public abstract class AbstractByteBufferedInputChannel<T extends Record> extends
 			while (!this.brokerAggreedToCloseChannel) {
 				requestReadBufferFromBroker();
 				if (this.dataBuffer != null) {
-					releasedConsumedReadBuffer();
+					releaseConsumedReadBuffer();
 					continue;
 				}
 				Thread.sleep(200);
@@ -220,7 +223,7 @@ public abstract class AbstractByteBufferedInputChannel<T extends Record> extends
 		}
 	}
 
-	private void releasedConsumedReadBuffer() {
+	private void releaseConsumedReadBuffer() {
 
 		// Keep track of number of bytes transmitted through this channel
 		this.amountOfDataTransmitted += this.dataBuffer.size();
