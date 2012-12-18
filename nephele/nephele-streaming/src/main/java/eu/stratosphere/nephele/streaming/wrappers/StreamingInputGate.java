@@ -15,7 +15,6 @@
 
 package eu.stratosphere.nephele.streaming.wrappers;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,7 +31,7 @@ public final class StreamingInputGate<T extends Record> extends
 
 	private final StreamListener streamListener;
 
-	private final InputChannelChooser channelChooser = new InputChannelChooser();
+	private final InputChannelChooser channelChooser;
 
 	/**
 	 * The thread which executes the task connected to the input gate.
@@ -53,6 +52,7 @@ public final class StreamingInputGate<T extends Record> extends
 		}
 
 		this.streamListener = streamListener;
+		this.channelChooser = new InputChannelChooser();
 		this.channelLatencyReporter = new InputGateChannelLatencyReporter(
 				streamListener);
 	}
@@ -96,12 +96,9 @@ public final class StreamingInputGate<T extends Record> extends
 
 	private T readFromChannel(int channelToReadFrom, T targetRecord)
 			throws IOException {
-		T returnValue = null;
-		try {
-			returnValue = this.getInputChannel(channelToReadFrom).readRecord(
-					targetRecord);
-		} catch (EOFException e) {
-		}
+		final T returnValue = this.getInputChannel(channelToReadFrom)
+				.readRecord(targetRecord);
+		
 		if (returnValue == null) {
 			this.channelChooser.markCurrentChannelUnavailable();
 		}

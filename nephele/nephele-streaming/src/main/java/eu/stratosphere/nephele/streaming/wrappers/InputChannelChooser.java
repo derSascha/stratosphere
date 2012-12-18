@@ -1,18 +1,12 @@
 package eu.stratosphere.nephele.streaming.wrappers;
 
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class InputChannelChooser {
 
 	private final LinkedBlockingQueue<Integer> incomingAvailableChannels = new LinkedBlockingQueue<Integer>();
 
-	private final HashSet<Integer> availableChannels = new HashSet<Integer>();
-
-	private LinkedList<Integer> doneChannels = new LinkedList<Integer>();
-
-	private LinkedList<Integer> pendingChannels = new LinkedList<Integer>();
+	private final RoundRobinChannelSchedule channelSchedule = new RoundRobinChannelSchedule();
 
 	private volatile boolean blockIfNoChannelAvailable = true;
 
@@ -25,25 +19,11 @@ public class InputChannelChooser {
 	public int chooseNextAvailableChannel() throws InterruptedException {
 		this.dequeueIncomingAvailableChannels();
 
-		if (this.availableChannels.isEmpty()) {
+		if (this.channelSchedule.isEmpty()) {
 			this.waitForAvailableChannelsIfNecessary();
 		}
 
-		return this.tryToDequeueNextChannel();
-	}
-
-	private int tryToDequeueNextChannel() {
-		if (this.pendingChannels.isEmpty()) {
-			this.switchDoneAndPendingChannels();
-		}
-
-		int currentChannel = -1;
-		if (!this.pendingChannels.isEmpty()) {
-			currentChannel = this.pendingChannels.removeFirst();
-			this.doneChannels.addLast(currentChannel);
-		}
-
-		return currentChannel;
+		return this.channelSchedule.nextChannel();
 	}
 
 	public void setBlockIfNoChannelAvailable(boolean blockIfNoChannelAvailable) {
@@ -56,14 +36,7 @@ public class InputChannelChooser {
 	}
 
 	public void markCurrentChannelUnavailable() {
-		int currentChannel = this.doneChannels.removeLast();
-		this.availableChannels.remove(currentChannel);
-	}
-
-	private void switchDoneAndPendingChannels() {
-		LinkedList<Integer> tmp = this.doneChannels;
-		this.doneChannels = this.pendingChannels;
-		this.pendingChannels = tmp;
+		this.channelSchedule.unscheduleCurrentChannel();
 	}
 
 	/**
@@ -76,12 +49,12 @@ public class InputChannelChooser {
 	private void waitForAvailableChannelsIfNecessary()
 			throws InterruptedException {
 		synchronized (this.incomingAvailableChannels) {
-			this.dequeueIncomingAvailableChannels();
 			while (this.incomingAvailableChannels.isEmpty()
 					&& this.blockIfNoChannelAvailable) {
 				this.incomingAvailableChannels.wait();
 			}
 		}
+		this.dequeueIncomingAvailableChannels();
 	}
 
 	public void addIncomingAvailableChannel(int channelIndex) {
@@ -94,15 +67,7 @@ public class InputChannelChooser {
 	private void dequeueIncomingAvailableChannels() {
 		Integer incoming;
 		while ((incoming = this.incomingAvailableChannels.poll()) != null) {
-			this.setChannelAvailable(incoming);
+			this.channelSchedule.scheduleChannel(incoming);
 		}
 	}
-
-	private void setChannelAvailable(int channelIndex) {
-		boolean added = this.availableChannels.add(channelIndex);
-		if (added) {
-			this.pendingChannels.add(channelIndex);
-		}
-	}
-
 }
