@@ -35,16 +35,16 @@ public class OutputGateRecordTagger<T extends Record> {
 
 		if (this.recordsSinceLastTag[outputChannel] >= this.streamListener
 				.getContext().getTaggingInterval()) {
-			record.setTag(this.createTag(System.currentTimeMillis()));
+			this.tagRecord(record);
 			this.recordsSinceLastTag[outputChannel] = 0;
 		} else {
 			record.setTag(null);
 		}
 	}
 
-	private TimestampTag createTag(final long timestamp) {
+	private void tagRecord(AbstractTaggableRecord record) {
 		TimestampTag tag = new TimestampTag();
-		tag.setTimestamp(timestamp);
-		return tag;
+		tag.setTimestamp(System.currentTimeMillis());
+		record.setTag(tag);
 	}
 }
