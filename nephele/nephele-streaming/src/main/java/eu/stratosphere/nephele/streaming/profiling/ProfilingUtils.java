@@ -10,13 +10,13 @@ public class ProfilingUtils {
 	public static String formatName(ManagementAttachment managementAttachment) {
 		if (managementAttachment instanceof ManagementVertex) {
 			return formatName((ManagementVertex) managementAttachment);
-		} else {
-			return formatName((ManagementEdge) managementAttachment);
 		}
+		return formatName((ManagementEdge) managementAttachment);
 	}
 
 	public static String formatName(ManagementEdge edge) {
-		return formatName(edge.getSource().getVertex()) + "->" + formatName(edge.getTarget().getVertex());
+		return formatName(edge.getSource().getVertex()) + "->"
+				+ formatName(edge.getTarget().getVertex());
 	}
 
 	public static String formatName(ManagementVertex vertex) {
@@ -32,7 +32,8 @@ public class ProfilingUtils {
 
 	public static String formatName(ExecutionVertex vertex) {
 		String name = vertex.getName();
-		for (int i = 0; i < vertex.getGroupVertex().getCurrentNumberOfGroupMembers(); i++) {
+		for (int i = 0; i < vertex.getGroupVertex()
+				.getCurrentNumberOfGroupMembers(); i++) {
 			if (vertex.getGroupVertex().getGroupMember(i) == vertex) {
 				name += i;
 				break;

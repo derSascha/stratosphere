@@ -41,7 +41,6 @@ import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingInputGate;
 import eu.stratosphere.nephele.streaming.wrappers.StreamingOutputGate;
 import eu.stratosphere.nephele.types.Record;
-import eu.stratosphere.nephele.util.StringUtils;
 
 public final class StreamListener {
 
@@ -60,40 +59,47 @@ public final class StreamListener {
 	public StreamListener(final Configuration taskConfiguration) {
 
 		if (taskConfiguration == null) {
-			throw new IllegalArgumentException("Argument taskConfiguration must not be null");
+			throw new IllegalArgumentException(
+					"Argument taskConfiguration must not be null");
 		}
 
 		this.taskConfiguration = taskConfiguration;
 	}
 
 	/**
-	 * Initializes the stream listener by retrieving the listener context from the task manager plugin.
+	 * Initializes the stream listener by retrieving the listener context from
+	 * the task manager plugin.
 	 */
 	public void init() {
 
-		final String listenerKey = this.taskConfiguration.getString(StreamListenerContext.CONTEXT_CONFIGURATION_KEY,
-			null);
+		final String listenerKey = this.taskConfiguration.getString(
+				StreamListenerContext.CONTEXT_CONFIGURATION_KEY, null);
 
 		if (listenerKey == null) {
-			throw new RuntimeException("Stream listener is unable to retrieve context key");
+			throw new RuntimeException(
+					"Stream listener is unable to retrieve context key");
 		}
 
-		this.listenerContext = StreamingTaskManagerPlugin.getStreamingListenerContext(listenerKey);
+		this.listenerContext = StreamingTaskManagerPlugin
+				.getStreamingListenerContext(listenerKey);
 
-		initOutputChannelMap();
+		this.initOutputChannelMap();
 
-		taskLatencyReporter = new TaskLatencyReporter(listenerContext);
+		this.taskLatencyReporter = new TaskLatencyReporter(this.listenerContext);
 	}
 
 	private void initOutputChannelMap() {
 		final Map<ChannelID, AbstractOutputChannel<? extends Record>> tmpMap = new HashMap<ChannelID, AbstractOutputChannel<? extends Record>>();
 
-		final Iterator<StreamingOutputGate<? extends Record>> it = this.outputGateMap.values().iterator();
+		final Iterator<StreamingOutputGate<? extends Record>> it = this.outputGateMap
+				.values().iterator();
 		while (it.hasNext()) {
 			final StreamingOutputGate<? extends Record> outputGate = it.next();
-			final int numberOfOutputChannels = outputGate.getNumberOfOutputChannels();
+			final int numberOfOutputChannels = outputGate
+					.getNumberOfOutputChannels();
 			for (int i = 0; i < numberOfOutputChannels; ++i) {
-				final AbstractOutputChannel<? extends Record> outputChannel = outputGate.getOutputChannel(i);
+				final AbstractOutputChannel<? extends Record> outputChannel = outputGate
+						.getOutputChannel(i);
 				tmpMap.put(outputChannel.getID(), outputChannel);
 			}
 		}
@@ -103,50 +109,57 @@ public final class StreamListener {
 
 	public void recordEmitted(final Record record) throws InterruptedException {
 
-		taskLatencyReporter.processRecordEmitted();
+		this.taskLatencyReporter.processRecordEmitted();
 
 		// Finally, check for pending actions
-		checkForPendingActions();
+		this.checkForPendingActions();
 	}
 
 	public void recordReceived(final Record record) {
-		taskLatencyReporter.processRecordReceived();
+		this.taskLatencyReporter.processRecordReceived();
 	}
 
-	public void reportChannelThroughput(final ChannelID sourceChannelID, final double throughput) {
+	public void reportChannelThroughput(final ChannelID sourceChannelID,
+			final double throughput) {
 		this.listenerContext.getProfilingReporter().addToNextReport(
-			new ChannelThroughput(sourceChannelID, throughput));
+				new ChannelThroughput(sourceChannelID, throughput));
 	}
 
-	public void reportBufferLatency(final ChannelID sourceChannelID, final double bufferLatency) {
+	public void reportBufferLatency(final ChannelID sourceChannelID,
+			final double bufferLatency) {
 		this.listenerContext.getProfilingReporter().addToNextReport(
-			new OutputBufferLatency(sourceChannelID, bufferLatency));
+				new OutputBufferLatency(sourceChannelID, bufferLatency));
 	}
 
 	public void reportChannelLatency(ChannelLatency channelLatency) {
-		this.listenerContext.getProfilingReporter().addToNextReport(channelLatency);
+		this.listenerContext.getProfilingReporter().addToNextReport(
+				channelLatency);
 	}
 
 	private void checkForPendingActions() throws InterruptedException {
 
-		LinkedBlockingQueue<AbstractAction> pendingActions = this.listenerContext.getPendingActionsQueue();
+		LinkedBlockingQueue<AbstractAction> pendingActions = this.listenerContext
+				.getPendingActionsQueue();
 
 		AbstractAction action;
 
 		while ((action = pendingActions.poll()) != null) {
 			if (action instanceof LimitBufferSizeAction) {
-				limitBufferSize((LimitBufferSizeAction) action);
+				this.limitBufferSize((LimitBufferSizeAction) action);
 			} else if (action instanceof ConstructStreamChainAction) {
-				constructStreamChain((ConstructStreamChainAction) action);
+				this.constructStreamChain((ConstructStreamChainAction) action);
 			} else {
-				LOG.error("Ignoring unknown action of type " + action.getClass());
+				LOG.error("Ignoring unknown action of type "
+						+ action.getClass());
 			}
 		}
 	}
 
-	private void constructStreamChain(final ConstructStreamChainAction csca) throws InterruptedException {
+	private void constructStreamChain(final ConstructStreamChainAction csca)
+			throws InterruptedException {
 
-		final StreamChain streamChain = this.listenerContext.constructStreamChain(csca.getVertexIDs());		
+		final StreamChain streamChain = this.listenerContext
+				.constructStreamChain(csca.getVertexIDs());
 		streamChain.waitUntilFlushed();
 	}
 
@@ -155,36 +168,40 @@ public final class StreamListener {
 		final ChannelID sourceChannelID = bsla.getSourceChannelID();
 		final int bufferSize = bsla.getBufferSize();
 
-		final AbstractOutputChannel<? extends Record> outputChannel = this.outputChannelMap.get(sourceChannelID);
+		final AbstractOutputChannel<? extends Record> outputChannel = this.outputChannelMap
+				.get(sourceChannelID);
 		if (outputChannel == null) {
 			LOG.error("Cannot find output channel with ID " + sourceChannelID);
 			return;
 		}
 
 		if (!(outputChannel instanceof AbstractByteBufferedOutputChannel)) {
-			LOG.error("Output channel with ID " + sourceChannelID + " is not a byte-buffered channel");
+			LOG.error("Output channel with ID " + sourceChannelID
+					+ " is not a byte-buffered channel");
 			return;
 		}
 
-		final AbstractByteBufferedOutputChannel<? extends Record> byteBufferedOutputChannel =
-			(AbstractByteBufferedOutputChannel<? extends Record>) outputChannel;
+		final AbstractByteBufferedOutputChannel<? extends Record> byteBufferedOutputChannel = (AbstractByteBufferedOutputChannel<? extends Record>) outputChannel;
 
-		LOG.info("Setting buffer size limit of output channel " + sourceChannelID + " to " + bufferSize + " bytes");
+		LOG.info("Setting buffer size limit of output channel "
+				+ sourceChannelID + " to " + bufferSize + " bytes");
 		byteBufferedOutputChannel.limitBufferSize(bufferSize);
 	}
 
-	public void registerOutputGate(final StreamingOutputGate<? extends Record> outputGate) {
+	public void registerOutputGate(
+			final StreamingOutputGate<? extends Record> outputGate) {
 
 		this.outputGateMap.put(outputGate.getGateID(), outputGate);
 	}
 
-	public <I extends Record, O extends Record> void registerMapper(final Mapper<I, O> mapper,
-			final StreamingInputGate<I> input, final StreamingOutputGate<O> output) {
+	public <I extends Record, O extends Record> void registerMapper(
+			final Mapper<I, O> mapper, final StreamingInputGate<I> input,
+			final StreamingOutputGate<O> output) {
 
 		this.listenerContext.registerMapper(mapper, input, output);
 	}
 
 	public StreamListenerContext getContext() {
-		return listenerContext;
+		return this.listenerContext;
 	}
 }

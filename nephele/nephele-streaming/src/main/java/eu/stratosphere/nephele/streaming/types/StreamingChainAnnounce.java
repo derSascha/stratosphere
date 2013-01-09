@@ -13,34 +13,36 @@ public class StreamingChainAnnounce extends AbstractStreamingData {
 
 	private ExecutionVertexID chainEndVertexID;
 
-	public StreamingChainAnnounce(JobID jobID, ExecutionVertexID chainBeginVertexID, ExecutionVertexID chainEndVertexID) {
+	public StreamingChainAnnounce(JobID jobID,
+			ExecutionVertexID chainBeginVertexID,
+			ExecutionVertexID chainEndVertexID) {
 		super(jobID);
 		this.chainBeginVertexID = chainBeginVertexID;
 		this.chainEndVertexID = chainEndVertexID;
 	}
 
 	public ExecutionVertexID getChainBeginVertexID() {
-		return chainBeginVertexID;
+		return this.chainBeginVertexID;
 	}
 
 	public ExecutionVertexID getChainEndVertexID() {
-		return chainEndVertexID;
+		return this.chainEndVertexID;
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
-		chainBeginVertexID.write(out);
-		chainEndVertexID.write(out);
+		this.chainBeginVertexID.write(out);
+		this.chainEndVertexID.write(out);
 	}
 
 	@Override
 	public void read(DataInput in) throws IOException {
 		super.read(in);
-		chainBeginVertexID = new ExecutionVertexID();
-		chainBeginVertexID.read(in);
+		this.chainBeginVertexID = new ExecutionVertexID();
+		this.chainBeginVertexID.read(in);
 
-		chainEndVertexID = new ExecutionVertexID();
-		chainEndVertexID.read(in);
+		this.chainEndVertexID = new ExecutionVertexID();
+		this.chainEndVertexID.read(in);
 	}
 }

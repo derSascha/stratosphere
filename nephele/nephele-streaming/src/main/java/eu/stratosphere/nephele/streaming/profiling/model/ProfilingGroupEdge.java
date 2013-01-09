@@ -10,22 +10,22 @@ public class ProfilingGroupEdge {
 
 	private ProfilingGroupVertex targetVertex;
 
-	public ProfilingGroupEdge(DistributionPattern distributionPattern, ProfilingGroupVertex sourceVertex,
-			ProfilingGroupVertex targetVertex) {
+	public ProfilingGroupEdge(DistributionPattern distributionPattern,
+			ProfilingGroupVertex sourceVertex, ProfilingGroupVertex targetVertex) {
 		this.distributionPattern = distributionPattern;
 		this.sourceVertex = sourceVertex;
 		this.targetVertex = targetVertex;
 	}
 
 	public DistributionPattern getDistributionPattern() {
-		return distributionPattern;
+		return this.distributionPattern;
 	}
 
 	public ProfilingGroupVertex getSourceVertex() {
-		return sourceVertex;
+		return this.sourceVertex;
 	}
 
 	public ProfilingGroupVertex getTargetVertex() {
-		return targetVertex;
+		return this.targetVertex;
 	}
 }

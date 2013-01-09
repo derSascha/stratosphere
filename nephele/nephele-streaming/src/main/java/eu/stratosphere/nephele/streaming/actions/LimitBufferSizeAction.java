@@ -24,7 +24,8 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
- * This class implements an action to limit the buffer size of a particular output channel.
+ * This class implements an action to limit the buffer size of a particular
+ * output channel.
  * 
  * @author warneke
  */
@@ -49,28 +50,33 @@ public final class LimitBufferSizeAction extends AbstractAction {
 	 * Constructs a new buffer size limit action object.
 	 * 
 	 * @param jobID
-	 *        the ID of the job the action applies to
+	 *            the ID of the job the action applies to
 	 * @param vertexID
-	 *        the ID of the vertex the action applies to
+	 *            the ID of the vertex the action applies to
 	 * @param sourceChannelID
-	 *        the ID of the output channel whose buffer size shall be limited
+	 *            the ID of the output channel whose buffer size shall be
+	 *            limited
 	 * @param bufferSize
-	 *        the new buffer size in bytes
+	 *            the new buffer size in bytes
 	 */
-	public LimitBufferSizeAction(final JobID jobID, final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
+	public LimitBufferSizeAction(final JobID jobID,
+			final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
 			final int bufferSize) {
 		super(jobID);
 
 		if (vertexID == null) {
-			throw new IllegalArgumentException("Argument vertexID must not be null");
+			throw new IllegalArgumentException(
+					"Argument vertexID must not be null");
 		}
 
 		if (sourceChannelID == null) {
-			throw new IllegalArgumentException("Argument sourceChannelID must not be null");
+			throw new IllegalArgumentException(
+					"Argument sourceChannelID must not be null");
 		}
 
 		if (bufferSize <= 0) {
-			throw new IllegalArgumentException("Argument bufferSize must be greather than zero");
+			throw new IllegalArgumentException(
+					"Argument bufferSize must be greather than zero");
 		}
 
 		this.vertexID = vertexID;

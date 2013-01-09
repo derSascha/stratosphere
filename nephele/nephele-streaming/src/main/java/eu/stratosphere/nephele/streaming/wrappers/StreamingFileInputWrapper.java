@@ -20,7 +20,8 @@ import eu.stratosphere.nephele.template.AbstractFileInputTask;
 import eu.stratosphere.nephele.template.AbstractInvokable;
 
 /**
- * This class provides a wrapper for Nephele tasks of the type {@link AbstractFileInputTask}.
+ * This class provides a wrapper for Nephele tasks of the type
+ * {@link AbstractFileInputTask}.
  * <p>
  * This class is thread-safe.
  * 
@@ -44,8 +45,10 @@ public final class StreamingFileInputWrapper extends AbstractFileInputTask {
 	@Override
 	public void registerInputOutput() {
 
-		this.streamListener = WrapperUtils.createStreamListener(getEnvironment());
-		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(getEnvironment(), this.streamListener);
+		this.streamListener = WrapperUtils.createStreamListener(this
+				.getEnvironment());
+		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(
+				this.getEnvironment(), this.streamListener);
 		this.wrappedInvokable.registerInputOutput();
 	}
 

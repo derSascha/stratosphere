@@ -17,8 +17,9 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
- * Contains information for the streaming plugin on a task manager that determies which of its tasks and channels
- * should be profiled and where the profiling information is to be sent.
+ * Contains information for the streaming plugin on a task manager that
+ * determies which of its tasks and channels should be profiled and where the
+ * profiling information is to be sent.
  * 
  * @author Bjoern Lohrmann
  */
@@ -27,24 +28,27 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 	private InstanceConnectionInfo reporterConnectionInfo;
 
 	/**
-	 * Where profiling information about a task should be sent. If this set is empty, this means that the task should
-	 * not be profiled.
+	 * Where profiling information about a task should be sent. If this set is
+	 * empty, this means that the task should not be profiled.
 	 */
 	private Map<ExecutionVertexID, Set<InstanceConnectionInfo>> taskProfilingMasters = new HashMap<ExecutionVertexID, Set<InstanceConnectionInfo>>();
 
 	/**
-	 * Defines for each incoming and outgoing channel, where to send profiling information. The {@link ChannelID}s in
-	 * the map are those of the incoming/outgoing channel itself, not those of the "connected channels" (the other end
-	 * of a channel). If there are no assigned profiling masters for a channel, then this means that the channel should
-	 * not be profiled.
+	 * Defines for each incoming and outgoing channel, where to send profiling
+	 * information. The {@link ChannelID}s in the map are those of the
+	 * incoming/outgoing channel itself, not those of the "connected channels"
+	 * (the other end of a channel). If there are no assigned profiling masters
+	 * for a channel, then this means that the channel should not be profiled.
 	 */
 	private Map<ChannelID, Set<InstanceConnectionInfo>> channelProfilingMasters = new HashMap<ChannelID, Set<InstanceConnectionInfo>>();
 
 	private JobID jobID;
 
-	public void addTaskProfilingMaster(ExecutionVertexID vertexID, InstanceConnectionInfo taskProfilingMaster) {
+	public void addTaskProfilingMaster(ExecutionVertexID vertexID,
+			InstanceConnectionInfo taskProfilingMaster) {
 		synchronized (this.taskProfilingMasters) {
-			Set<InstanceConnectionInfo> assignedMasters = this.taskProfilingMasters.get(vertexID);
+			Set<InstanceConnectionInfo> assignedMasters = this.taskProfilingMasters
+					.get(vertexID);
 			if (assignedMasters == null) {
 				assignedMasters = new HashSet<InstanceConnectionInfo>();
 				this.taskProfilingMasters.put(vertexID, assignedMasters);
@@ -53,9 +57,11 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 	}
 
-	public void addChannelProfilingMaster(ChannelID channelID, InstanceConnectionInfo channelProfilingMaster) {
-		synchronized (channelProfilingMasters) {
-			Set<InstanceConnectionInfo> assignedMasters = this.channelProfilingMasters.get(channelID);
+	public void addChannelProfilingMaster(ChannelID channelID,
+			InstanceConnectionInfo channelProfilingMaster) {
+		synchronized (this.channelProfilingMasters) {
+			Set<InstanceConnectionInfo> assignedMasters = this.channelProfilingMasters
+					.get(channelID);
 			if (assignedMasters == null) {
 				assignedMasters = new HashSet<InstanceConnectionInfo>();
 				this.channelProfilingMasters.put(channelID, assignedMasters);
@@ -64,7 +70,8 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 	}
 
-	public StreamProfilingReporterInfo(JobID jobID, InstanceConnectionInfo taskManager) {
+	public StreamProfilingReporterInfo(JobID jobID,
+			InstanceConnectionInfo taskManager) {
 		this.jobID = jobID;
 		this.reporterConnectionInfo = taskManager;
 	}
@@ -73,19 +80,20 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 	}
 
 	public InstanceConnectionInfo getReporterConnectionInfo() {
-		return reporterConnectionInfo;
+		return this.reporterConnectionInfo;
 	}
 
 	public JobID getJobID() {
-		return jobID;
+		return this.jobID;
 	}
 
 	public Collection<ExecutionVertexID> getTasksToProfile() {
-		return taskProfilingMasters.keySet();
+		return this.taskProfilingMasters.keySet();
 	}
 
-	public Set<InstanceConnectionInfo> getTaskProfilingMasters(final ExecutionVertexID vertexID) {
-		return taskProfilingMasters.get(vertexID);
+	public Set<InstanceConnectionInfo> getTaskProfilingMasters(
+			final ExecutionVertexID vertexID) {
+		return this.taskProfilingMasters.get(vertexID);
 	}
 
 	public Collection<ChannelID> getChannelsToProfile() {
@@ -93,32 +101,37 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 	}
 
 	/**
-	 * Returns where to send profiling information of the given channel. If there are no assigned profiling masters for
-	 * a channel, then this means that the channel should
-	 * not be profiled.
+	 * Returns where to send profiling information of the given channel. If
+	 * there are no assigned profiling masters for a channel, then this means
+	 * that the channel should not be profiled.
 	 * 
 	 * @param channelID
-	 *        A {@link ChannelID} of an incoming/outoing channel of the task (side of the channel that is local to the
-	 *        task).
-	 * @return A set of instance connection infos, or null if the channel should not be profiled.
+	 *            A {@link ChannelID} of an incoming/outoing channel of the task
+	 *            (side of the channel that is local to the task).
+	 * @return A set of instance connection infos, or null if the channel should
+	 *         not be profiled.
 	 */
-	public Set<InstanceConnectionInfo> getChannelProfilingMasters(final ChannelID channelID) {
-		return channelProfilingMasters.get(channelID);
+	public Set<InstanceConnectionInfo> getChannelProfilingMasters(
+			final ChannelID channelID) {
+		return this.channelProfilingMasters.get(channelID);
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
 		this.jobID.write(out);
-		Map<InstanceConnectionInfo, Integer> connectionInfoIds = writeConnectionInfoInfoIdMap(out);
+		Map<InstanceConnectionInfo, Integer> connectionInfoIds = this
+				.writeConnectionInfoInfoIdMap(out);
 		out.writeInt(connectionInfoIds.get(this.reporterConnectionInfo));
-		writeTaskProfilingMasters(out, connectionInfoIds);
-		writeChannelProfilingMasters(out, connectionInfoIds);
+		this.writeTaskProfilingMasters(out, connectionInfoIds);
+		this.writeChannelProfilingMasters(out, connectionInfoIds);
 	}
 
-	private void writeChannelProfilingMasters(DataOutput out, Map<InstanceConnectionInfo, Integer> connectionInfoIds)
+	private void writeChannelProfilingMasters(DataOutput out,
+			Map<InstanceConnectionInfo, Integer> connectionInfoIds)
 			throws IOException {
 		out.writeInt(this.channelProfilingMasters.size());
-		for (Entry<ChannelID, Set<InstanceConnectionInfo>> entry : this.channelProfilingMasters.entrySet()) {
+		for (Entry<ChannelID, Set<InstanceConnectionInfo>> entry : this.channelProfilingMasters
+				.entrySet()) {
 			entry.getKey().write(out);
 			out.writeInt(entry.getValue().size());
 			for (InstanceConnectionInfo connectionInfo : entry.getValue()) {
@@ -127,10 +140,12 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 	}
 
-	private void writeTaskProfilingMasters(DataOutput out, Map<InstanceConnectionInfo, Integer> connectionInfoIds)
+	private void writeTaskProfilingMasters(DataOutput out,
+			Map<InstanceConnectionInfo, Integer> connectionInfoIds)
 			throws IOException {
 		out.writeInt(this.taskProfilingMasters.size());
-		for (Entry<ExecutionVertexID, Set<InstanceConnectionInfo>> entry : this.taskProfilingMasters.entrySet()) {
+		for (Entry<ExecutionVertexID, Set<InstanceConnectionInfo>> entry : this.taskProfilingMasters
+				.entrySet()) {
 			entry.getKey().write(out);
 			out.writeInt(entry.getValue().size());
 			for (InstanceConnectionInfo connectionInfo : entry.getValue()) {
@@ -139,14 +154,16 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 	}
 
-	private Map<InstanceConnectionInfo, Integer> writeConnectionInfoInfoIdMap(DataOutput out) throws IOException {
+	private Map<InstanceConnectionInfo, Integer> writeConnectionInfoInfoIdMap(
+			DataOutput out) throws IOException {
 		int nextFreeId = 0;
 		Map<InstanceConnectionInfo, Integer> connectionInfoIds = new HashMap<InstanceConnectionInfo, Integer>();
 
-		connectionInfoIds.put(reporterConnectionInfo, nextFreeId);
+		connectionInfoIds.put(this.reporterConnectionInfo, nextFreeId);
 		nextFreeId++;
 
-		for (Set<InstanceConnectionInfo> taskMasters : this.taskProfilingMasters.values()) {
+		for (Set<InstanceConnectionInfo> taskMasters : this.taskProfilingMasters
+				.values()) {
 			for (InstanceConnectionInfo taskMaster : taskMasters) {
 				if (!connectionInfoIds.containsKey(taskMaster)) {
 					connectionInfoIds.put(taskMaster, nextFreeId);
@@ -155,7 +172,8 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 			}
 		}
 
-		for (Set<InstanceConnectionInfo> channelMasters : this.channelProfilingMasters.values()) {
+		for (Set<InstanceConnectionInfo> channelMasters : this.channelProfilingMasters
+				.values()) {
 			for (InstanceConnectionInfo channelMaster : channelMasters) {
 				if (!connectionInfoIds.containsKey(channelMaster)) {
 					connectionInfoIds.put(channelMaster, nextFreeId);
@@ -165,7 +183,8 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 
 		out.writeInt(connectionInfoIds.size());
-		for (Entry<InstanceConnectionInfo, Integer> entry : connectionInfoIds.entrySet()) {
+		for (Entry<InstanceConnectionInfo, Integer> entry : connectionInfoIds
+				.entrySet()) {
 			entry.getKey().write(out);
 			out.writeInt(entry.getValue());
 		}
@@ -177,13 +196,15 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 	public void read(DataInput in) throws IOException {
 		this.jobID = new JobID();
 		this.jobID.read(in);
-		Map<Integer, InstanceConnectionInfo> connectionInfoIds = readConnectionInfoInfoIdMap(in);
+		Map<Integer, InstanceConnectionInfo> connectionInfoIds = this
+				.readConnectionInfoInfoIdMap(in);
 		this.reporterConnectionInfo = connectionInfoIds.get(in.readInt());
-		readTaskProfilingMasters(in, connectionInfoIds);
-		readChannelProfilingMasters(in, connectionInfoIds);
+		this.readTaskProfilingMasters(in, connectionInfoIds);
+		this.readChannelProfilingMasters(in, connectionInfoIds);
 	}
 
-	private void readChannelProfilingMasters(DataInput in, Map<Integer, InstanceConnectionInfo> connectionInfoIds)
+	private void readChannelProfilingMasters(DataInput in,
+			Map<Integer, InstanceConnectionInfo> connectionInfoIds)
 			throws IOException {
 		int channelsToRead = in.readInt();
 		for (int i = 0; i < channelsToRead; i++) {
@@ -199,7 +220,8 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 	}
 
-	private void readTaskProfilingMasters(DataInput in, Map<Integer, InstanceConnectionInfo> connectionInfoIds)
+	private void readTaskProfilingMasters(DataInput in,
+			Map<Integer, InstanceConnectionInfo> connectionInfoIds)
 			throws IOException {
 
 		int verticesToRead = in.readInt();
@@ -216,7 +238,8 @@ public class StreamProfilingReporterInfo implements IOReadableWritable {
 		}
 	}
 
-	private Map<Integer, InstanceConnectionInfo> readConnectionInfoInfoIdMap(DataInput in) throws IOException {
+	private Map<Integer, InstanceConnectionInfo> readConnectionInfoInfoIdMap(
+			DataInput in) throws IOException {
 		Map<Integer, InstanceConnectionInfo> connectionInfos = new HashMap<Integer, InstanceConnectionInfo>();
 		int entriesToRead = in.readInt();
 		for (int i = 0; i < entriesToRead; i++) {

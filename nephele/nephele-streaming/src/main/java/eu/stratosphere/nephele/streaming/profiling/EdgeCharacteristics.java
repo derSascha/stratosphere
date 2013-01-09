@@ -27,35 +27,32 @@ public class EdgeCharacteristics {
 	}
 
 	public ProfilingEdge getEdge() {
-		return edge;
+		return this.edge;
 	}
 
 	public double getChannelLatencyInMillis() {
-		if (latencyInMillisStatistic.hasValues()) {
-			return latencyInMillisStatistic.getArithmeticMean();
-		} else {
-			return -1;
+		if (this.latencyInMillisStatistic.hasValues()) {
+			return this.latencyInMillisStatistic.getArithmeticMean();
 		}
+
+		return -1;
 	}
 
 	public double getChannelThroughputInMbit() {
-		if (throughputInMbitStatistic.hasValues()) {
-			return throughputInMbitStatistic.getArithmeticMean();
-		} else {
-			return -1;
+		if (this.throughputInMbitStatistic.hasValues()) {
+			return this.throughputInMbitStatistic.getArithmeticMean();
 		}
+		return -1;
 	}
 
 	public double getOutputBufferLifetimeInMillis() {
-		if (isInChain()) {
+		if (this.isInChain()) {
 			return 0;
-		} else {
-			if (outputBufferLifetimeStatistic.hasValues()) {
-				return outputBufferLifetimeStatistic.getArithmeticMean();
-			} else {
-				return -1;
-			}
 		}
+		if (this.outputBufferLifetimeStatistic.hasValues()) {
+			return this.outputBufferLifetimeStatistic.getArithmeticMean();
+		}
+		return -1;
 	}
 
 	public void addLatencyMeasurement(long timestamp, double latencyInMillis) {
@@ -68,21 +65,22 @@ public class EdgeCharacteristics {
 		this.throughputInMbitStatistic.addValue(value);
 	}
 
-	public void addOutputBufferLatencyMeasurement(long timestamp, double latencyInMillis) {
+	public void addOutputBufferLatencyMeasurement(long timestamp,
+			double latencyInMillis) {
 		ProfilingValue value = new ProfilingValue(latencyInMillis, timestamp);
 		this.outputBufferLifetimeStatistic.addValue(value);
 	}
 
 	public boolean isChannelLatencyFresherThan(long freshnessThreshold) {
-		return latencyInMillisStatistic.getOldestValue().getTimestamp() >= freshnessThreshold;
+		return this.latencyInMillisStatistic.getOldestValue().getTimestamp() >= freshnessThreshold;
 	}
 
 	public boolean isOutputBufferLatencyFresherThan(long freshnessThreshold) {
-		if (isInChain()) {
+		if (this.isInChain()) {
 			return true;
-		} else {
-			return outputBufferLifetimeStatistic.getOldestValue().getTimestamp() >= freshnessThreshold;
 		}
+		return this.outputBufferLifetimeStatistic.getOldestValue()
+				.getTimestamp() >= freshnessThreshold;
 	}
 
 	public void setIsInChain(boolean isInChain) {
@@ -90,14 +88,16 @@ public class EdgeCharacteristics {
 	}
 
 	public boolean isInChain() {
-		return isInChain;
+		return this.isInChain;
 	}
 
 	public boolean isActive() {
-		return latencyInMillisStatistic.hasValues() && (isInChain() || outputBufferLifetimeStatistic.hasValues());
+		return this.latencyInMillisStatistic.hasValues()
+				&& (this.isInChain() || this.outputBufferLifetimeStatistic
+						.hasValues());
 	}
 
 	public BufferSizeHistory getBufferSizeHistory() {
-		return bufferSizeHistory;
+		return this.bufferSizeHistory;
 	}
 }

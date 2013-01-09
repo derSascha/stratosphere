@@ -33,14 +33,15 @@ public final class RecordUtils {
 	}
 
 	/**
-	 * Creates a copy of the given {@link Record} object by an in-memory serialization and subsequent
-	 * deserialization.
+	 * Creates a copy of the given {@link Record} object by an in-memory
+	 * serialization and subsequent deserialization.
 	 * 
 	 * @param original
-	 *        the original object to be copied
-	 * @return the copy of original object created by the original object's serialization/deserialization methods
+	 *            the original object to be copied
+	 * @return the copy of original object created by the original object's
+	 *         serialization/deserialization methods
 	 * @throws IOException
-	 *         thrown if an error occurs while copying the object
+	 *             thrown if an error occurs while copying the object
 	 */
 	public static Record createCopy(final Record original) throws IOException {
 
@@ -56,7 +57,8 @@ public final class RecordUtils {
 			throw new IOException(StringUtils.stringifyException(e));
 		}
 
-		final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+		final ByteArrayInputStream bais = new ByteArrayInputStream(
+				baos.toByteArray());
 		final DataInputStream dis = new DataInputStream(bais);
 
 		copy.read(dis);

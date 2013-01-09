@@ -30,7 +30,8 @@ public class BufferSizeManager {
 	private static final Log LOG = LogFactory.getLog(BufferSizeManager.class);
 
 	/**
-	 * Provides access to the configuration entry which defines the buffer size adjustment interval-
+	 * Provides access to the configuration entry which defines the buffer size
+	 * adjustment interval-
 	 */
 	private static final String PROFILINGMASTER_ADJUSTMENTINTERVAL_KEY = "streaming.profilingmaster.adjustmentinterval";
 
@@ -54,34 +55,42 @@ public class BufferSizeManager {
 
 	private JobID jobID;
 
-	public BufferSizeManager(JobID jobID, long latencyGoal, ProfilingModel profilingModel,
+	public BufferSizeManager(JobID jobID, long latencyGoal,
+			ProfilingModel profilingModel,
 			StreamingCommunicationThread communicationThread) {
 		this.jobID = jobID;
 		this.latencyGoal = latencyGoal;
 		this.profilingModel = profilingModel;
 		this.communicationThread = communicationThread;
 
-		this.adjustmentInterval = StreamingTaskManagerPlugin.getPluginConfiguration().getLong(
-			PROFILINGMASTER_ADJUSTMENTINTERVAL_KEY, DEFAULT_ADJUSTMENTINTERVAL);
+		this.adjustmentInterval = StreamingTaskManagerPlugin
+				.getPluginConfiguration().getLong(
+						PROFILINGMASTER_ADJUSTMENTINTERVAL_KEY,
+						DEFAULT_ADJUSTMENTINTERVAL);
 
-		this.timeOfNextAdjustment = ProfilingUtils.alignToInterval(System.currentTimeMillis()
-			+ WAIT_BEFORE_FIRST_ADJUSTMENT, this.adjustmentInterval);
-		initBufferSizes();
+		this.timeOfNextAdjustment = ProfilingUtils.alignToInterval(
+				System.currentTimeMillis() + WAIT_BEFORE_FIRST_ADJUSTMENT,
+				this.adjustmentInterval);
+		this.initBufferSizes();
 		// FIXME: buffer size logging only possible for ONE profiling sequence
-		// bufferSizeLogger = new BufferSizeLogger(profilingModel.getProfilingSequence());
+		// bufferSizeLogger = new
+		// BufferSizeLogger(profilingModel.getProfilingSequence());
 	}
 
 	private void initBufferSizes() {
-		int bufferSize = GlobalConfiguration.getInteger("channel.network.bufferSizeInBytes",
-			GlobalBufferPool.DEFAULT_BUFFER_SIZE_IN_BYTES);
+		int bufferSize = GlobalConfiguration.getInteger(
+				"channel.network.bufferSizeInBytes",
+				GlobalBufferPool.DEFAULT_BUFFER_SIZE_IN_BYTES);
 
 		this.maximumBufferSize = bufferSize;
 
 		long now = System.currentTimeMillis();
-		for (ProfilingGroupVertex groupVertex : profilingModel.getProfilingSequence().getSequenceVertices()) {
+		for (ProfilingGroupVertex groupVertex : this.profilingModel
+				.getProfilingSequence().getSequenceVertices()) {
 			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
 				for (ProfilingEdge forwardEdge : vertex.getForwardEdges()) {
-					forwardEdge.getEdgeCharacteristics().getBufferSizeHistory().addToHistory(now, bufferSize);
+					forwardEdge.getEdgeCharacteristics().getBufferSizeHistory()
+							.addToHistory(now, bufferSize);
 				}
 			}
 		}
@@ -93,48 +102,54 @@ public class BufferSizeManager {
 
 	HashSet<ChannelID> staleEdges = new HashSet<ChannelID>();
 
-	public void adjustBufferSizes(ProfilingSequenceSummary summary) throws InterruptedException {
+	public void adjustBufferSizes(ProfilingSequenceSummary summary)
+			throws InterruptedException {
 		HashMap<ProfilingEdge, Integer> edgesToAdjust = new HashMap<ProfilingEdge, Integer>();
 
-		staleEdges.clear();
-		for (ProfilingSubsequenceSummary activeSubsequence : summary.enumerateActiveSubsequences()) {
-			if (activeSubsequence.getSubsequenceLatency() > latencyGoal) {
-				collectEdgesToAdjust(activeSubsequence, edgesToAdjust);
+		this.staleEdges.clear();
+		for (ProfilingSubsequenceSummary activeSubsequence : summary
+				.enumerateActiveSubsequences()) {
+			if (activeSubsequence.getSubsequenceLatency() > this.latencyGoal) {
+				this.collectEdgesToAdjust(activeSubsequence, edgesToAdjust);
 			}
 		}
 
-		doAdjust(edgesToAdjust);
+		this.doAdjust(edgesToAdjust);
 
-		LOG.info(String.format("Adjusted edges: %d | Edges with stale profiling data: %d", edgesToAdjust.size(),
-			staleEdges.size()));
+		LOG.info(String.format(
+				"Adjusted edges: %d | Edges with stale profiling data: %d",
+				edgesToAdjust.size(), this.staleEdges.size()));
 
-		refreshTimeOfNextAdjustment();
+		this.refreshTimeOfNextAdjustment();
 	}
 
 	public void logBufferSizes() throws IOException {
-		bufferSizeLogger.logBufferSizes();
+		this.bufferSizeLogger.logBufferSizes();
 	}
 
-	private void doAdjust(HashMap<ProfilingEdge, Integer> edgesToAdjust) throws InterruptedException {
+	private void doAdjust(HashMap<ProfilingEdge, Integer> edgesToAdjust)
+			throws InterruptedException {
 
 		for (ProfilingEdge edge : edgesToAdjust.keySet()) {
 			int newBufferSize = edgesToAdjust.get(edge);
 
-			BufferSizeHistory sizeHistory = edge.getEdgeCharacteristics().getBufferSizeHistory();
-			sizeHistory.addToHistory(timeOfNextAdjustment, newBufferSize);
+			BufferSizeHistory sizeHistory = edge.getEdgeCharacteristics()
+					.getBufferSizeHistory();
+			sizeHistory.addToHistory(this.timeOfNextAdjustment, newBufferSize);
 
-			setBufferSize(edge, newBufferSize);
+			this.setBufferSize(edge, newBufferSize);
 		}
 	}
 
 	private void refreshTimeOfNextAdjustment() {
 		long now = System.currentTimeMillis();
-		while (timeOfNextAdjustment <= now) {
-			timeOfNextAdjustment += this.adjustmentInterval;
+		while (this.timeOfNextAdjustment <= now) {
+			this.timeOfNextAdjustment += this.adjustmentInterval;
 		}
 	}
 
-	private void collectEdgesToAdjust(ProfilingSubsequenceSummary activeSubsequence,
+	private void collectEdgesToAdjust(
+			ProfilingSubsequenceSummary activeSubsequence,
 			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
 
 		for (ProfilingEdge edge : activeSubsequence.getEdges()) {
@@ -145,30 +160,41 @@ public class BufferSizeManager {
 				continue;
 			}
 
-			if (!hasFreshValues(edgeChar) || !hasFreshValues(edge.getSourceVertex().getVertexLatency())) {
-				staleEdges.add(edge.getSourceChannelID());
-				// LOG.info("Rejecting edge due to stale values: " + ProfilingUtils.formatName(edge));
+			if (!this.hasFreshValues(edgeChar)
+					|| !this.hasFreshValues(edge.getSourceVertex()
+							.getVertexLatency())) {
+				this.staleEdges.add(edge.getSourceChannelID());
+				// LOG.info("Rejecting edge due to stale values: " +
+				// ProfilingUtils.formatName(edge));
 				continue;
 			}
 
 			// double edgeLatency = edgeChar.getChannelLatencyInMillis();
-			double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
-			double sourceTaskLatency = edge.getSourceVertex().getVertexLatency().getLatencyInMillis();
+			double avgOutputBufferLatency = edgeChar
+					.getOutputBufferLifetimeInMillis() / 2;
+			double sourceTaskLatency = edge.getSourceVertex()
+					.getVertexLatency().getLatencyInMillis();
 
-			// if (avgOutputBufferLatency > 5 && avgOutputBufferLatency >= 0.05 * edgeLatency) {
-			if (avgOutputBufferLatency > 5 && avgOutputBufferLatency > sourceTaskLatency) {
-				reduceBufferSize(edgeChar, edgesToAdjust);
+			// if (avgOutputBufferLatency > 5 && avgOutputBufferLatency >= 0.05
+			// * edgeLatency) {
+			if (avgOutputBufferLatency > 5
+					&& avgOutputBufferLatency > sourceTaskLatency) {
+				this.reduceBufferSize(edgeChar, edgesToAdjust);
 			} else if (avgOutputBufferLatency <= 1) {
-				increaseBufferSize(edgeChar, edgesToAdjust);
+				this.increaseBufferSize(edgeChar, edgesToAdjust);
 			}
 		}
 	}
 
-	private void increaseBufferSize(EdgeCharacteristics edgeChar, HashMap<ProfilingEdge, Integer> edgesToAdjust) {
-		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry().getBufferSize();
-		int newBufferSize = Math.min(proposedIncreasedBufferSize(oldBufferSize), this.maximumBufferSize);
+	private void increaseBufferSize(EdgeCharacteristics edgeChar,
+			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry()
+				.getBufferSize();
+		int newBufferSize = Math.min(
+				this.proposedIncreasedBufferSize(oldBufferSize),
+				this.maximumBufferSize);
 
-		if (isRelevantIncrease(oldBufferSize, newBufferSize)) {
+		if (this.isRelevantIncrease(oldBufferSize, newBufferSize)) {
 			edgesToAdjust.put(edgeChar.getEdge(), newBufferSize);
 		}
 	}
@@ -181,12 +207,15 @@ public class BufferSizeManager {
 		return (int) (oldBufferSize * 1.2);
 	}
 
-	private void reduceBufferSize(EdgeCharacteristics edgeChar, HashMap<ProfilingEdge, Integer> edgesToAdjust) {
-		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry().getBufferSize();
-		int newBufferSize = proposedReducedBufferSize(edgeChar, oldBufferSize);
+	private void reduceBufferSize(EdgeCharacteristics edgeChar,
+			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry()
+				.getBufferSize();
+		int newBufferSize = this.proposedReducedBufferSize(edgeChar,
+				oldBufferSize);
 
 		// filters pointless minor changes in buffer size
-		if (isRelevantReduction(newBufferSize, oldBufferSize)) {
+		if (this.isRelevantReduction(newBufferSize, oldBufferSize)) {
 			edgesToAdjust.put(edgeChar.getEdge(), newBufferSize);
 		}
 
@@ -200,8 +229,10 @@ public class BufferSizeManager {
 		return newBufferSize < oldBufferSize * 0.98;
 	}
 
-	private int proposedReducedBufferSize(EdgeCharacteristics edgeChar, int oldBufferSize) {
-		double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
+	private int proposedReducedBufferSize(EdgeCharacteristics edgeChar,
+			int oldBufferSize) {
+		double avgOutputBufferLatency = edgeChar
+				.getOutputBufferLifetimeInMillis() / 2;
 
 		double reductionFactor = Math.pow(0.95, avgOutputBufferLatency);
 		reductionFactor = Math.max(0.01, reductionFactor);
@@ -212,10 +243,12 @@ public class BufferSizeManager {
 	}
 
 	private boolean hasFreshValues(EdgeCharacteristics edgeChar) {
-		long freshnessThreshold = edgeChar.getBufferSizeHistory().getLastEntry().getTimestamp();
+		long freshnessThreshold = edgeChar.getBufferSizeHistory()
+				.getLastEntry().getTimestamp();
 
 		return edgeChar.isChannelLatencyFresherThan(freshnessThreshold)
-			&& edgeChar.isOutputBufferLatencyFresherThan(freshnessThreshold);
+				&& edgeChar
+						.isOutputBufferLatencyFresherThan(freshnessThreshold);
 	}
 
 	private boolean hasFreshValues(VertexLatency vertexLatency) {
@@ -223,23 +256,25 @@ public class BufferSizeManager {
 	}
 
 	public boolean isAdjustmentNecessary(long now) {
-		return now >= timeOfNextAdjustment;
+		return now >= this.timeOfNextAdjustment;
 	}
 
-	private void setBufferSize(ProfilingEdge edge, int bufferSize) throws InterruptedException {
-		LimitBufferSizeAction bsla = new LimitBufferSizeAction(jobID, edge.getSourceVertex().getID(),
-			edge.getSourceChannelID(), bufferSize);
+	private void setBufferSize(ProfilingEdge edge, int bufferSize)
+			throws InterruptedException {
+		LimitBufferSizeAction bsla = new LimitBufferSizeAction(this.jobID, edge
+				.getSourceVertex().getID(), edge.getSourceChannelID(),
+				bufferSize);
 
 		if (this.profilingModel.getProfilingSequence().getProfilingMaster()
-			.equals(edge.getSourceVertex().getProfilingReporter())) {
+				.equals(edge.getSourceVertex().getProfilingReporter())) {
 			try {
 				StreamingTaskManagerPlugin.getInstance().sendData(bsla);
 			} catch (IOException e) {
 				LOG.error(StringUtils.stringifyException(e));
 			}
 		} else {
-			this.communicationThread.sendToTaskManagerAsynchronously(edge.getSourceVertex().getProfilingReporter(),
-				bsla);
+			this.communicationThread.sendToTaskManagerAsynchronously(edge
+					.getSourceVertex().getProfilingReporter(), bsla);
 		}
 	}
 }

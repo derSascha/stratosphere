@@ -26,7 +26,8 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.util.SerializableArrayList;
 
 /**
- * This class implements an action to construct a stream chain for a particular sub-path of the graph.
+ * This class implements an action to construct a stream chain for a particular
+ * sub-path of the graph.
  * 
  * @author warneke
  */
@@ -34,15 +35,18 @@ public final class ConstructStreamChainAction extends AbstractAction {
 
 	private final SerializableArrayList<ExecutionVertexID> vertexIDs = new SerializableArrayList<ExecutionVertexID>();
 
-	public ConstructStreamChainAction(final JobID jobID, final List<ExecutionVertexID> vertexIDs) {
+	public ConstructStreamChainAction(final JobID jobID,
+			final List<ExecutionVertexID> vertexIDs) {
 		super(jobID);
 
 		if (vertexIDs == null) {
-			throw new IllegalArgumentException("Argument vertexIDs must not be null");
+			throw new IllegalArgumentException(
+					"Argument vertexIDs must not be null");
 		}
 
 		if (vertexIDs.size() < 2) {
-			throw new IllegalArgumentException("Argument vertexIDs must be a list with at least two elements");
+			throw new IllegalArgumentException(
+					"Argument vertexIDs must be a list with at least two elements");
 		}
 
 		this.vertexIDs.addAll(vertexIDs);

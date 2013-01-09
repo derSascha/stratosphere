@@ -11,7 +11,8 @@ public class ActAsProfilingMasterAction extends AbstractAction {
 
 	private ProfilingSequence profilingSequence;
 
-	public ActAsProfilingMasterAction(JobID jobID, ProfilingSequence profilingSequence) {
+	public ActAsProfilingMasterAction(JobID jobID,
+			ProfilingSequence profilingSequence) {
 		super(jobID);
 		this.profilingSequence = profilingSequence;
 	}
@@ -20,7 +21,7 @@ public class ActAsProfilingMasterAction extends AbstractAction {
 	}
 
 	public ProfilingSequence getProfilingSequence() {
-		return profilingSequence;
+		return this.profilingSequence;
 	}
 
 	public void setProfilingSequence(ProfilingSequence profilingSequence) {
@@ -33,7 +34,7 @@ public class ActAsProfilingMasterAction extends AbstractAction {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		super.write(out);
-		profilingSequence.write(out);
+		this.profilingSequence.write(out);
 	}
 
 	/**
@@ -43,6 +44,6 @@ public class ActAsProfilingMasterAction extends AbstractAction {
 	public void read(final DataInput in) throws IOException {
 		super.read(in);
 		this.profilingSequence = new ProfilingSequence();
-		profilingSequence.read(in);
+		this.profilingSequence.read(in);
 	}
 }

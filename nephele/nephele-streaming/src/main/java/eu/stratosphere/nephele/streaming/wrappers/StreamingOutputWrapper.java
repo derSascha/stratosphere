@@ -20,7 +20,8 @@ import eu.stratosphere.nephele.template.AbstractInvokable;
 import eu.stratosphere.nephele.template.AbstractOutputTask;
 
 /**
- * This class provides a wrapper for Nephele tasks of the type {@link AbstractOutputTask}.
+ * This class provides a wrapper for Nephele tasks of the type
+ * {@link AbstractOutputTask}.
  * <p>
  * This class is thread-safe.
  * 
@@ -44,8 +45,10 @@ public final class StreamingOutputWrapper extends AbstractOutputTask {
 	@Override
 	public void registerInputOutput() {
 
-		this.streamListener = WrapperUtils.createStreamListener(getEnvironment());
-		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(getEnvironment(), this.streamListener);
+		this.streamListener = WrapperUtils.createStreamListener(this
+				.getEnvironment());
+		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(
+				this.getEnvironment(), this.streamListener);
 		this.wrappedInvokable.registerInputOutput();
 	}
 

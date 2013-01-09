@@ -82,64 +82,76 @@ public class ProfilingSubsequenceTest {
 
 	@Before
 	public void setup() {
-		groupVertex0 = new ProfilingGroupVertex(new JobVertexID(), "group-0");
-		groupVertex1 = new ProfilingGroupVertex(new JobVertexID(), "group-1");
-		groupVertex2 = new ProfilingGroupVertex(new JobVertexID(), "group-2");
-		groupVertex3 = new ProfilingGroupVertex(new JobVertexID(), "group-3");
+		this.groupVertex0 = new ProfilingGroupVertex(new JobVertexID(),
+				"group-0");
+		this.groupVertex1 = new ProfilingGroupVertex(new JobVertexID(),
+				"group-1");
+		this.groupVertex2 = new ProfilingGroupVertex(new JobVertexID(),
+				"group-2");
+		this.groupVertex3 = new ProfilingGroupVertex(new JobVertexID(),
+				"group-3");
 
-		groupEdge01 = new ProfilingGroupEdge(DistributionPattern.BIPARTITE, groupVertex0, groupVertex1);
-		groupEdge12 = new ProfilingGroupEdge(DistributionPattern.POINTWISE, groupVertex1, groupVertex2);
-		groupEdge23 = new ProfilingGroupEdge(DistributionPattern.BIPARTITE, groupVertex2, groupVertex3);
+		this.groupEdge01 = new ProfilingGroupEdge(
+				DistributionPattern.BIPARTITE, this.groupVertex0,
+				this.groupVertex1);
+		this.groupEdge12 = new ProfilingGroupEdge(
+				DistributionPattern.POINTWISE, this.groupVertex1,
+				this.groupVertex2);
+		this.groupEdge23 = new ProfilingGroupEdge(
+				DistributionPattern.BIPARTITE, this.groupVertex2,
+				this.groupVertex3);
 
-		vertex00 = createVertex(false, "vertex00", 1);
-		vertex01 = createVertex(false, "vertex01", 2);
-		vertex10 = createVertex(true, "vertex10", 3);
-		vertex11 = createVertex(true, "vertex11", 4);
-		vertex20 = createVertex(true, "vertex20", 5);
-		vertex21 = createVertex(true, "vertex21", 6);
-		vertex30 = createVertex(false, "vertex30", 7);
-		vertex31 = createVertex(false, "vertex31", 8);
-		vertex32 = createVertex(false, "vertex32", 9);
+		this.vertex00 = this.createVertex(false, "vertex00", 1);
+		this.vertex01 = this.createVertex(false, "vertex01", 2);
+		this.vertex10 = this.createVertex(true, "vertex10", 3);
+		this.vertex11 = this.createVertex(true, "vertex11", 4);
+		this.vertex20 = this.createVertex(true, "vertex20", 5);
+		this.vertex21 = this.createVertex(true, "vertex21", 6);
+		this.vertex30 = this.createVertex(false, "vertex30", 7);
+		this.vertex31 = this.createVertex(false, "vertex31", 8);
+		this.vertex32 = this.createVertex(false, "vertex32", 9);
 
-		edge0010 = connect(vertex00, vertex10, true, 110);
-		edge0011 = connect(vertex00, vertex11, true, 120);
-		edge0110 = connect(vertex01, vertex10, true, 130);
-		edge0111 = connect(vertex01, vertex11, true, 140);
+		this.edge0010 = this.connect(this.vertex00, this.vertex10, true, 110);
+		this.edge0011 = this.connect(this.vertex00, this.vertex11, true, 120);
+		this.edge0110 = this.connect(this.vertex01, this.vertex10, true, 130);
+		this.edge0111 = this.connect(this.vertex01, this.vertex11, true, 140);
 
-		edge1020 = connect(vertex10, vertex20, true, 210);
-		edge1121 = connect(vertex11, vertex21, true, 220);
+		this.edge1020 = this.connect(this.vertex10, this.vertex20, true, 210);
+		this.edge1121 = this.connect(this.vertex11, this.vertex21, true, 220);
 
-		edge2030 = connect(vertex20, vertex30, true, 310);
-		edge2031 = connect(vertex20, vertex31, true, 320);
-		edge2032 = connect(vertex20, vertex32, true, 330);
-		edge2130 = connect(vertex21, vertex30, true, 340);
-		edge2131 = connect(vertex21, vertex31, true, 350);
-		edge2132 = connect(vertex21, vertex32, true, 360);
+		this.edge2030 = this.connect(this.vertex20, this.vertex30, true, 310);
+		this.edge2031 = this.connect(this.vertex20, this.vertex31, true, 320);
+		this.edge2032 = this.connect(this.vertex20, this.vertex32, true, 330);
+		this.edge2130 = this.connect(this.vertex21, this.vertex30, true, 340);
+		this.edge2131 = this.connect(this.vertex21, this.vertex31, true, 350);
+		this.edge2132 = this.connect(this.vertex21, this.vertex32, true, 360);
 
-		groupVertex0.addGroupMember(vertex00);
-		groupVertex0.addGroupMember(vertex01);
+		this.groupVertex0.addGroupMember(this.vertex00);
+		this.groupVertex0.addGroupMember(this.vertex01);
 
-		groupVertex1.addGroupMember(vertex10);
-		groupVertex1.addGroupMember(vertex11);
+		this.groupVertex1.addGroupMember(this.vertex10);
+		this.groupVertex1.addGroupMember(this.vertex11);
 
-		groupVertex2.addGroupMember(vertex20);
-		groupVertex2.addGroupMember(vertex21);
+		this.groupVertex2.addGroupMember(this.vertex20);
+		this.groupVertex2.addGroupMember(this.vertex21);
 
-		groupVertex3.addGroupMember(vertex30);
-		groupVertex3.addGroupMember(vertex31);
-		groupVertex3.addGroupMember(vertex32);
+		this.groupVertex3.addGroupMember(this.vertex30);
+		this.groupVertex3.addGroupMember(this.vertex31);
+		this.groupVertex3.addGroupMember(this.vertex32);
 
-		sequence = new ProfilingSequence();
-		sequence.addSequenceVertex(groupVertex0);
-		sequence.addSequenceVertex(groupVertex1);
-		sequence.addSequenceVertex(groupVertex2);
-		sequence.addSequenceVertex(groupVertex3);
-		sequence.setIncludeStartVertex(false);
-		sequence.setIncludeEndVertex(false);
+		this.sequence = new ProfilingSequence();
+		this.sequence.addSequenceVertex(this.groupVertex0);
+		this.sequence.addSequenceVertex(this.groupVertex1);
+		this.sequence.addSequenceVertex(this.groupVertex2);
+		this.sequence.addSequenceVertex(this.groupVertex3);
+		this.sequence.setIncludeStartVertex(false);
+		this.sequence.setIncludeEndVertex(false);
 	}
 
-	private ProfilingVertex createVertex(final boolean active, final String name, final double latency) {
-		ProfilingVertex vertex = new ProfilingVertex(new ExecutionVertexID(), name);
+	private ProfilingVertex createVertex(final boolean active,
+			final String name, final double latency) {
+		ProfilingVertex vertex = new ProfilingVertex(new ExecutionVertexID(),
+				name);
 		VertexLatency vertexLatency = new VertexLatency(vertex) {
 			@Override
 			public boolean isActive() {
@@ -155,7 +167,8 @@ public class ProfilingSubsequenceTest {
 		return vertex;
 	}
 
-	private ProfilingEdge connect(ProfilingVertex from, ProfilingVertex to, final boolean active, final long latency) {
+	private ProfilingEdge connect(ProfilingVertex from, ProfilingVertex to,
+			final boolean active, final long latency) {
 		ProfilingEdge edge = new ProfilingEdge(new ChannelID(), new ChannelID());
 		from.addForwardEdge(edge);
 		to.addBackwardEdge(edge);
@@ -164,14 +177,17 @@ public class ProfilingSubsequenceTest {
 		// src/target indices on edge should not play any role
 
 		edge.setEdgeCharacteristics(new EdgeCharacteristics(edge) {
+			@Override
 			public boolean isActive() {
 				return active;
 			}
 
+			@Override
 			public double getChannelLatencyInMillis() {
 				return latency;
 			}
-			
+
+			@Override
 			public double getOutputBufferLifetimeInMillis() {
 				return 40;
 			}
@@ -181,7 +197,8 @@ public class ProfilingSubsequenceTest {
 
 	@Test
 	public void testConstructorSimple() {
-		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(sequence);
+		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(
+				this.sequence);
 		assertEquals(4, summary.sequenceDepth);
 
 		assertEquals(2, summary.forwardEdgeCounts[0]);
@@ -195,25 +212,26 @@ public class ProfilingSubsequenceTest {
 		assertEquals(0, summary.forwardEdgeIndices[3]);
 
 		assertEquals(4, summary.currSubsequence.size());
-		assertTrue(summary.currSubsequence.get(0) == vertex00);
-		assertTrue(summary.currSubsequence.get(1) == vertex10);
-		assertTrue(summary.currSubsequence.get(2) == vertex20);
-		assertTrue(summary.currSubsequence.get(3) == vertex30);
+		assertTrue(summary.currSubsequence.get(0) == this.vertex00);
+		assertTrue(summary.currSubsequence.get(1) == this.vertex10);
+		assertTrue(summary.currSubsequence.get(2) == this.vertex20);
+		assertTrue(summary.currSubsequence.get(3) == this.vertex30);
 		assertTrue(summary.isSubsequenceActive());
 		assertTrue(summary.getSubsequenceLatency() == 638.0);
 		assertTrue(summary.getEdges().size() == 3);
-		assertTrue(summary.getEdges().get(0) == edge0010);
-		assertTrue(summary.getEdges().get(1) == edge1020);
-		assertTrue(summary.getEdges().get(2) == edge2030);
+		assertTrue(summary.getEdges().get(0) == this.edge0010);
+		assertTrue(summary.getEdges().get(1) == this.edge1020);
+		assertTrue(summary.getEdges().get(2) == this.edge2030);
 	}
 
 	@Test
 	public void testConstructorHarder() {
-		deactivateEdge(edge1020);
-		deactivateEdge(edge0011);
-		deactivateEdge(edge2130);
-		deactivateEdge(edge2131);
-		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(sequence);
+		this.deactivateEdge(this.edge1020);
+		this.deactivateEdge(this.edge0011);
+		this.deactivateEdge(this.edge2130);
+		this.deactivateEdge(this.edge2131);
+		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(
+				this.sequence);
 
 		assertEquals(2, summary.forwardEdgeCounts[0]);
 		assertEquals(2, summary.forwardEdgeCounts[1]);
@@ -226,26 +244,27 @@ public class ProfilingSubsequenceTest {
 		assertEquals(2, summary.forwardEdgeIndices[3]);
 
 		assertEquals(4, summary.currSubsequence.size());
-		assertTrue(summary.currSubsequence.get(0) == vertex01);
-		assertTrue(summary.currSubsequence.get(1) == vertex11);
-		assertTrue(summary.currSubsequence.get(2) == vertex21);
-		assertTrue(summary.currSubsequence.get(3) == vertex32);
+		assertTrue(summary.currSubsequence.get(0) == this.vertex01);
+		assertTrue(summary.currSubsequence.get(1) == this.vertex11);
+		assertTrue(summary.currSubsequence.get(2) == this.vertex21);
+		assertTrue(summary.currSubsequence.get(3) == this.vertex32);
 		assertTrue(summary.isSubsequenceActive());
 		assertTrue(summary.getSubsequenceLatency() == 730.0);
 		assertTrue(summary.getEdges().size() == 3);
-		assertTrue(summary.getEdges().get(0) == edge0111);
-		assertTrue(summary.getEdges().get(1) == edge1121);
-		assertTrue(summary.getEdges().get(2) == edge2132);
+		assertTrue(summary.getEdges().get(0) == this.edge0111);
+		assertTrue(summary.getEdges().get(1) == this.edge1121);
+		assertTrue(summary.getEdges().get(2) == this.edge2132);
 	}
 
 	@Test
 	public void testConstructorWithNoActiveSequence() {
-		deactivateEdge(edge1020);
-		deactivateEdge(edge0011);
-		deactivateEdge(edge2130);
-		deactivateEdge(edge2131);
-		deactivateEdge(edge2132);
-		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(sequence);
+		this.deactivateEdge(this.edge1020);
+		this.deactivateEdge(this.edge0011);
+		this.deactivateEdge(this.edge2130);
+		this.deactivateEdge(this.edge2131);
+		this.deactivateEdge(this.edge2132);
+		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(
+				this.sequence);
 
 		assertEquals(2, summary.forwardEdgeCounts[0]);
 		assertEquals(2, summary.forwardEdgeCounts[1]);
@@ -261,12 +280,13 @@ public class ProfilingSubsequenceTest {
 
 	@Test
 	public void testSwitchToNextActivePath() {
-		deactivateEdge(edge0011);
-		deactivateEdge(edge2030);
-		deactivateEdge(edge2032);
-		deactivateEdge(edge2130);
-		deactivateEdge(edge2131);
-		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(sequence);
+		this.deactivateEdge(this.edge0011);
+		this.deactivateEdge(this.edge2030);
+		this.deactivateEdge(this.edge2032);
+		this.deactivateEdge(this.edge2130);
+		this.deactivateEdge(this.edge2131);
+		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(
+				this.sequence);
 
 		assertEquals(0, summary.forwardEdgeIndices[0]);
 		assertEquals(0, summary.forwardEdgeIndices[1]);
@@ -274,16 +294,15 @@ public class ProfilingSubsequenceTest {
 		assertEquals(1, summary.forwardEdgeIndices[3]);
 		assertEquals(4, summary.currSubsequence.size());
 		assertTrue(summary.isSubsequenceActive());
-		assertTrue(summary.currSubsequence.get(0) == vertex00);
-		assertTrue(summary.currSubsequence.get(1) == vertex10);
-		assertTrue(summary.currSubsequence.get(2) == vertex20);
-		assertTrue(summary.currSubsequence.get(3) == vertex31);
+		assertTrue(summary.currSubsequence.get(0) == this.vertex00);
+		assertTrue(summary.currSubsequence.get(1) == this.vertex10);
+		assertTrue(summary.currSubsequence.get(2) == this.vertex20);
+		assertTrue(summary.currSubsequence.get(3) == this.vertex31);
 		assertTrue(summary.getSubsequenceLatency() == 648.0);
 		assertTrue(summary.getEdges().size() == 3);
-		assertTrue(summary.getEdges().get(0) == edge0010);
-		assertTrue(summary.getEdges().get(1) == edge1020);
-		assertTrue(summary.getEdges().get(2) == edge2031);
-
+		assertTrue(summary.getEdges().get(0) == this.edge0010);
+		assertTrue(summary.getEdges().get(1) == this.edge1020);
+		assertTrue(summary.getEdges().get(2) == this.edge2031);
 
 		assertTrue(summary.switchToNextActivePathIfPossible());
 		assertEquals(1, summary.forwardEdgeIndices[0]);
@@ -292,15 +311,15 @@ public class ProfilingSubsequenceTest {
 		assertEquals(1, summary.forwardEdgeIndices[3]);
 		assertEquals(4, summary.currSubsequence.size());
 		assertTrue(summary.isSubsequenceActive());
-		assertTrue(summary.currSubsequence.get(0) == vertex01);
-		assertTrue(summary.currSubsequence.get(1) == vertex10);
-		assertTrue(summary.currSubsequence.get(2) == vertex20);
-		assertTrue(summary.currSubsequence.get(3) == vertex31);
+		assertTrue(summary.currSubsequence.get(0) == this.vertex01);
+		assertTrue(summary.currSubsequence.get(1) == this.vertex10);
+		assertTrue(summary.currSubsequence.get(2) == this.vertex20);
+		assertTrue(summary.currSubsequence.get(3) == this.vertex31);
 		assertTrue(summary.getSubsequenceLatency() == 668.0);
 		assertTrue(summary.getEdges().size() == 3);
-		assertTrue(summary.getEdges().get(0) == edge0110);
-		assertTrue(summary.getEdges().get(1) == edge1020);
-		assertTrue(summary.getEdges().get(2) == edge2031);
+		assertTrue(summary.getEdges().get(0) == this.edge0110);
+		assertTrue(summary.getEdges().get(1) == this.edge1020);
+		assertTrue(summary.getEdges().get(2) == this.edge2031);
 
 		assertTrue(summary.switchToNextActivePathIfPossible());
 		assertEquals(1, summary.forwardEdgeIndices[0]);
@@ -309,15 +328,15 @@ public class ProfilingSubsequenceTest {
 		assertEquals(2, summary.forwardEdgeIndices[3]);
 		assertEquals(4, summary.currSubsequence.size());
 		assertTrue(summary.isSubsequenceActive());
-		assertTrue(summary.currSubsequence.get(0) == vertex01);
-		assertTrue(summary.currSubsequence.get(1) == vertex11);
-		assertTrue(summary.currSubsequence.get(2) == vertex21);
-		assertTrue(summary.currSubsequence.get(3) == vertex32);
+		assertTrue(summary.currSubsequence.get(0) == this.vertex01);
+		assertTrue(summary.currSubsequence.get(1) == this.vertex11);
+		assertTrue(summary.currSubsequence.get(2) == this.vertex21);
+		assertTrue(summary.currSubsequence.get(3) == this.vertex32);
 		assertTrue(summary.getSubsequenceLatency() == 730.0);
 		assertTrue(summary.getEdges().size() == 3);
-		assertTrue(summary.getEdges().get(0) == edge0111);
-		assertTrue(summary.getEdges().get(1) == edge1121);
-		assertTrue(summary.getEdges().get(2) == edge2132);
+		assertTrue(summary.getEdges().get(0) == this.edge0111);
+		assertTrue(summary.getEdges().get(1) == this.edge1121);
+		assertTrue(summary.getEdges().get(2) == this.edge2132);
 
 		assertFalse(summary.switchToNextActivePathIfPossible());
 		assertEquals(-1, summary.forwardEdgeIndices[0]);
@@ -327,30 +346,32 @@ public class ProfilingSubsequenceTest {
 		assertEquals(0, summary.currSubsequence.size());
 		assertFalse(summary.isSubsequenceActive());
 	}
-	
+
 	@Test
 	public void addCurrentSubsequenceLatenciesTest() {
-		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(sequence);
-		
+		ProfilingSubsequenceSummary summary = new ProfilingSubsequenceSummary(
+				this.sequence);
+
 		double[] aggregatedLats = new double[8];
 		summary.addCurrentSubsequenceLatencies(aggregatedLats);
-		
+
 		assertTrue(aggregatedLats[0] == 20);
 		assertTrue(aggregatedLats[1] == 90);
-		
+
 		assertTrue(aggregatedLats[2] == 3);
-		
+
 		assertTrue(aggregatedLats[3] == 20);
 		assertTrue(aggregatedLats[4] == 190);
-		
+
 		assertTrue(aggregatedLats[5] == 5);
-		
+
 		assertTrue(aggregatedLats[6] == 20);
 		assertTrue(aggregatedLats[7] == 290);
 	}
 
 	private void deactivateEdge(ProfilingEdge edge) {
 		edge.setEdgeCharacteristics(new EdgeCharacteristics(edge) {
+			@Override
 			public boolean isActive() {
 				return false;
 			}

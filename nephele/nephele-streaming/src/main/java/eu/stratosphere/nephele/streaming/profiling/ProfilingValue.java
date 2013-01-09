@@ -17,7 +17,7 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 	}
 
 	public double getValue() {
-		return value;
+		return this.value;
 	}
 
 	public void setValue(double value) {
@@ -25,7 +25,7 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 	}
 
 	public long getTimestamp() {
-		return timestamp;
+		return this.timestamp;
 	}
 
 	public void setTimestamp(long timestamp) {
@@ -33,7 +33,7 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 	}
 
 	public long getId() {
-		return id;
+		return this.id;
 	}
 
 	/**
@@ -56,12 +56,23 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 		}
 	}
 
+	@Override
 	public boolean equals(Object otherObj) {
 		if (otherObj instanceof ProfilingValue) {
 			ProfilingValue other = (ProfilingValue) otherObj;
 			return other.id == this.id;
-		} else {
-			return false;
 		}
+		return false;
 	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		return Long.valueOf(this.id).hashCode();
+	}
+
 }

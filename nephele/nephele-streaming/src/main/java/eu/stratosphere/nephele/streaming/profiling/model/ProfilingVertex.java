@@ -36,11 +36,11 @@ public class ProfilingVertex {
 	}
 
 	public ExecutionVertexID getID() {
-		return vertexID;
+		return this.vertexID;
 	}
 
 	public List<ProfilingEdge> getForwardEdges() {
-		return forwardEdges;
+		return this.forwardEdges;
 	}
 
 	public void addForwardEdge(ProfilingEdge forwardEdge) {
@@ -48,7 +48,7 @@ public class ProfilingVertex {
 	}
 
 	public List<ProfilingEdge> getBackwardEdges() {
-		return backwardEdges;
+		return this.backwardEdges;
 	}
 
 	public void addBackwardEdge(ProfilingEdge backwardEdge) {
@@ -56,7 +56,7 @@ public class ProfilingVertex {
 	}
 
 	public InstanceConnectionInfo getProfilingReporter() {
-		return profilingReporter;
+		return this.profilingReporter;
 	}
 
 	public void setProfilingReporter(InstanceConnectionInfo profilingReporter) {
@@ -64,7 +64,7 @@ public class ProfilingVertex {
 	}
 
 	public VertexLatency getVertexLatency() {
-		return vertexLatency;
+		return this.vertexLatency;
 	}
 
 	public void setVertexLatency(VertexLatency vertexLatency) {
@@ -72,10 +72,11 @@ public class ProfilingVertex {
 	}
 
 	public String getName() {
-		return name;
+		return this.name;
 	}
 
+	@Override
 	public String toString() {
-		return name;
+		return this.name;
 	}
 }

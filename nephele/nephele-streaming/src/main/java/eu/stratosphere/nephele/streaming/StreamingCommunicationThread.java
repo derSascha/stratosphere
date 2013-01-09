@@ -32,8 +32,9 @@ import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
- * This class implements a communication thread to handle communication from the task manager plugin component to the
- * job manager plugin component in an asynchronous fashion. The main reason for asynchronous communication is not
+ * This class implements a communication thread to handle communication from the
+ * task manager plugin component to the job manager plugin component in an
+ * asynchronous fashion. The main reason for asynchronous communication is not
  * influence the processing delay by the RPC call latency.
  * <p>
  * This class is thread-safe.
@@ -45,15 +46,12 @@ public final class StreamingCommunicationThread extends Thread {
 	/**
 	 * The log object.
 	 */
-	private static final Log LOG = LogFactory.getLog(StreamingCommunicationThread.class);
+	private static final Log LOG = LogFactory
+			.getLog(StreamingCommunicationThread.class);
 
 	/**
-	 * The capacity of the data queue.
-	 */
-	private static final int QUEUE_CAPACITY = 128;
-
-	/**
-	 * The blocking queue which is used to asynchronously exchange data with the job manager component of this plugin.
+	 * The blocking queue which is used to asynchronously exchange data with the
+	 * job manager component of this plugin.
 	 */
 	private final BlockingQueue<AbstractStreamingData> dataQueue = new LinkedBlockingQueue<AbstractStreamingData>();
 
@@ -69,26 +67,31 @@ public final class StreamingCommunicationThread extends Thread {
 
 		try {
 			while (!interrupted()) {
-				InstanceConnectionInfo connectionInfo = connectionInfoQueue.take();
-				AbstractStreamingData data = dataQueue.take();
+				InstanceConnectionInfo connectionInfo = this.connectionInfoQueue
+						.take();
+				AbstractStreamingData data = this.dataQueue.take();
 
 				try {
-					getProxy(connectionInfo).sendData(StreamingPluginLoader.STREAMING_PLUGIN_ID, data);
+					this.getProxy(connectionInfo).sendData(
+							StreamingPluginLoader.STREAMING_PLUGIN_ID, data);
 				} catch (IOException ioe) {
 					LOG.error(StringUtils.stringifyException(ioe));
-					proxies.remove(connectionInfo);
+					this.proxies.remove(connectionInfo);
 				}
 			}
 		} catch (InterruptedException e) {
 		}
 	}
 
-	private PluginCommunicationProtocol getProxy(InstanceConnectionInfo connectionInfo) throws IOException {
-		PluginCommunicationProtocol proxy = proxies.get(connectionInfo);
+	private PluginCommunicationProtocol getProxy(
+			InstanceConnectionInfo connectionInfo) throws IOException {
+		PluginCommunicationProtocol proxy = this.proxies.get(connectionInfo);
 		if (proxy == null) {
-			proxy = RPC.getProxy(PluginCommunicationProtocol.class, new InetSocketAddress(connectionInfo.getAddress(),
-				connectionInfo.getIPCPort()), NetUtils.getSocketFactory());
-			proxies.put(connectionInfo, proxy);
+			proxy = RPC.getProxy(PluginCommunicationProtocol.class,
+					new InetSocketAddress(connectionInfo.getAddress(),
+							connectionInfo.getIPCPort()), NetUtils
+							.getSocketFactory());
+			this.proxies.put(connectionInfo, proxy);
 		}
 
 		return proxy;
@@ -98,12 +101,13 @@ public final class StreamingCommunicationThread extends Thread {
 	 * Stops the communication thread.
 	 */
 	void stopCommunicationThread() {
-		interrupt();
+		this.interrupt();
 	}
 
-	public void sendToTaskManagerAsynchronously(final InstanceConnectionInfo connectionInfo,
+	public void sendToTaskManagerAsynchronously(
+			final InstanceConnectionInfo connectionInfo,
 			final AbstractStreamingData data) throws InterruptedException {
-		dataQueue.put(data);
-		connectionInfoQueue.put(connectionInfo);
+		this.dataQueue.put(data);
+		this.connectionInfoQueue.put(connectionInfo);
 	}
 }

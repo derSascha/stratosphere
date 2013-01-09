@@ -22,7 +22,8 @@ import java.io.IOException;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 
 /**
- * This class stores information about the throughput of a specific output channel.
+ * This class stores information about the throughput of a specific output
+ * channel.
  * 
  * @author warneke
  */
@@ -44,23 +45,25 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	 * Constructs a new channel throughput object.
 	 * 
 	 * @param jobID
-	 *        the ID of the job this channel throughput object belongs to
+	 *            the ID of the job this channel throughput object belongs to
 	 * @param vertexID
-	 *        the ID of the vertex which is connected to this output channel
+	 *            the ID of the vertex which is connected to this output channel
 	 * @param sourceChannelID
-	 *        the ID of the output channel
+	 *            the ID of the output channel
 	 * @param throughput
-	 *        the throughput in MBit/s
+	 *            the throughput in MBit/s
 	 */
 	public ChannelThroughput(final ChannelID sourceChannelID,
 			final double throughput) {
 
 		if (sourceChannelID == null) {
-			throw new IllegalArgumentException("Argument sourceChannelID must not be null");
+			throw new IllegalArgumentException(
+					"Argument sourceChannelID must not be null");
 		}
 
 		if (throughput < 0.0) {
-			throw new IllegalArgumentException("Argument throughput must not be positive");
+			throw new IllegalArgumentException(
+					"Argument throughput must not be positive");
 		}
 
 		this.sourceChannelID = sourceChannelID;
@@ -103,7 +106,7 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.sourceChannelID.write(out);
-		out.writeDouble(getThroughput());
+		out.writeDouble(this.getThroughput());
 	}
 
 	/**
@@ -122,11 +125,26 @@ public final class ChannelThroughput extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof ChannelThroughput) {
 			ChannelThroughput other = (ChannelThroughput) otherObj;
-			isEqual = other.getSourceChannelID().equals(getSourceChannelID())
-				&& (other.getThroughput() == getThroughput());
+			isEqual = other.getSourceChannelID().equals(
+					this.getSourceChannelID())
+					&& other.getThroughput() == this.getThroughput();
 		}
 
 		return isEqual;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		long temp = Double.doubleToLongBits(this.throughput);
+		int result = prime + (int) (temp ^ temp >>> 32);
+		result = prime * result + this.sourceChannelID.hashCode();
+		return result;
 	}
 
 }

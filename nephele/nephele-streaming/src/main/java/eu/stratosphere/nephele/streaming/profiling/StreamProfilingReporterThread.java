@@ -28,21 +28,24 @@ import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
- * For a given Nephele job, this class aggregates and reports stream profiling data (latencies, throughput, etc) of
- * the tasks of running within the task manager. Profiling data is aggregated for every profiling master
- * and shipped in a single message to the profiling master once every {@link #aggregationInterval}.
- * If no profiling data has been received, messages will be skipped.
- * This class starts its own thread as soon as there is at least on registered task (see
- * {@link #registerProfilingReporterInfo(StreamProfilingReporterInfo)}) and can be shut down by invoking
- * {@link #shutdown()}.
- * This class is threadsafe. Any profiling data added after shutdown will be ignored.
- * FIXME: lifecycle. When does does thread get stopped?
+ * For a given Nephele job, this class aggregates and reports stream profiling
+ * data (latencies, throughput, etc) of the tasks of running within the task
+ * manager. Profiling data is aggregated for every profiling master and shipped
+ * in a single message to the profiling master once every
+ * {@link #aggregationInterval}. If no profiling data has been received,
+ * messages will be skipped. This class starts its own thread as soon as there
+ * is at least on registered task (see
+ * {@link #registerProfilingReporterInfo(StreamProfilingReporterInfo)}) and can
+ * be shut down by invoking {@link #shutdown()}. This class is threadsafe. Any
+ * profiling data added after shutdown will be ignored. FIXME: lifecycle. When
+ * does does thread get stopped?
  * 
  * @author Bjoern Lohrmann
  */
 public class StreamProfilingReporterThread extends Thread {
 
-	private static final Log LOG = LogFactory.getLog(StreamProfilingReporterThread.class);
+	private static final Log LOG = LogFactory
+			.getLog(StreamProfilingReporterThread.class);
 
 	private JobID jobID;
 
@@ -73,19 +76,23 @@ public class StreamProfilingReporterThread extends Thread {
 
 		private long reportingOffset;
 
-		public PendingReport(InstanceConnectionInfo profilingMaster, long reportingOffset) {
+		public PendingReport(InstanceConnectionInfo profilingMaster,
+				long reportingOffset) {
 			this.profilingMaster = profilingMaster;
-			this.report = new StreamProfilingReport(jobID);
+			this.report = new StreamProfilingReport(
+					StreamProfilingReporterThread.this.jobID);
 			long now = System.currentTimeMillis();
-			this.dueTime = now - (now % aggregationInterval) + reportingOffset;
+			this.dueTime = now - now
+					% StreamProfilingReporterThread.this.aggregationInterval
+					+ reportingOffset;
 		}
 
 		public long getDueTime() {
-			return dueTime;
+			return this.dueTime;
 		}
 
 		public StreamProfilingReport getReport() {
-			return report;
+			return this.report;
 		}
 
 		public InstanceConnectionInfo getProfilingMaster() {
@@ -95,9 +102,11 @@ public class StreamProfilingReporterThread extends Thread {
 		public void refreshReport() {
 			long now = System.currentTimeMillis();
 			while (this.dueTime <= now) {
-				this.dueTime = this.dueTime + aggregationInterval;
+				this.dueTime = this.dueTime
+						+ StreamProfilingReporterThread.this.aggregationInterval;
 			}
-			report = new StreamProfilingReport(jobID);
+			this.report = new StreamProfilingReport(
+					StreamProfilingReporterThread.this.jobID);
 		}
 
 		public long getReportingOffset() {
@@ -106,9 +115,9 @@ public class StreamProfilingReporterThread extends Thread {
 
 		@Override
 		public int compareTo(PendingReport o) {
-			if (getReportingOffset() < o.getReportingOffset()) {
+			if (this.getReportingOffset() < o.getReportingOffset()) {
 				return -1;
-			} else if (getReportingOffset() > o.getReportingOffset()) {
+			} else if (this.getReportingOffset() > o.getReportingOffset()) {
 				return 1;
 			} else {
 				return 0;
@@ -125,7 +134,8 @@ public class StreamProfilingReporterThread extends Thread {
 		this.aggregationInterval = aggregationInterval;
 		this.pendingReports = new PendingReport[0];
 
-		// concurrent maps are necessary here because THIS thread and and another thread registering/unregistering
+		// concurrent maps are necessary here because THIS thread and and
+		// another thread registering/unregistering
 		// profiling infos may access the maps concurrently
 		this.reportByProfilingMaster = new ConcurrentHashMap<InstanceConnectionInfo, PendingReport>();
 		this.reportByVertexID = new ConcurrentHashMap<ExecutionVertexID, Set<PendingReport>>();
@@ -135,34 +145,41 @@ public class StreamProfilingReporterThread extends Thread {
 		this.started = false;
 	}
 
+	@Override
 	public void run() {
 		try {
 			int currentReportIndex = -1;
 			while (!interrupted()) {
 
 				PendingReport currentReport;
-				synchronized (pendingReports) {
-					currentReportIndex = (currentReportIndex + 1) % pendingReports.length;
-					currentReport = pendingReports[currentReportIndex];
+				synchronized (this.pendingReports) {
+					currentReportIndex = (currentReportIndex + 1)
+							% this.pendingReports.length;
+					currentReport = this.pendingReports[currentReportIndex];
 				}
 
-				processPendingProfilingData();
-				long sleepTime = Math.max(0, currentReport.getDueTime() - System.currentTimeMillis());
+				this.processPendingProfilingData();
+				long sleepTime = Math.max(0, currentReport.getDueTime()
+						- System.currentTimeMillis());
 				if (sleepTime > 0) {
 					sleep(sleepTime);
 				}
-				processPendingProfilingData();
+				this.processPendingProfilingData();
 
 				if (!currentReport.getReport().isEmpty()) {
-					if (currentReport.getProfilingMaster().equals(localhost)) {
+					if (currentReport.getProfilingMaster().equals(
+							this.localhost)) {
 						try {
-							StreamingTaskManagerPlugin.getInstance().sendData(currentReport.getReport());
+							StreamingTaskManagerPlugin.getInstance().sendData(
+									currentReport.getReport());
 						} catch (IOException e) {
 							LOG.error(StringUtils.stringifyException(e));
 						}
 					} else {
-						communicationThread.sendToTaskManagerAsynchronously(currentReport.getProfilingMaster(),
-							currentReport.getReport());
+						this.communicationThread
+								.sendToTaskManagerAsynchronously(
+										currentReport.getProfilingMaster(),
+										currentReport.getReport());
 					}
 				}
 				currentReport.refreshReport();
@@ -171,7 +188,7 @@ public class StreamProfilingReporterThread extends Thread {
 		} catch (InterruptedException e) {
 		}
 
-		cleanUp();
+		this.cleanUp();
 	}
 
 	private void cleanUp() {
@@ -184,23 +201,24 @@ public class StreamProfilingReporterThread extends Thread {
 	private ArrayList<AbstractStreamProfilingRecord> tmpRecords = new ArrayList<AbstractStreamProfilingRecord>();
 
 	private void processPendingProfilingData() {
-		pendingProfilingRecords.drainTo(tmpRecords);
-		for (AbstractStreamProfilingRecord profilingRecord : tmpRecords) {
+		this.pendingProfilingRecords.drainTo(this.tmpRecords);
+		for (AbstractStreamProfilingRecord profilingRecord : this.tmpRecords) {
 			if (profilingRecord instanceof ChannelLatency) {
-				processChannelLatency((ChannelLatency) profilingRecord);
+				this.processChannelLatency((ChannelLatency) profilingRecord);
 			} else if (profilingRecord instanceof ChannelThroughput) {
-				processChannelThroughput((ChannelThroughput) profilingRecord);
+				this.processChannelThroughput((ChannelThroughput) profilingRecord);
 			} else if (profilingRecord instanceof OutputBufferLatency) {
-				processOutputBufferLatency((OutputBufferLatency) profilingRecord);
+				this.processOutputBufferLatency((OutputBufferLatency) profilingRecord);
 			} else if (profilingRecord instanceof TaskLatency) {
-				processTaskLatency((TaskLatency) profilingRecord);
+				this.processTaskLatency((TaskLatency) profilingRecord);
 			}
 		}
-		tmpRecords.clear();
+		this.tmpRecords.clear();
 	}
 
 	private void processTaskLatency(TaskLatency taskLatency) {
-		Set<PendingReport> reports = reportByVertexID.get(taskLatency.getVertexID());
+		Set<PendingReport> reports = this.reportByVertexID.get(taskLatency
+				.getVertexID());
 		if (reports != null) {
 			for (PendingReport report : reports) {
 				report.getReport().addTaskLatency(taskLatency);
@@ -209,7 +227,8 @@ public class StreamProfilingReporterThread extends Thread {
 	}
 
 	private void processOutputBufferLatency(OutputBufferLatency obl) {
-		Set<PendingReport> reports = reportByChannelID.get(obl.getSourceChannelID());
+		Set<PendingReport> reports = this.reportByChannelID.get(obl
+				.getSourceChannelID());
 		if (reports != null) {
 			for (PendingReport report : reports) {
 				report.getReport().addOutputBufferLatency(obl);
@@ -218,7 +237,8 @@ public class StreamProfilingReporterThread extends Thread {
 	}
 
 	private void processChannelThroughput(ChannelThroughput channelThroughput) {
-		Set<PendingReport> reports = reportByChannelID.get(channelThroughput.getSourceChannelID());
+		Set<PendingReport> reports = this.reportByChannelID
+				.get(channelThroughput.getSourceChannelID());
 		if (reports != null) {
 			for (PendingReport report : reports) {
 				report.getReport().addChannelThroughput(channelThroughput);
@@ -227,7 +247,8 @@ public class StreamProfilingReporterThread extends Thread {
 	}
 
 	private void processChannelLatency(ChannelLatency channelLatency) {
-		Set<PendingReport> reports = reportByChannelID.get(channelLatency.getSourceChannelID());
+		Set<PendingReport> reports = this.reportByChannelID.get(channelLatency
+				.getSourceChannelID());
 		if (reports != null) {
 			for (PendingReport report : reports) {
 				report.getReport().addChannelLatency(channelLatency);
@@ -235,40 +256,50 @@ public class StreamProfilingReporterThread extends Thread {
 		}
 	}
 
-	public void registerProfilingReporterInfo(StreamProfilingReporterInfo reporterInfo) {
+	public void registerProfilingReporterInfo(
+			StreamProfilingReporterInfo reporterInfo) {
 		synchronized (this.pendingReports) {
 			this.localhost = reporterInfo.getReporterConnectionInfo();
 			int tasks = 0;
 			int channels = 0;
 
 			for (ExecutionVertexID vertexID : reporterInfo.getTasksToProfile()) {
-				Set<PendingReport> vertexReports = getOrCreateVertexReports(vertexID);
+				Set<PendingReport> vertexReports = this
+						.getOrCreateVertexReports(vertexID);
 
-				for (InstanceConnectionInfo profilingMaster : reporterInfo.getTaskProfilingMasters(vertexID)) {
-					vertexReports.add(getOrCreateProfilingReport(profilingMaster));
+				for (InstanceConnectionInfo profilingMaster : reporterInfo
+						.getTaskProfilingMasters(vertexID)) {
+					vertexReports.add(this
+							.getOrCreateProfilingReport(profilingMaster));
 				}
-				LOG.info(String.format("Registered %d reports for vertex %s", vertexReports.size(), vertexID.toString()));
+				LOG.info(String.format("Registered %d reports for vertex %s",
+						vertexReports.size(), vertexID.toString()));
 				tasks++;
 			}
 
 			for (ChannelID channelID : reporterInfo.getChannelsToProfile()) {
-				Set<PendingReport> channelReports = getOrCreateChannelReports(channelID);
+				Set<PendingReport> channelReports = this
+						.getOrCreateChannelReports(channelID);
 
 				for (InstanceConnectionInfo channelProfilingMaster : reporterInfo
-					.getChannelProfilingMasters(channelID)) {
+						.getChannelProfilingMasters(channelID)) {
 
-					channelReports.add(getOrCreateProfilingReport(channelProfilingMaster));
+					channelReports
+							.add(this
+									.getOrCreateProfilingReport(channelProfilingMaster));
 				}
-				LOG.info(String.format("Registered %d reports for channel %s", channelReports.size(),
-					channelID.toString()));
+				LOG.info(String.format("Registered %d reports for channel %s",
+						channelReports.size(), channelID.toString()));
 				channels++;
 			}
-			LOG.info(String.format("Added %d tasks and %d channels. Altogether (max) %d reports each interval", tasks,
-				channels, reportByProfilingMaster.size()));
+			LOG.info(String
+					.format("Added %d tasks and %d channels. Altogether (max) %d reports each interval",
+							tasks, channels,
+							this.reportByProfilingMaster.size()));
 
-			if (!started) {
-				start();
-				started = true;
+			if (!this.started) {
+				this.start();
+				this.started = true;
 			}
 		}
 	}
@@ -277,8 +308,10 @@ public class StreamProfilingReporterThread extends Thread {
 	 * @param reporterInfo
 	 * @return true when the reporter is shutting down, false otherwise
 	 */
-	public boolean unregisterProfilingReporterInfo(StreamProfilingReporterInfo reporterInfo) {
-		// no synchronization necessary here, because reportByXXX maps are threadsafe
+	public boolean unregisterProfilingReporterInfo(
+			StreamProfilingReporterInfo reporterInfo) {
+		// no synchronization necessary here, because reportByXXX maps are
+		// threadsafe
 		for (ExecutionVertexID vertexID : reporterInfo.getTasksToProfile()) {
 			this.reportByVertexID.remove(vertexID);
 		}
@@ -287,53 +320,64 @@ public class StreamProfilingReporterThread extends Thread {
 			this.reportByChannelID.remove(channelID);
 		}
 
-		// TODO: reduce the pending reports array accordingly (currently we don't have
-		// the lookup structures to now whether a PendingReport won't be needed anymore)
+		// TODO: reduce the pending reports array accordingly (currently we
+		// don't have
+		// the lookup structures to now whether a PendingReport won't be needed
+		// anymore)
 		if (this.reportByVertexID.isEmpty() && this.reportByChannelID.isEmpty()) {
-			shutdown();
+			this.shutdown();
 			return true;
-		} else {
-			return false;
 		}
+		return false;
 	}
 
 	private Set<PendingReport> getOrCreateChannelReports(ChannelID channelID) {
-		Set<PendingReport> channelReports = reportByChannelID.get(channelID);
+		Set<PendingReport> channelReports = this.reportByChannelID
+				.get(channelID);
 		if (channelReports == null) {
-			// concurrent sets are necessary here because THIS thread and and another thread registering/unregistering
+			// concurrent sets are necessary here because THIS thread and and
+			// another thread registering/unregistering
 			// profiling infos may access the maps concurrently
 			channelReports = new CopyOnWriteArraySet<PendingReport>();
-			reportByChannelID.put(channelID, channelReports);
+			this.reportByChannelID.put(channelID, channelReports);
 		}
 		return channelReports;
 	}
 
-	private Set<PendingReport> getOrCreateVertexReports(ExecutionVertexID vertexID) {
-		Set<PendingReport> vertexReports = reportByVertexID.get(vertexID);
+	private Set<PendingReport> getOrCreateVertexReports(
+			ExecutionVertexID vertexID) {
+		Set<PendingReport> vertexReports = this.reportByVertexID.get(vertexID);
 		if (vertexReports == null) {
-			// concurrent sets are necessary here because THIS thread and and another thread registering/unregistering
+			// concurrent sets are necessary here because THIS thread and and
+			// another thread registering/unregistering
 			// profiling infos may access the maps concurrently
 			vertexReports = new CopyOnWriteArraySet<PendingReport>();
-			reportByVertexID.put(vertexID, vertexReports);
+			this.reportByVertexID.put(vertexID, vertexReports);
 		}
 		return vertexReports;
 	}
 
-	private PendingReport getOrCreateProfilingReport(InstanceConnectionInfo profilingMaster) {
-		PendingReport profilingMasterReport = reportByProfilingMaster.get(profilingMaster);
+	private PendingReport getOrCreateProfilingReport(
+			InstanceConnectionInfo profilingMaster) {
+		PendingReport profilingMasterReport = this.reportByProfilingMaster
+				.get(profilingMaster);
 		if (profilingMasterReport == null) {
-			profilingMasterReport = createAndEnqueueReport(profilingMaster);
+			profilingMasterReport = this
+					.createAndEnqueueReport(profilingMaster);
 		}
 		return profilingMasterReport;
 	}
 
-	private PendingReport createAndEnqueueReport(InstanceConnectionInfo profilingMaster) {
-		PendingReport newReport = new PendingReport(profilingMaster, (long) (Math.random() * aggregationInterval));
-		reportByProfilingMaster.put(profilingMaster, newReport);
+	private PendingReport createAndEnqueueReport(
+			InstanceConnectionInfo profilingMaster) {
+		PendingReport newReport = new PendingReport(profilingMaster,
+				(long) (Math.random() * this.aggregationInterval));
+		this.reportByProfilingMaster.put(profilingMaster, newReport);
 
 		// insert new report in pendingReports, sorted by reporting offset
-		PendingReport[] newPendingReports = new PendingReport[pendingReports.length + 1];
-		System.arraycopy(this.pendingReports, 0, newPendingReports, 0, this.pendingReports.length);
+		PendingReport[] newPendingReports = new PendingReport[this.pendingReports.length + 1];
+		System.arraycopy(this.pendingReports, 0, newPendingReports, 0,
+				this.pendingReports.length);
 		newPendingReports[newPendingReports.length - 1] = newReport;
 		Arrays.sort(newPendingReports);
 		this.pendingReports = newPendingReports;
@@ -343,33 +387,33 @@ public class StreamProfilingReporterThread extends Thread {
 
 	public void addToNextReport(ChannelLatency channelLatency) {
 		// may be null when profiling was shut down
-		if (pendingProfilingRecords != null) {
-			pendingProfilingRecords.add(channelLatency);
+		if (this.pendingProfilingRecords != null) {
+			this.pendingProfilingRecords.add(channelLatency);
 		}
 	}
 
 	public void addToNextReport(ChannelThroughput channelThroughput) {
 		// may be null when profiling was shut down
-		if (pendingProfilingRecords != null) {
-			pendingProfilingRecords.add(channelThroughput);
+		if (this.pendingProfilingRecords != null) {
+			this.pendingProfilingRecords.add(channelThroughput);
 		}
 	}
 
 	public void addToNextReport(OutputBufferLatency outputBufferLatency) {
 		// may be null when profiling was shut down
-		if (pendingProfilingRecords != null) {
-			pendingProfilingRecords.add(outputBufferLatency);
+		if (this.pendingProfilingRecords != null) {
+			this.pendingProfilingRecords.add(outputBufferLatency);
 		}
 	}
 
 	public void addToNextReport(TaskLatency taskLatency) {
 		// may be null when profiling was shut down
-		if (pendingProfilingRecords != null) {
-			pendingProfilingRecords.add(taskLatency);
+		if (this.pendingProfilingRecords != null) {
+			this.pendingProfilingRecords.add(taskLatency);
 		}
 	}
 
 	public void shutdown() {
-		interrupt();
+		this.interrupt();
 	}
 }

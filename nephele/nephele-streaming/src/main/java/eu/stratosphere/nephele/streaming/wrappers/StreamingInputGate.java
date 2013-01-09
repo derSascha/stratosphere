@@ -67,7 +67,7 @@ public final class StreamingInputGate<T extends Record> extends
 			this.executingThread = Thread.currentThread();
 		}
 
-		if (isClosed()) {
+		if (this.isClosed()) {
 			return null;
 		}
 
@@ -82,14 +82,14 @@ public final class StreamingInputGate<T extends Record> extends
 
 			if (channelToReadFrom != -1) {
 				// regular reading
-				record = readFromChannel(channelToReadFrom, target);
+				record = this.readFromChannel(channelToReadFrom, target);
 			} else {
 				// never returns and dumps any incoming data
-				trapTaskThread(target);
+				this.trapTaskThread(target);
 			}
 		} while (record == null);
 
-		reportRecordReceived(record);
+		this.reportRecordReceived(record);
 
 		return record;
 	}
@@ -98,7 +98,7 @@ public final class StreamingInputGate<T extends Record> extends
 			throws IOException {
 		final T returnValue = this.getInputChannel(channelToReadFrom)
 				.readRecord(targetRecord);
-		
+
 		if (returnValue == null) {
 			this.channelChooser.markCurrentChannelUnavailable();
 		}
@@ -128,10 +128,10 @@ public final class StreamingInputGate<T extends Record> extends
 	 *             if task thread is interrupted.
 	 */
 	private void trapTaskThread(T target) throws InterruptedException {
-		signalThatTaskHasHalted();
+		this.signalThatTaskHasHalted();
 
 		// this should never return unless the task is interrupted
-		dumpIncomingData(target);
+		this.dumpIncomingData(target);
 
 		throw new RuntimeException(
 				"Failed to halt chained task, this is a bug.");
@@ -175,7 +175,7 @@ public final class StreamingInputGate<T extends Record> extends
 	@Override
 	public void registerRecordAvailabilityListener(
 			final RecordAvailabilityListener<T> listener) {
-		getWrappedInputGate().registerRecordAvailabilityListener(listener);
+		this.getWrappedInputGate().registerRecordAvailabilityListener(listener);
 	}
 
 	/**
@@ -184,17 +184,17 @@ public final class StreamingInputGate<T extends Record> extends
 	@Override
 	public boolean hasRecordAvailable() throws IOException,
 			InterruptedException {
-		return getWrappedInputGate().hasRecordAvailable();
+		return this.getWrappedInputGate().hasRecordAvailable();
 	}
 
 	@Override
 	public void notifyDataUnitConsumed(int channelIndex) {
-		getWrappedInputGate().notifyDataUnitConsumed(channelIndex);
+		this.getWrappedInputGate().notifyDataUnitConsumed(channelIndex);
 	}
 
 	@Override
 	public void initializeDecompressors() throws CompressionException {
-		getWrappedInputGate().initializeDecompressors();
+		this.getWrappedInputGate().initializeDecompressors();
 	}
 
 	public void haltTaskThread() throws InterruptedException {

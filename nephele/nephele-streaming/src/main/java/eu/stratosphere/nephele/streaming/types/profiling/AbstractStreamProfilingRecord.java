@@ -7,6 +7,7 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
  * 
  * @author Bjoern Lohrmann
  */
-public abstract class AbstractStreamProfilingRecord implements IOReadableWritable {
+public abstract class AbstractStreamProfilingRecord implements
+		IOReadableWritable {
 
 }

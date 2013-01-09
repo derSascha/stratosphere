@@ -33,12 +33,14 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 			final double bufferLatency) {
 
 		if (sourceChannelID == null) {
-			throw new IllegalArgumentException("Argument sourceChannelID must not be null");
+			throw new IllegalArgumentException(
+					"Argument sourceChannelID must not be null");
 		}
 
 		if (bufferLatency < 0) {
-			throw new IllegalArgumentException("Argument bufferLatency must be greater than or equal to zero but is "
-				+ bufferLatency);
+			throw new IllegalArgumentException(
+					"Argument bufferLatency must be greater than or equal to zero but is "
+							+ bufferLatency);
 		}
 
 		this.sourceChannelID = sourceChannelID;
@@ -68,7 +70,7 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.sourceChannelID.write(out);
-		out.writeDouble(getBufferLatency());
+		out.writeDouble(this.getBufferLatency());
 	}
 
 	/**
@@ -87,10 +89,26 @@ public final class OutputBufferLatency extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof OutputBufferLatency) {
 			OutputBufferLatency other = (OutputBufferLatency) otherObj;
-			isEqual = other.getSourceChannelID().equals(getSourceChannelID())
-				&& (other.getBufferLatency() == getBufferLatency());
+			isEqual = other.getSourceChannelID().equals(
+					this.getSourceChannelID())
+					&& other.getBufferLatency() == this.getBufferLatency();
 		}
 
 		return isEqual;
 	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		long temp = Double.doubleToLongBits(this.bufferLatency);
+		int result = prime + (int) (temp ^ temp >>> 32);
+		result = prime * result + this.sourceChannelID.hashCode();
+		return result;
+	}
+
 }

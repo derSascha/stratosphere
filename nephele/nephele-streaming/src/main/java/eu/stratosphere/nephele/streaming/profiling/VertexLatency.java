@@ -14,28 +14,28 @@ public class VertexLatency {
 	}
 
 	public ProfilingVertex getVertex() {
-		return vertex;
+		return this.vertex;
 	}
 
 	public double getLatencyInMillis() {
-		if (latencyStatistics.hasValues()) {
-			return latencyStatistics.getArithmeticMean();
-		} else {
-			return -1;
+		if (this.latencyStatistics.hasValues()) {
+			return this.latencyStatistics.getArithmeticMean();
 		}
+		return -1;
 	}
-	
+
 	public boolean isActive() {
-		return latencyStatistics.hasValues();
+		return this.latencyStatistics.hasValues();
 	}
 
 	public void addLatencyMeasurement(long timestamp, double latencyInMillis) {
 		ProfilingValue value = new ProfilingValue(latencyInMillis, timestamp);
-		latencyStatistics.addValue(value);
+		this.latencyStatistics.addValue(value);
 	}
 
 	@Override
 	public String toString() {
-		return String.format("VertexLatency[%s|%.03f]", vertex.toString(), getLatencyInMillis());
+		return String.format("VertexLatency[%s|%.03f]", this.vertex.toString(),
+				this.getLatencyInMillis());
 	}
 }

@@ -30,15 +30,15 @@ public class InputGateChannelLatencyReporter {
 		int tagsReceived;
 
 		public boolean reportIsDue() {
-			return (timeOfLastReceivedTag - timeOfLastReport > streamListener.getContext()
-				.getAggregationInterval())
-				&& tagsReceived > 0;
+			return this.timeOfLastReceivedTag - this.timeOfLastReport > InputGateChannelLatencyReporter.this.streamListener
+					.getContext().getAggregationInterval()
+					&& this.tagsReceived > 0;
 		}
 
 		public void reset(long now) {
-			timeOfLastReport = now;
-			accumulatedLatency = 0;
-			tagsReceived = 0;
+			this.timeOfLastReport = now;
+			this.accumulatedLatency = 0;
+			this.tagsReceived = 0;
 		}
 	}
 
@@ -53,10 +53,10 @@ public class InputGateChannelLatencyReporter {
 		if (tag != null) {
 			long now = System.currentTimeMillis();
 
-			ChannelLatencyInfo latencyInfo = processTagLatency(tag, now);
+			ChannelLatencyInfo latencyInfo = this.processTagLatency(tag, now);
 
 			if (latencyInfo.reportIsDue()) {
-				doReport(now, latencyInfo);
+				this.doReport(now, latencyInfo);
 				reportSent = true;
 			}
 		}
@@ -65,15 +65,17 @@ public class InputGateChannelLatencyReporter {
 	}
 
 	private void doReport(long now, ChannelLatencyInfo latencyInfo) {
-		ChannelLatency channelLatency = new ChannelLatency(latencyInfo.sourceChannelID,
-			latencyInfo.accumulatedLatency / latencyInfo.tagsReceived);
+		ChannelLatency channelLatency = new ChannelLatency(
+				latencyInfo.sourceChannelID, latencyInfo.accumulatedLatency
+						/ latencyInfo.tagsReceived);
 
-		streamListener.reportChannelLatency(channelLatency);
+		this.streamListener.reportChannelLatency(channelLatency);
 		latencyInfo.reset(now);
 	}
 
 	private ChannelLatencyInfo processTagLatency(StreamingTag tag, long now) {
-		ChannelLatencyInfo info = channelLatencyInfos.get(tag.getSourceChannelID());
+		ChannelLatencyInfo info = this.channelLatencyInfos.get(tag
+				.getSourceChannelID());
 
 		if (info == null) {
 			info = new ChannelLatencyInfo();
@@ -81,7 +83,7 @@ public class InputGateChannelLatencyReporter {
 			info.timeOfLastReport = now;
 			info.accumulatedLatency = 0;
 			info.tagsReceived = 0;
-			channelLatencyInfos.put(tag.getSourceChannelID(), info);
+			this.channelLatencyInfos.put(tag.getSourceChannelID(), info);
 		}
 
 		info.timeOfLastReceivedTag = now;

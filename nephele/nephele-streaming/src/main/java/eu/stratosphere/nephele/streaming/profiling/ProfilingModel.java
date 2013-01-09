@@ -32,35 +32,42 @@ public class ProfilingModel {
 
 	public ProfilingModel(ProfilingSequence profilingGroupSequence) {
 		this.profilingGroupSequence = profilingGroupSequence;
-		initMaps();
-		countProfilingSequences();
+		this.initMaps();
+		this.countProfilingSequences();
 	}
 
 	private void countProfilingSequences() {
 		this.noOfProfilingSequences = -1;
-		for (ProfilingGroupVertex groupVertex : profilingGroupSequence.getSequenceVertices()) {
+		for (ProfilingGroupVertex groupVertex : this.profilingGroupSequence
+				.getSequenceVertices()) {
 			if (this.noOfProfilingSequences == -1) {
-				this.noOfProfilingSequences = groupVertex.getGroupMembers().size();
+				this.noOfProfilingSequences = groupVertex.getGroupMembers()
+						.size();
 			} else if (groupVertex.getBackwardEdge().getDistributionPattern() == DistributionPattern.BIPARTITE) {
-				this.noOfProfilingSequences *= groupVertex.getGroupMembers().size();
+				this.noOfProfilingSequences *= groupVertex.getGroupMembers()
+						.size();
 			}
 		}
-		LOG.info(String.format("Profiling model with %d profiling sequences", this.noOfProfilingSequences));
+		LOG.info(String.format("Profiling model with %d profiling sequences",
+				this.noOfProfilingSequences));
 	}
 
 	private void initMaps() {
 		this.vertexLatencies = new HashMap<ExecutionVertexID, VertexLatency>();
 		this.edgeCharacteristics = new HashMap<ChannelID, EdgeCharacteristics>();
 
-		for (ProfilingGroupVertex groupVertex : this.profilingGroupSequence.getSequenceVertices()) {
+		for (ProfilingGroupVertex groupVertex : this.profilingGroupSequence
+				.getSequenceVertices()) {
 			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
 				VertexLatency vertexLatency = new VertexLatency(vertex);
 				vertex.setVertexLatency(vertexLatency);
 				this.vertexLatencies.put(vertex.getID(), vertexLatency);
 				for (ProfilingEdge edge : vertex.getForwardEdges()) {
-					EdgeCharacteristics currentEdgeChars = new EdgeCharacteristics(edge);
+					EdgeCharacteristics currentEdgeChars = new EdgeCharacteristics(
+							edge);
 					edge.setEdgeCharacteristics(currentEdgeChars);
-					this.edgeCharacteristics.put(edge.getSourceChannelID(), currentEdgeChars);
+					this.edgeCharacteristics.put(edge.getSourceChannelID(),
+							currentEdgeChars);
 				}
 			}
 		}
@@ -68,46 +75,55 @@ public class ProfilingModel {
 
 	public void refreshEdgeLatency(long timestamp, ChannelLatency channelLatency) {
 		// FIXME workaround for bug that causes NaNs
-		if (Double.isInfinite(channelLatency.getChannelLatency()) || Double.isNaN(channelLatency.getChannelLatency())) {
+		if (Double.isInfinite(channelLatency.getChannelLatency())
+				|| Double.isNaN(channelLatency.getChannelLatency())) {
 			return;
 		}
 
-		this.edgeCharacteristics.get(channelLatency.getSourceChannelID()).addLatencyMeasurement(timestamp,
-			channelLatency.getChannelLatency());
+		this.edgeCharacteristics.get(channelLatency.getSourceChannelID())
+				.addLatencyMeasurement(timestamp,
+						channelLatency.getChannelLatency());
 	}
 
 	public void refreshTaskLatency(long timestamp, TaskLatency taskLatency) {
 		// FIXME workaround for bug that causes NaNs
-		if (Double.isInfinite(taskLatency.getTaskLatency()) || Double.isNaN(taskLatency.getTaskLatency())) {
+		if (Double.isInfinite(taskLatency.getTaskLatency())
+				|| Double.isNaN(taskLatency.getTaskLatency())) {
 			return;
 		}
 
-		this.vertexLatencies.get(taskLatency.getVertexID()).addLatencyMeasurement(timestamp,
-			taskLatency.getTaskLatency());
+		this.vertexLatencies.get(taskLatency.getVertexID())
+				.addLatencyMeasurement(timestamp, taskLatency.getTaskLatency());
 	}
 
-	public void refreshChannelThroughput(long timestamp, ChannelThroughput channelThroughput) {
+	public void refreshChannelThroughput(long timestamp,
+			ChannelThroughput channelThroughput) {
 		// FIXME workaround for bug that causes NaNs
-		if (Double.isInfinite(channelThroughput.getThroughput()) || Double.isNaN(channelThroughput.getThroughput())) {
+		if (Double.isInfinite(channelThroughput.getThroughput())
+				|| Double.isNaN(channelThroughput.getThroughput())) {
 			return;
 		}
 
-		this.edgeCharacteristics.get(channelThroughput.getSourceChannelID()).addThroughputMeasurement(timestamp,
-			channelThroughput.getThroughput());
+		this.edgeCharacteristics.get(channelThroughput.getSourceChannelID())
+				.addThroughputMeasurement(timestamp,
+						channelThroughput.getThroughput());
 	}
 
-	public void refreshChannelOutputBufferLatency(long timestamp, OutputBufferLatency latency) {
-		this.edgeCharacteristics.get(latency.getSourceChannelID()).addOutputBufferLatencyMeasurement(timestamp,
-			latency.getBufferLatency());
+	public void refreshChannelOutputBufferLatency(long timestamp,
+			OutputBufferLatency latency) {
+		this.edgeCharacteristics.get(latency.getSourceChannelID())
+				.addOutputBufferLatencyMeasurement(timestamp,
+						latency.getBufferLatency());
 	}
 
 	public ProfilingSequenceSummary computeProfilingSummary() {
-		return new ProfilingSequenceSummary(profilingGroupSequence);
+		return new ProfilingSequenceSummary(this.profilingGroupSequence);
 	}
 
 	public void announceStreamingChain(StreamingChainAnnounce announce) {
 
-		ProfilingVertex currentVertex = this.vertexLatencies.get(announce.getChainBeginVertexID()).getVertex();
+		ProfilingVertex currentVertex = this.vertexLatencies.get(
+				announce.getChainBeginVertexID()).getVertex();
 
 		while (!currentVertex.getID().equals(announce.getChainEndVertexID())) {
 			ProfilingEdge forwardEdge = currentVertex.getForwardEdges().get(0);

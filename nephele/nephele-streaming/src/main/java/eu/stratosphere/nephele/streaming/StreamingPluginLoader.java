@@ -24,7 +24,8 @@ import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.jobmanager.StreamingJobManagerPlugin;
 
 /**
- * This class implements the loader functionality for the Nephele streaming plugin.
+ * This class implements the loader functionality for the Nephele streaming
+ * plugin.
  * <p>
  * This class is thread-safe.
  * 
@@ -45,21 +46,25 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	/**
 	 * The ID of this plugin.
 	 */
-	public static final PluginID STREAMING_PLUGIN_ID = PluginID.fromByteArray(new byte[] { 0x3c, 0x00, 0x00, -0x1b,
-		0x38, 0x4a, 0x60, -0x61, -0x25,
-		0x00, 0x00, 0x16, 0x00, 0x18, 0x7f, 0x01 });
+	public static final PluginID STREAMING_PLUGIN_ID = PluginID
+			.fromByteArray(new byte[] { 0x3c, 0x00, 0x00, -0x1b, 0x38, 0x4a,
+					0x60, -0x61, -0x25, 0x00, 0x00, 0x16, 0x00, 0x18, 0x7f,
+					0x01 });
 
 	/**
 	 * Constructs a loader for the Nephele streaming plugin.
 	 * 
 	 * @param pluginName
-	 *        the name of the plugin as specified in the plugin configuration file
+	 *            the name of the plugin as specified in the plugin
+	 *            configuration file
 	 * @param pluginConfiguration
-	 *        the configuration of this plugin
+	 *            the configuration of this plugin
 	 * @param pluginLookupService
-	 *        the lookup service to locate the remote components of this plugin
+	 *            the lookup service to locate the remote components of this
+	 *            plugin
 	 */
-	public StreamingPluginLoader(final String pluginName, final Configuration pluginConfiguration,
+	public StreamingPluginLoader(final String pluginName,
+			final Configuration pluginConfiguration,
 			final PluginLookupService pluginLookupService) {
 		super(pluginName, pluginConfiguration, pluginLookupService);
 	}
@@ -71,7 +76,8 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	public synchronized JobManagerPlugin getJobManagerPlugin() {
 
 		if (this.jobManagerPlugin == null) {
-			this.jobManagerPlugin = new StreamingJobManagerPlugin(STREAMING_PLUGIN_ID, getPluginConfiguration());
+			this.jobManagerPlugin = new StreamingJobManagerPlugin(
+					STREAMING_PLUGIN_ID, this.getPluginConfiguration());
 		}
 
 		return this.jobManagerPlugin;
@@ -84,8 +90,8 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	public synchronized TaskManagerPlugin getTaskManagerPlugin() {
 
 		if (this.taskManagerPlugin == null) {
-			this.taskManagerPlugin = new StreamingTaskManagerPlugin(getPluginConfiguration(), getPluginLookupService()
-				.getJobManagerComponent(getPluginID()));
+			this.taskManagerPlugin = new StreamingTaskManagerPlugin(
+					this.getPluginConfiguration());
 		}
 
 		return this.taskManagerPlugin;

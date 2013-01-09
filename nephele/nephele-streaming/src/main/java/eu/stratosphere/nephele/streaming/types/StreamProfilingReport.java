@@ -13,18 +13,19 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.types.IdMapper.IDFactory;
 import eu.stratosphere.nephele.streaming.types.IdMapper.MapperMode;
-import eu.stratosphere.nephele.streaming.types.profiling.AbstractStreamProfilingRecord;
 import eu.stratosphere.nephele.streaming.types.profiling.ChannelLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.ChannelThroughput;
 import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 
 /**
- * Holds a profiling data report meant to be shipped to a profiling master. Instead of sending
- * each {@link AbstractStreamProfilingRecord} individually, they are sent in batch with special serialization routines
- * with a simple compression mechanism (multiple occurences of the same 16 byte ID are replaced by a four byte integer
- * placeholder). Most internal fields of this class are initialized in a lazy fashion, thus (empty) instances of this
- * class have a small memory footprint.
+ * Holds a profiling data report meant to be shipped to a profiling master.
+ * Instead of sending each {@link AbstractStreamProfilingRecord} individually,
+ * they are sent in batch with special serialization routines with a simple
+ * compression mechanism (multiple occurences of the same 16 byte ID are
+ * replaced by a four byte integer placeholder). Most internal fields of this
+ * class are initialized in a lazy fashion, thus (empty) instances of this class
+ * have a small memory footprint.
  * 
  * @author Bjoern Lohrmann
  */
@@ -45,7 +46,8 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	private HashMap<Integer, TaskLatency> taskLatencies;
 
 	/**
-	 * Creates and initializes StreamProfilingReport object to be used for sending/serialization.
+	 * Creates and initializes StreamProfilingReport object to be used for
+	 * sending/serialization.
 	 * 
 	 * @param jobID
 	 */
@@ -55,7 +57,8 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	}
 
 	/**
-	 * Creates and initializes StreamProfilingReport object to be used for receiving/deserialization.
+	 * Creates and initializes StreamProfilingReport object to be used for
+	 * receiving/deserialization.
 	 */
 	public StreamProfilingReport() {
 		super();
@@ -91,11 +94,14 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	}
 
 	public void addChannelLatency(ChannelLatency channelLatency) {
-		int sourceChannelID = getOrCreateChannelIDMap().getIntID(channelLatency.getSourceChannelID());
+		int sourceChannelID = this.getOrCreateChannelIDMap().getIntID(
+				channelLatency.getSourceChannelID());
 
-		ChannelLatency existing = getOrCreateChannelLatencyMap().get(sourceChannelID);
+		ChannelLatency existing = this.getOrCreateChannelLatencyMap().get(
+				sourceChannelID);
 		if (existing == null) {
-			getOrCreateChannelLatencyMap().put(sourceChannelID, channelLatency);
+			this.getOrCreateChannelLatencyMap().put(sourceChannelID,
+					channelLatency);
 		} else {
 			existing.add(channelLatency);
 		}
@@ -104,17 +110,19 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	public Collection<ChannelLatency> getChannelLatencies() {
 		if (this.channelLatencies == null) {
 			return Collections.emptyList();
-		} else {
-			return this.channelLatencies.values();
 		}
+		return this.channelLatencies.values();
 	}
 
 	public void addChannelThroughput(ChannelThroughput channelThroughput) {
-		int sourceChannelID = getOrCreateChannelIDMap().getIntID(channelThroughput.getSourceChannelID());
+		int sourceChannelID = this.getOrCreateChannelIDMap().getIntID(
+				channelThroughput.getSourceChannelID());
 
-		ChannelThroughput existing = getOrCreateChannelThroughputMap().get(sourceChannelID);
+		ChannelThroughput existing = this.getOrCreateChannelThroughputMap()
+				.get(sourceChannelID);
 		if (existing == null) {
-			getOrCreateChannelThroughputMap().put(sourceChannelID, channelThroughput);
+			this.getOrCreateChannelThroughputMap().put(sourceChannelID,
+					channelThroughput);
 		} else {
 			existing.add(channelThroughput);
 		}
@@ -123,17 +131,19 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	public Collection<ChannelThroughput> getChannelThroughputs() {
 		if (this.channelThroughputs == null) {
 			return Collections.emptyList();
-		} else {
-			return this.channelThroughputs.values();
 		}
+		return this.channelThroughputs.values();
 	}
 
 	public void addOutputBufferLatency(OutputBufferLatency outputBufferLatency) {
-		int sourceChannelID = getOrCreateChannelIDMap().getIntID(outputBufferLatency.getSourceChannelID());
+		int sourceChannelID = this.getOrCreateChannelIDMap().getIntID(
+				outputBufferLatency.getSourceChannelID());
 
-		OutputBufferLatency existing = getOrCreateOutputBufferLatencyMap().get(sourceChannelID);
+		OutputBufferLatency existing = this.getOrCreateOutputBufferLatencyMap()
+				.get(sourceChannelID);
 		if (existing == null) {
-			getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
+			this.getOrCreateOutputBufferLatencyMap().put(sourceChannelID,
+					outputBufferLatency);
 		} else {
 			existing.add(outputBufferLatency);
 		}
@@ -142,16 +152,16 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	public Collection<OutputBufferLatency> getOutputBufferLatencies() {
 		if (this.outputBufferLatencies == null) {
 			return Collections.emptyList();
-		} else {
-			return this.outputBufferLatencies.values();
 		}
+		return this.outputBufferLatencies.values();
 	}
 
 	public void addTaskLatency(TaskLatency taskLatency) {
-		int vertexID = getOrCreateExecutionVertexIDMap().getIntID(taskLatency.getVertexID());
-		TaskLatency existing = getOrCreateTaskLatencyMap().get(vertexID);
+		int vertexID = this.getOrCreateExecutionVertexIDMap().getIntID(
+				taskLatency.getVertexID());
+		TaskLatency existing = this.getOrCreateTaskLatencyMap().get(vertexID);
 		if (existing == null) {
-			getOrCreateTaskLatencyMap().put(vertexID, taskLatency);
+			this.getOrCreateTaskLatencyMap().put(vertexID, taskLatency);
 		} else {
 			existing.add(taskLatency);
 		}
@@ -160,24 +170,26 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	public Collection<TaskLatency> getTaskLatencies() {
 		if (this.taskLatencies == null) {
 			return Collections.emptyList();
-		} else {
-			return this.taskLatencies.values();
 		}
+		return this.taskLatencies.values();
 	}
 
 	private IdMapper<ChannelID> getOrCreateChannelIDMap() {
 		if (this.channelIDMap == null) {
 			if (this.mapperMode == MapperMode.WRITABLE) {
-				this.channelIDMap = new IdMapper<ChannelID>(MapperMode.WRITABLE, null);
+				this.channelIDMap = new IdMapper<ChannelID>(
+						MapperMode.WRITABLE, null);
 			} else {
-				this.channelIDMap = new IdMapper<ChannelID>(MapperMode.READABLE, new IDFactory<ChannelID>() {
-					@Override
-					public ChannelID read(DataInput in) throws IOException {
-						ChannelID id = new ChannelID();
-						id.read(in);
-						return id;
-					}
-				});
+				this.channelIDMap = new IdMapper<ChannelID>(
+						MapperMode.READABLE, new IDFactory<ChannelID>() {
+							@Override
+							public ChannelID read(DataInput in)
+									throws IOException {
+								ChannelID id = new ChannelID();
+								id.read(in);
+								return id;
+							}
+						});
 			}
 		}
 
@@ -187,12 +199,15 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	private IdMapper<ExecutionVertexID> getOrCreateExecutionVertexIDMap() {
 		if (this.executionVertexIDMap == null) {
 			if (this.mapperMode == MapperMode.WRITABLE) {
-				this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(MapperMode.WRITABLE, null);
+				this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(
+						MapperMode.WRITABLE, null);
 			} else {
-				this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(MapperMode.READABLE,
+				this.executionVertexIDMap = new IdMapper<ExecutionVertexID>(
+						MapperMode.READABLE,
 						new IDFactory<ExecutionVertexID>() {
 							@Override
-							public ExecutionVertexID read(DataInput in) throws IOException {
+							public ExecutionVertexID read(DataInput in)
+									throws IOException {
 								ExecutionVertexID id = new ExecutionVertexID();
 								id.read(in);
 								return id;
@@ -211,27 +226,28 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		super.write(out);
-		writeExecutionVertexIDMap(out);
-		writeChannelIDMap(out);
-		writeChannelLatencies(out);
-		writeChannelThroughputs(out);
-		writeOutputBufferLatencies(out);
-		writeTaskLatencies(out);
+		this.writeExecutionVertexIDMap(out);
+		this.writeChannelIDMap(out);
+		this.writeChannelLatencies(out);
+		this.writeChannelThroughputs(out);
+		this.writeOutputBufferLatencies(out);
+		this.writeTaskLatencies(out);
 	}
 
 	private void writeChannelIDMap(final DataOutput out) throws IOException {
 		if (this.channelIDMap != null) {
 			out.writeBoolean(true);
-			channelIDMap.write(out);
+			this.channelIDMap.write(out);
 		} else {
 			out.writeBoolean(false);
 		}
 	}
 
-	private void writeExecutionVertexIDMap(final DataOutput out) throws IOException {
+	private void writeExecutionVertexIDMap(final DataOutput out)
+			throws IOException {
 		if (this.executionVertexIDMap != null) {
 			out.writeBoolean(true);
-			executionVertexIDMap.write(out);
+			this.executionVertexIDMap.write(out);
 		} else {
 			out.writeBoolean(false);
 		}
@@ -240,7 +256,8 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	private void writeChannelLatencies(DataOutput out) throws IOException {
 		if (this.channelLatencies != null) {
 			out.writeInt(this.channelLatencies.size());
-			for (Entry<Integer, ChannelLatency> entry : channelLatencies.entrySet()) {
+			for (Entry<Integer, ChannelLatency> entry : this.channelLatencies
+					.entrySet()) {
 				out.writeInt(entry.getKey());
 				out.writeDouble(entry.getValue().getChannelLatency());
 			}
@@ -252,7 +269,8 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	private void writeChannelThroughputs(DataOutput out) throws IOException {
 		if (this.channelThroughputs != null) {
 			out.writeInt(this.channelThroughputs.size());
-			for (Entry<Integer, ChannelThroughput> entry : this.channelThroughputs.entrySet()) {
+			for (Entry<Integer, ChannelThroughput> entry : this.channelThroughputs
+					.entrySet()) {
 				out.writeInt(entry.getKey());
 				out.writeDouble(entry.getValue().getThroughput());
 			}
@@ -264,7 +282,8 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	private void writeOutputBufferLatencies(DataOutput out) throws IOException {
 		if (this.outputBufferLatencies != null) {
 			out.writeInt(this.outputBufferLatencies.size());
-			for (Entry<Integer, OutputBufferLatency> entry : this.outputBufferLatencies.entrySet()) {
+			for (Entry<Integer, OutputBufferLatency> entry : this.outputBufferLatencies
+					.entrySet()) {
 				out.writeInt(entry.getKey());
 				out.writeDouble(entry.getValue().getBufferLatency());
 			}
@@ -276,7 +295,8 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	private void writeTaskLatencies(DataOutput out) throws IOException {
 		if (this.taskLatencies != null) {
 			out.writeInt(this.taskLatencies.size());
-			for (Entry<Integer, TaskLatency> entry : this.taskLatencies.entrySet()) {
+			for (Entry<Integer, TaskLatency> entry : this.taskLatencies
+					.entrySet()) {
 				out.writeInt(entry.getKey());
 				out.writeDouble(entry.getValue().getTaskLatency());
 			}
@@ -291,23 +311,23 @@ public class StreamProfilingReport extends AbstractStreamingData {
 	@Override
 	public void read(final DataInput in) throws IOException {
 		super.read(in);
-		readExecutionVertexIDMap(in);
-		readChannelIDMap(in);
-		readChannelLatencies(in);
-		readChannelThroughputs(in);
-		readOutputBufferLatencies(in);
-		readTaskLatencies(in);
+		this.readExecutionVertexIDMap(in);
+		this.readChannelIDMap(in);
+		this.readChannelLatencies(in);
+		this.readChannelThroughputs(in);
+		this.readOutputBufferLatencies(in);
+		this.readTaskLatencies(in);
 	}
 
 	private void readChannelIDMap(final DataInput in) throws IOException {
 		if (in.readBoolean()) {
-			getOrCreateChannelIDMap().read(in);
+			this.getOrCreateChannelIDMap().read(in);
 		}
 	}
 
 	private void readExecutionVertexIDMap(DataInput in) throws IOException {
 		if (in.readBoolean()) {
-			getOrCreateExecutionVertexIDMap().read(in);
+			this.getOrCreateExecutionVertexIDMap().read(in);
 		}
 	}
 
@@ -315,9 +335,11 @@ public class StreamProfilingReport extends AbstractStreamingData {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			int sourceChannelID = in.readInt();
-			ChannelLatency channelLatency = new ChannelLatency(getOrCreateChannelIDMap().getFullID(sourceChannelID),
-				in.readDouble());
-			getOrCreateChannelLatencyMap().put(sourceChannelID, channelLatency);
+			ChannelLatency channelLatency = new ChannelLatency(this
+					.getOrCreateChannelIDMap().getFullID(sourceChannelID),
+					in.readDouble());
+			this.getOrCreateChannelLatencyMap().put(sourceChannelID,
+					channelLatency);
 		}
 	}
 
@@ -325,10 +347,11 @@ public class StreamProfilingReport extends AbstractStreamingData {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			int sourceChannelID = in.readInt();
-			ChannelThroughput channelThroughput = new ChannelThroughput(getOrCreateChannelIDMap().getFullID(
-				sourceChannelID),
-				in.readDouble());
-			getOrCreateChannelThroughputMap().put(sourceChannelID, channelThroughput);
+			ChannelThroughput channelThroughput = new ChannelThroughput(this
+					.getOrCreateChannelIDMap().getFullID(sourceChannelID),
+					in.readDouble());
+			this.getOrCreateChannelThroughputMap().put(sourceChannelID,
+					channelThroughput);
 		}
 	}
 
@@ -336,10 +359,11 @@ public class StreamProfilingReport extends AbstractStreamingData {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			int sourceChannelID = in.readInt();
-			OutputBufferLatency outputBufferLatency = new OutputBufferLatency(getOrCreateChannelIDMap().getFullID(
-				sourceChannelID),
-				in.readDouble());
-			getOrCreateOutputBufferLatencyMap().put(sourceChannelID, outputBufferLatency);
+			OutputBufferLatency outputBufferLatency = new OutputBufferLatency(
+					this.getOrCreateChannelIDMap().getFullID(sourceChannelID),
+					in.readDouble());
+			this.getOrCreateOutputBufferLatencyMap().put(sourceChannelID,
+					outputBufferLatency);
 		}
 	}
 
@@ -347,9 +371,10 @@ public class StreamProfilingReport extends AbstractStreamingData {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			int intTaskID = in.readInt();
-			TaskLatency taskLatency = new TaskLatency(getOrCreateExecutionVertexIDMap().getFullID(intTaskID),
-				in.readDouble());
-			getOrCreateTaskLatencyMap().put(intTaskID, taskLatency);
+			TaskLatency taskLatency = new TaskLatency(this
+					.getOrCreateExecutionVertexIDMap().getFullID(intTaskID),
+					in.readDouble());
+			this.getOrCreateTaskLatencyMap().put(intTaskID, taskLatency);
 		}
 	}
 

@@ -10,12 +10,14 @@ import eu.stratosphere.nephele.io.AbstractID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 
 /**
- * Maps {@link AbstractID} objects (16 byte) to integer objects (4 byte) for the purpose of compressing
- * message sizes. Objects of this class are either in READBLE or WRITABLE mode.
- * In READABLE mode you first have to populate the ID map by calling {@link #read(DataInput)} and can then retrieve
- * {@link AbstractID} objects by calling {@link #getFullID(int)}.
- * In WRITABLE mode, you can populate the ID map by repeatedly calling {@link #getIntID(AbstractID)} and then serialize
- * the map for shipment by calling {@link #write(DataOutput)}.
+ * Maps {@link AbstractID} objects (16 byte) to integer objects (4 byte) for the
+ * purpose of compressing message sizes. Objects of this class are either in
+ * READBLE or WRITABLE mode. In READABLE mode you first have to populate the ID
+ * map by calling {@link #read(DataInput)} and can then retrieve
+ * {@link AbstractID} objects by calling {@link #getFullID(int)}. In WRITABLE
+ * mode, you can populate the ID map by repeatedly calling
+ * {@link #getIntID(AbstractID)} and then serialize the map for shipment by
+ * calling {@link #write(DataOutput)}.
  * 
  * @author Bjoern Lohrmann
  * @param <T>
@@ -23,14 +25,15 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
 public class IdMapper<T extends AbstractID> implements IOReadableWritable {
 
 	/**
-	 * Maps 16 byte {@link AbstractID} objects to an integer unique within this message. This is an optimization
-	 * so that each ID object only has to be transferred once within this message.
+	 * Maps 16 byte {@link AbstractID} objects to an integer unique within this
+	 * message. This is an optimization so that each ID object only has to be
+	 * transferred once within this message.
 	 */
 	private HashMap<T, Integer> idMap;
 
 	/**
-	 * Contains all {@link AbstractID} objects that have been mapped to an integer ID
-	 * exactly in the order they were mapped.
+	 * Contains all {@link AbstractID} objects that have been mapped to an
+	 * integer ID exactly in the order they were mapped.
 	 */
 	private ArrayList<T> mappedIDs;
 
@@ -44,8 +47,7 @@ public class IdMapper<T extends AbstractID> implements IOReadableWritable {
 	private IDFactory<T> idFactory;
 
 	public enum MapperMode {
-		READABLE,
-		WRITABLE
+		READABLE, WRITABLE
 	}
 
 	public interface IDFactory<T> {
@@ -56,10 +58,11 @@ public class IdMapper<T extends AbstractID> implements IOReadableWritable {
 	 * Initializes a new IdMapper object depending on the given {{@link #mode}.
 	 * 
 	 * @param mode
-	 *        If WRITABLE, then {@link #idFactory} will be ignored, otherwise it will be used to create new ID objects
-	 *        during deserialization.
+	 *            If WRITABLE, then {@link #idFactory} will be ignored,
+	 *            otherwise it will be used to create new ID objects during
+	 *            deserialization.
 	 * @param idFactory
-	 *        Used to create new ID objects.
+	 *            Used to create new ID objects.
 	 */
 	public IdMapper(MapperMode mode, IDFactory<T> idFactory) {
 		this.mode = mode;
@@ -74,25 +77,25 @@ public class IdMapper<T extends AbstractID> implements IOReadableWritable {
 	}
 
 	public int getIntID(T abstractID) {
-		Integer intID = idMap.get(abstractID);
+		Integer intID = this.idMap.get(abstractID);
 		if (intID == null) {
-			intID = nextFreeID;
-			nextFreeID++;
-			idMap.put(abstractID, intID);
-			mappedIDs.add(abstractID);
+			intID = this.nextFreeID;
+			this.nextFreeID++;
+			this.idMap.put(abstractID, intID);
+			this.mappedIDs.add(abstractID);
 		}
 
 		return intID;
 	}
 
 	public T getFullID(int integerID) {
-		return mappedIDs.get(integerID);
+		return this.mappedIDs.get(integerID);
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		out.writeInt(mappedIDs.size());
-		for (T id : mappedIDs) {
+		out.writeInt(this.mappedIDs.size());
+		for (T id : this.mappedIDs) {
 			id.write(out);
 		}
 	}
@@ -102,11 +105,11 @@ public class IdMapper<T extends AbstractID> implements IOReadableWritable {
 		int idCount = in.readInt();
 		this.mappedIDs = new ArrayList<T>(idCount);
 		for (int i = 0; i < idCount; i++) {
-			mappedIDs.add(idFactory.read(in));
+			this.mappedIDs.add(this.idFactory.read(in));
 		}
 	}
 
 	public boolean isEmpty() {
-		return mappedIDs.isEmpty();
+		return this.mappedIDs.isEmpty();
 	}
 }

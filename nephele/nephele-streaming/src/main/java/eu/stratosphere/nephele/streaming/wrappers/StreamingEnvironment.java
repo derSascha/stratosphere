@@ -32,8 +32,9 @@ import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.types.Record;
 
 /**
- * A streaming environment wraps the created input and output gates in special {@link StreamingInputGate} and
- * {@link StreamingOutputGate} objects to intercept particular methods calls necessary for the statistics collection.
+ * A streaming environment wraps the created input and output gates in special
+ * {@link StreamingInputGate} and {@link StreamingOutputGate} objects to
+ * intercept particular methods calls necessary for the statistics collection.
  * <p>
  * This class is thread-safe.
  * 
@@ -51,11 +52,13 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 	 * Constructs a new streaming environment
 	 * 
 	 * @param wrappedEnvironment
-	 *        the environment to be encapsulated by this streaming environment
+	 *            the environment to be encapsulated by this streaming
+	 *            environment
 	 * @param streamListener
-	 *        the stream listener
+	 *            the stream listener
 	 */
-	StreamingEnvironment(final Environment wrappedEnvironment, final StreamListener streamListener) {
+	StreamingEnvironment(final Environment wrappedEnvironment,
+			final StreamListener streamListener) {
 		super(wrappedEnvironment);
 
 		this.streamListener = streamListener;
@@ -66,13 +69,16 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
-	public <T extends Record> OutputGate<T> createOutputGate(final GateID gateID,
-		final Class<T> outputClass, final ChannelSelector<T> selector, final boolean isBroadcast) {
+	public <T extends Record> OutputGate<T> createOutputGate(
+			final GateID gateID, final Class<T> outputClass,
+			final ChannelSelector<T> selector, final boolean isBroadcast) {
 
-		final OutputGate<? extends Record> outputGate = getWrappedEnvironment().createOutputGate(gateID, outputClass,
-			selector, isBroadcast);
+		final OutputGate<? extends Record> outputGate = this
+				.getWrappedEnvironment().createOutputGate(gateID, outputClass,
+						selector, isBroadcast);
 
-		final StreamingOutputGate sog = new StreamingOutputGate(outputGate, this.streamListener);
+		final StreamingOutputGate sog = new StreamingOutputGate(outputGate,
+				this.streamListener);
 		this.streamingOutputGates.add(sog);
 
 		return sog;
@@ -84,11 +90,13 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public <T extends Record> InputGate<T> createInputGate(final GateID gateID,
-		final RecordDeserializerFactory<T> deserializer) {
+			final RecordDeserializerFactory<T> deserializer) {
 
-		final InputGate<? extends Record> inputGate = getWrappedEnvironment().createInputGate(gateID, deserializer);
+		final InputGate<? extends Record> inputGate = this
+				.getWrappedEnvironment().createInputGate(gateID, deserializer);
 
-		final StreamingInputGate sig = new StreamingInputGate(inputGate, this.streamListener);
+		final StreamingInputGate sig = new StreamingInputGate(inputGate,
+				this.streamListener);
 		this.streamingInputGates.add(sig);
 
 		return sig;
@@ -99,7 +107,8 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public <I extends Record, O extends Record> void registerMapper(final Mapper<I, O> mapper) {
+	public <I extends Record, O extends Record> void registerMapper(
+			final Mapper<I, O> mapper) {
 
 		if (this.streamingInputGates.size() != 1) {
 			return;
@@ -108,48 +117,49 @@ public final class StreamingEnvironment extends AbstractEnvironmentWrapper {
 		if (this.streamingOutputGates.size() != 1) {
 			return;
 		}
-		
-		this.streamListener.registerMapper(mapper, (StreamingInputGate<I>) this.streamingInputGates.get(0),
-			(StreamingOutputGate<O>) this.streamingOutputGates.get(0));
+
+		this.streamListener.registerMapper(mapper,
+				(StreamingInputGate<I>) this.streamingInputGates.get(0),
+				(StreamingOutputGate<O>) this.streamingOutputGates.get(0));
 	}
 
 	@Override
 	public int getNumberOfOutputChannels() {
-		return getWrappedEnvironment().getNumberOfOutputChannels();
+		return this.getWrappedEnvironment().getNumberOfOutputChannels();
 	}
 
 	@Override
 	public int getNumberOfInputChannels() {
-		return getWrappedEnvironment().getNumberOfInputChannels();
+		return this.getWrappedEnvironment().getNumberOfInputChannels();
 	}
 
 	@Override
 	public Set<ChannelID> getOutputChannelIDs() {
-		return getWrappedEnvironment().getOutputChannelIDs();
+		return this.getWrappedEnvironment().getOutputChannelIDs();
 	}
 
 	@Override
 	public Set<ChannelID> getInputChannelIDs() {
-		return getWrappedEnvironment().getInputChannelIDs();
+		return this.getWrappedEnvironment().getInputChannelIDs();
 	}
 
 	@Override
 	public Set<GateID> getOutputGateIDs() {
-		return getWrappedEnvironment().getOutputGateIDs();
+		return this.getWrappedEnvironment().getOutputGateIDs();
 	}
 
 	@Override
 	public Set<GateID> getInputGateIDs() {
-		return getWrappedEnvironment().getInputGateIDs();
+		return this.getWrappedEnvironment().getInputGateIDs();
 	}
 
 	@Override
 	public Set<ChannelID> getOutputChannelIDsOfGate(GateID gateID) {
-		return getWrappedEnvironment().getOutputChannelIDsOfGate(gateID);
+		return this.getWrappedEnvironment().getOutputChannelIDsOfGate(gateID);
 	}
 
 	@Override
 	public Set<ChannelID> getInputChannelIDsOfGate(GateID gateID) {
-		return getWrappedEnvironment().getInputChannelIDsOfGate(gateID);
+		return this.getWrappedEnvironment().getInputChannelIDsOfGate(gateID);
 	}
 }

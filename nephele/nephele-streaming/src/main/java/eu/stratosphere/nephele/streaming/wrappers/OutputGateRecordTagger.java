@@ -15,31 +15,37 @@ public class OutputGateRecordTagger<T extends Record> {
 
 	private OutputGate<T> outputGate;
 
-	public OutputGateRecordTagger(OutputGate<T> outputGate, StreamListener streamListener) {
+	public OutputGateRecordTagger(OutputGate<T> outputGate,
+			StreamListener streamListener) {
 		this.outputGate = outputGate;
 		this.streamListener = streamListener;
 	}
 
 	public void tagRecordIfNecessary(AbstractTaggableRecord record) {
-		if (recordsSinceLastTag == null) {
-			this.recordsSinceLastTag = new int[outputGate.getNumberOfOutputChannels()];
+		if (this.recordsSinceLastTag == null) {
+			this.recordsSinceLastTag = new int[this.outputGate
+					.getNumberOfOutputChannels()];
 		}
 
 		@SuppressWarnings("unchecked")
-		int outputChannel = outputGate.getChannelSelector().selectChannels((T) record,
-			outputGate.getNumberOfOutputChannels())[0];
+		int outputChannel = this.outputGate.getChannelSelector()
+				.selectChannels((T) record,
+						this.outputGate.getNumberOfOutputChannels())[0];
 
-		recordsSinceLastTag[outputChannel]++;
+		this.recordsSinceLastTag[outputChannel]++;
 
-		if (recordsSinceLastTag[outputChannel] >= streamListener.getContext().getTaggingInterval()) {
-			record.setTag(createTag(System.currentTimeMillis(), outputGate.getOutputChannel(outputChannel).getID()));
-			recordsSinceLastTag[outputChannel] = 0;
+		if (this.recordsSinceLastTag[outputChannel] >= this.streamListener
+				.getContext().getTaggingInterval()) {
+			record.setTag(this.createTag(System.currentTimeMillis(),
+					this.outputGate.getOutputChannel(outputChannel).getID()));
+			this.recordsSinceLastTag[outputChannel] = 0;
 		} else {
 			record.setTag(null);
 		}
 	}
 
-	private StreamingTag createTag(final long timestamp, final ChannelID sourceChannelID) {
+	private StreamingTag createTag(final long timestamp,
+			final ChannelID sourceChannelID) {
 		StreamingTag tag = new StreamingTag(sourceChannelID);
 		tag.setTimestamp(timestamp);
 		return tag;

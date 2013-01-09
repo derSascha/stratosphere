@@ -34,7 +34,7 @@ public class ProfilingEdge {
 	}
 
 	public ProfilingVertex getSourceVertex() {
-		return sourceVertex;
+		return this.sourceVertex;
 	}
 
 	public void setSourceVertex(ProfilingVertex sourceVertex) {
@@ -42,7 +42,7 @@ public class ProfilingEdge {
 	}
 
 	public ProfilingVertex getTargetVertex() {
-		return targetVertex;
+		return this.targetVertex;
 	}
 
 	public void setTargetVertex(ProfilingVertex targetVertex) {
@@ -50,15 +50,15 @@ public class ProfilingEdge {
 	}
 
 	public ChannelID getSourceChannelID() {
-		return sourceChannelID;
+		return this.sourceChannelID;
 	}
 
 	public ChannelID getTargetChannelID() {
-		return targetChannelID;
+		return this.targetChannelID;
 	}
 
 	public int getSourceVertexEdgeIndex() {
-		return sourceVertexEdgeIndex;
+		return this.sourceVertexEdgeIndex;
 	}
 
 	public void setSourceVertexEdgeIndex(int sourceVertexEdgeIndex) {
@@ -66,7 +66,7 @@ public class ProfilingEdge {
 	}
 
 	public int getTargetVertexEdgeIndex() {
-		return targetVertexEdgeIndex;
+		return this.targetVertexEdgeIndex;
 	}
 
 	public void setTargetVertexEdgeIndex(int targetVertexEdgeIndex) {
@@ -74,14 +74,16 @@ public class ProfilingEdge {
 	}
 
 	public EdgeCharacteristics getEdgeCharacteristics() {
-		return edgeCharacteristics;
+		return this.edgeCharacteristics;
 	}
 
 	public void setEdgeCharacteristics(EdgeCharacteristics edgeCharacteristics) {
 		this.edgeCharacteristics = edgeCharacteristics;
 	}
 
+	@Override
 	public String toString() {
-		return String.format("%s->%s", sourceVertex.getName(), targetVertex.getName());
+		return String.format("%s->%s", this.sourceVertex.getName(),
+				this.targetVertex.getName());
 	}
 }

@@ -29,7 +29,8 @@ import eu.stratosphere.nephele.util.StringUtils;
 
 public class StreamProfilingMasterThread extends Thread {
 
-	private static final Log LOG = LogFactory.getLog(StreamProfilingMasterThread.class);
+	private static final Log LOG = LogFactory
+			.getLog(StreamProfilingMasterThread.class);
 
 	private final LinkedBlockingQueue<AbstractStreamingData> streamingDataQueue;
 
@@ -45,22 +46,26 @@ public class StreamProfilingMasterThread extends Thread {
 
 	private JobID jobID;
 
-	public StreamProfilingMasterThread(JobID jobID, StreamingCommunicationThread communicationThread,
+	public StreamProfilingMasterThread(JobID jobID,
+			StreamingCommunicationThread communicationThread,
 			ProfilingSequence profilingSequence) {
 		this.jobID = jobID;
 		this.communicationThread = communicationThread;
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamingData>();
 		this.profilingSequence = profilingSequence;
 		this.profilingModel = new ProfilingModel(this.profilingSequence);
-		this.bufferSizeManager = new BufferSizeManager(this.jobID, 300, this.profilingModel, this.communicationThread);
+		this.bufferSizeManager = new BufferSizeManager(this.jobID, 300,
+				this.profilingModel, this.communicationThread);
 
 		try {
-			this.logger = new ProfilingLogger(this.bufferSizeManager.getAdjustmentInterval());
+			this.logger = new ProfilingLogger(
+					this.bufferSizeManager.getAdjustmentInterval());
 		} catch (IOException e) {
 			LOG.error("Error when opening profiling logger file", e);
 		}
 	}
 
+	@Override
 	public void run() {
 		LOG.info("Started profiling master thread.");
 
@@ -70,10 +75,11 @@ public class StreamProfilingMasterThread extends Thread {
 		int throughputs = 0;
 		int obls = 0;
 
-		triggerChainingDelayed(45000);
+		this.triggerChainingDelayed(45000);
 		try {
 			while (!interrupted()) {
-				AbstractStreamingData streamingData = streamingDataQueue.take();
+				AbstractStreamingData streamingData = this.streamingDataQueue
+						.take();
 
 				totalNoOfMessages++;
 
@@ -81,33 +87,43 @@ public class StreamProfilingMasterThread extends Thread {
 				if (streamingData instanceof StreamProfilingReport) {
 					StreamProfilingReport profilingReport = (StreamProfilingReport) streamingData;
 
-					for (ChannelLatency channelLatency : profilingReport.getChannelLatencies()) {
-						profilingModel.refreshEdgeLatency(now, channelLatency);
+					for (ChannelLatency channelLatency : profilingReport
+							.getChannelLatencies()) {
+						this.profilingModel.refreshEdgeLatency(now,
+								channelLatency);
 						channelLats++;
 					}
 
-					for (ChannelThroughput channelThroughput : profilingReport.getChannelThroughputs()) {
-						profilingModel.refreshChannelThroughput(now, channelThroughput);
+					for (ChannelThroughput channelThroughput : profilingReport
+							.getChannelThroughputs()) {
+						this.profilingModel.refreshChannelThroughput(now,
+								channelThroughput);
 						throughputs++;
 					}
 
-					for (TaskLatency taskLatency : profilingReport.getTaskLatencies()) {
-						profilingModel.refreshTaskLatency(now, taskLatency);
+					for (TaskLatency taskLatency : profilingReport
+							.getTaskLatencies()) {
+						this.profilingModel
+								.refreshTaskLatency(now, taskLatency);
 						taskLats++;
 					}
 
-					for (OutputBufferLatency outputBufferLatency : profilingReport.getOutputBufferLatencies()) {
-						profilingModel.refreshChannelOutputBufferLatency(now, outputBufferLatency);
+					for (OutputBufferLatency outputBufferLatency : profilingReport
+							.getOutputBufferLatencies()) {
+						this.profilingModel.refreshChannelOutputBufferLatency(
+								now, outputBufferLatency);
 						obls++;
 					}
 				} else if (streamingData instanceof StreamingChainAnnounce) {
-					profilingModel.announceStreamingChain((StreamingChainAnnounce) streamingData);
+					this.profilingModel
+							.announceStreamingChain((StreamingChainAnnounce) streamingData);
 				}
 
 				if (this.bufferSizeManager.isAdjustmentNecessary(now)) {
 					long beginTime = System.currentTimeMillis();
 
-					ProfilingSequenceSummary summary = profilingModel.computeProfilingSummary();
+					ProfilingSequenceSummary summary = this.profilingModel
+							.computeProfilingSummary();
 					this.bufferSizeManager.adjustBufferSizes(summary);
 
 					try {
@@ -116,12 +132,14 @@ public class StreamProfilingMasterThread extends Thread {
 						LOG.error(StringUtils.stringifyException(e));
 					}
 
-					long buffersizeAdjustmentOverhead = System.currentTimeMillis() - beginTime;
+					long buffersizeAdjustmentOverhead = System
+							.currentTimeMillis() - beginTime;
 					LOG.info(String
-						.format(
-							"total messages: %d (channel: %d | task: %d | throughput: %d | obl: %d) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
-							totalNoOfMessages, channelLats, taskLats, throughputs, obls, streamingDataQueue.size(),
-							buffersizeAdjustmentOverhead));
+							.format("total messages: %d (channel: %d | task: %d | throughput: %d | obl: %d) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
+									totalNoOfMessages, channelLats, taskLats,
+									throughputs, obls,
+									this.streamingDataQueue.size(),
+									buffersizeAdjustmentOverhead));
 
 					totalNoOfMessages = 0;
 					channelLats = 0;
@@ -134,7 +152,7 @@ public class StreamProfilingMasterThread extends Thread {
 		} catch (InterruptedException e) {
 		}
 
-		cleanUp();
+		this.cleanUp();
 		LOG.info("Stopped profiling master thread");
 	}
 
@@ -142,22 +160,28 @@ public class StreamProfilingMasterThread extends Thread {
 		final LinkedList<LinkedList<ExecutionVertexID>> chainList = new LinkedList<LinkedList<ExecutionVertexID>>();
 		final HashMap<ExecutionVertexID, InstanceConnectionInfo> instances = new HashMap<ExecutionVertexID, InstanceConnectionInfo>();
 
-		for (ProfilingGroupVertex groupVertex : this.profilingSequence.getSequenceVertices()) {
+		for (ProfilingGroupVertex groupVertex : this.profilingSequence
+				.getSequenceVertices()) {
 			if (groupVertex.getName().startsWith("Decoder")) {
 
-				LOG.info("Decoder group members: " + groupVertex.getGroupMembers().size());
+				LOG.info("Decoder group members: "
+						+ groupVertex.getGroupMembers().size());
 				for (ProfilingVertex decoder : groupVertex.getGroupMembers()) {
-					instances.put(decoder.getID(), decoder.getProfilingReporter());
+					instances.put(decoder.getID(),
+							decoder.getProfilingReporter());
 					LinkedList<ExecutionVertexID> chain = new LinkedList<ExecutionVertexID>();
 					chain.add(decoder.getID());
 
-					ProfilingVertex merger = decoder.getForwardEdges().get(0).getTargetVertex();
+					ProfilingVertex merger = decoder.getForwardEdges().get(0)
+							.getTargetVertex();
 					chain.add(merger.getID());
 
-					ProfilingVertex overlay = merger.getForwardEdges().get(0).getTargetVertex();
+					ProfilingVertex overlay = merger.getForwardEdges().get(0)
+							.getTargetVertex();
 					chain.add(overlay.getID());
 
-					ProfilingVertex encoder = overlay.getForwardEdges().get(0).getTargetVertex();
+					ProfilingVertex encoder = overlay.getForwardEdges().get(0)
+							.getTargetVertex();
 					chain.add(encoder.getID());
 					chainList.add(chain);
 				}
@@ -177,18 +201,26 @@ public class StreamProfilingMasterThread extends Thread {
 					return;
 				}
 				for (LinkedList<ExecutionVertexID> chain : chainList) {
-					handOffStreamingData(new StreamingChainAnnounce(jobID, chain.getFirst(), chain.getLast()));
+					StreamProfilingMasterThread.this
+							.handOffStreamingData(new StreamingChainAnnounce(
+									StreamProfilingMasterThread.this.jobID,
+									chain.getFirst(), chain.getLast()));
 				}
 
 				for (LinkedList<ExecutionVertexID> chain : chainList) {
-					ConstructStreamChainAction csca = new ConstructStreamChainAction(jobID, chain);
-					InstanceConnectionInfo actionReceiver = instances.get(chain.getFirst());
+					ConstructStreamChainAction csca = new ConstructStreamChainAction(
+							StreamProfilingMasterThread.this.jobID, chain);
+					InstanceConnectionInfo actionReceiver = instances.get(chain
+							.getFirst());
 					try {
-						communicationThread.sendToTaskManagerAsynchronously(actionReceiver, csca);
+						StreamProfilingMasterThread.this.communicationThread
+								.sendToTaskManagerAsynchronously(
+										actionReceiver, csca);
 					} catch (InterruptedException e) {
 					}
-					LOG.info(String.format("Triggered chaining for %d tasks on %s", chain.size(),
-						actionReceiver.toString()));
+					LOG.info(String.format(
+							"Triggered chaining for %d tasks on %s",
+							chain.size(), actionReceiver.toString()));
 				}
 			}
 		};
@@ -209,6 +241,6 @@ public class StreamProfilingMasterThread extends Thread {
 	}
 
 	public void handOffStreamingData(AbstractStreamingData data) {
-		streamingDataQueue.add(data);
+		this.streamingDataQueue.add(data);
 	}
 }

@@ -47,9 +47,11 @@ import eu.stratosphere.nephele.streaming.wrappers.StreamingTaskWrapper;
 import eu.stratosphere.nephele.streaming.wrappers.WrapperUtils;
 import eu.stratosphere.nephele.template.AbstractInvokable;
 
-public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusListener {
+public class StreamingJobManagerPlugin implements JobManagerPlugin,
+		JobStatusListener {
 
-	private static final Log LOG = LogFactory.getLog(StreamingJobManagerPlugin.class);
+	private static final Log LOG = LogFactory
+			.getLog(StreamingJobManagerPlugin.class);
 
 	private final PluginID pluginID;
 
@@ -57,7 +59,8 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 
 	private ConcurrentHashMap<JobID, JobStreamProfilingManager> streamProfilingManagers = new ConcurrentHashMap<JobID, JobStreamProfilingManager>();
 
-	public StreamingJobManagerPlugin(final PluginID pluginID, final Configuration pluginConfiguration) {
+	public StreamingJobManagerPlugin(final PluginID pluginID,
+			final Configuration pluginConfiguration) {
 		this.pluginID = pluginID;
 		this.pluginConfiguration = pluginConfiguration;
 	}
@@ -67,32 +70,38 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public JobGraph rewriteJobGraph(final JobGraph jobGraph) {
-		rewriteInputVertices(jobGraph);
-		rewriteTaskVertices(jobGraph);
-		rewriteOutputVertices(jobGraph);
+		this.rewriteInputVertices(jobGraph);
+		this.rewriteTaskVertices(jobGraph);
+		this.rewriteOutputVertices(jobGraph);
 
 		return jobGraph;
 	}
 
 	private void rewriteOutputVertices(final JobGraph jobGraph) {
-		final Iterator<AbstractJobOutputVertex> outputIt = jobGraph.getOutputVertices();
+		final Iterator<AbstractJobOutputVertex> outputIt = jobGraph
+				.getOutputVertices();
 		while (outputIt.hasNext()) {
 
-			final AbstractJobOutputVertex abstractOutputVertex = outputIt.next();
-			final Class<? extends AbstractInvokable> originalClass = abstractOutputVertex.getInvokableClass();
+			final AbstractJobOutputVertex abstractOutputVertex = outputIt
+					.next();
+			final Class<? extends AbstractInvokable> originalClass = abstractOutputVertex
+					.getInvokableClass();
 
 			if (abstractOutputVertex instanceof JobFileOutputVertex) {
 				final JobFileOutputVertex fileOutputVertex = (JobFileOutputVertex) abstractOutputVertex;
-				fileOutputVertex.setFileOutputClass(StreamingFileOutputWrapper.class);
+				fileOutputVertex
+						.setFileOutputClass(StreamingFileOutputWrapper.class);
 			} else if (abstractOutputVertex instanceof JobOutputVertex) {
 				final JobOutputVertex outputVertex = (JobOutputVertex) abstractOutputVertex;
 				outputVertex.setOutputClass(StreamingOutputWrapper.class);
 			} else {
-				LOG.warn("Cannot wrap output task of type " + originalClass + ", skipping...");
+				LOG.warn("Cannot wrap output task of type " + originalClass
+						+ ", skipping...");
 				continue;
 			}
 
-			abstractOutputVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
+			abstractOutputVertex.getConfiguration().setString(
+					WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
 		}
 	}
 
@@ -101,31 +110,38 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 		while (taskIt.hasNext()) {
 
 			final JobTaskVertex taskVertex = taskIt.next();
-			final Class<? extends AbstractInvokable> originalClass = taskVertex.getInvokableClass();
+			final Class<? extends AbstractInvokable> originalClass = taskVertex
+					.getInvokableClass();
 			taskVertex.setTaskClass(StreamingTaskWrapper.class);
-			taskVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
+			taskVertex.getConfiguration().setString(
+					WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
 		}
 	}
 
 	private void rewriteInputVertices(final JobGraph jobGraph) {
-		final Iterator<AbstractJobInputVertex> inputIt = jobGraph.getInputVertices();
+		final Iterator<AbstractJobInputVertex> inputIt = jobGraph
+				.getInputVertices();
 		while (inputIt.hasNext()) {
 
 			final AbstractJobInputVertex abstractInputVertex = inputIt.next();
-			final Class<? extends AbstractInvokable> originalClass = abstractInputVertex.getInvokableClass();
+			final Class<? extends AbstractInvokable> originalClass = abstractInputVertex
+					.getInvokableClass();
 
 			if (abstractInputVertex instanceof JobFileInputVertex) {
 				final JobFileInputVertex fileInputVertex = (JobFileInputVertex) abstractInputVertex;
-				fileInputVertex.setFileInputClass(StreamingFileInputWrapper.class);
+				fileInputVertex
+						.setFileInputClass(StreamingFileInputWrapper.class);
 			} else if (abstractInputVertex instanceof JobInputVertex) {
 				final JobInputVertex inputVertex = (JobInputVertex) abstractInputVertex;
 				inputVertex.setInputClass(StreamingInputWrapper.class);
 			} else {
-				LOG.warn("Cannot wrap input task of type " + originalClass + ", skipping...");
+				LOG.warn("Cannot wrap input task of type " + originalClass
+						+ ", skipping...");
 				continue;
 			}
 
-			abstractInputVertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
+			abstractInputVertex.getConfiguration().setString(
+					WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
 		}
 	}
 
@@ -133,10 +149,12 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 * {@inheritDoc}
 	 */
 	@Override
-	public ExecutionGraph rewriteExecutionGraph(final ExecutionGraph executionGraph) {
+	public ExecutionGraph rewriteExecutionGraph(
+			final ExecutionGraph executionGraph) {
 		JobID jobId = executionGraph.getJobID();
-		JobStreamProfilingManager profilingManager = new JobStreamProfilingManager(executionGraph);
-		streamProfilingManagers.put(jobId, profilingManager);
+		JobStreamProfilingManager profilingManager = new JobStreamProfilingManager(
+				executionGraph);
+		this.streamProfilingManagers.put(jobId, profilingManager);
 
 		return executionGraph;
 	}
@@ -146,10 +164,11 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public void shutdown() {
-		for (JobStreamProfilingManager streamProfilingManager : streamProfilingManagers.values()) {
+		for (JobStreamProfilingManager streamProfilingManager : this.streamProfilingManagers
+				.values()) {
 			streamProfilingManager.shutdown();
 		}
-		streamProfilingManagers.clear();
+		this.streamProfilingManagers.clear();
 	}
 
 	/**
@@ -157,29 +176,31 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	 */
 	@Override
 	public void sendData(final IOReadableWritable data) throws IOException {
-		LOG.error("Job manger streaming plugin received unexpected data of type " + data);
+		LOG.error("Job manger streaming plugin received unexpected data of type "
+				+ data);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public IOReadableWritable requestData(final IOReadableWritable data) throws IOException {
-		LOG.error("Job manger streaming plugin received unexpected data request of type " + data);
+	public IOReadableWritable requestData(final IOReadableWritable data)
+			throws IOException {
+		LOG.error("Job manger streaming plugin received unexpected data request of type "
+				+ data);
 		return null;
 	}
 
 	@Override
 	public void jobStatusHasChanged(ExecutionGraph executionGraph,
-			InternalJobStatus newJobStatus,
-			String optionalMessage) {
+			InternalJobStatus newJobStatus, String optionalMessage) {
 
 		if (newJobStatus == InternalJobStatus.FAILED
-			|| newJobStatus == InternalJobStatus.CANCELED
-			|| newJobStatus == InternalJobStatus.FINISHED) {
+				|| newJobStatus == InternalJobStatus.CANCELED
+				|| newJobStatus == InternalJobStatus.FINISHED) {
 
-			JobStreamProfilingManager streamProfilingManager = streamProfilingManagers
-				.remove(executionGraph.getJobID());
+			JobStreamProfilingManager streamProfilingManager = this.streamProfilingManagers
+					.remove(executionGraph.getJobID());
 
 			if (streamProfilingManager != null) {
 				streamProfilingManager.shutdown();
@@ -204,10 +225,10 @@ public class StreamingJobManagerPlugin implements JobManagerPlugin, JobStatusLis
 	}
 
 	public PluginID getPluginID() {
-		return pluginID;
+		return this.pluginID;
 	}
 
 	public Configuration getPluginConfiguration() {
-		return pluginConfiguration;
+		return this.pluginConfiguration;
 	}
 }

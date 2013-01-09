@@ -31,7 +31,8 @@ public final class StreamingTag implements Tag {
 	public StreamingTag(final ChannelID sourceChannelID) {
 
 		if (sourceChannelID == null) {
-			throw new IllegalArgumentException("sourceChannelID must not be null");
+			throw new IllegalArgumentException(
+					"sourceChannelID must not be null");
 		}
 
 		this.sourceChannelID = sourceChannelID;

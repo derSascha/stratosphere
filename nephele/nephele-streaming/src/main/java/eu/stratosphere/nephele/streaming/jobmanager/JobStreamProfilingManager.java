@@ -16,7 +16,8 @@ import eu.stratosphere.nephele.streaming.profiling.model.ProfilingSequence;
 
 public class JobStreamProfilingManager {
 
-	private static final Log LOG = LogFactory.getLog(JobStreamProfilingManager.class);
+	private static final Log LOG = LogFactory
+			.getLog(JobStreamProfilingManager.class);
 
 	private ExecutionGraph executionGraph;
 
@@ -27,25 +28,27 @@ public class JobStreamProfilingManager {
 	public JobStreamProfilingManager(ExecutionGraph executionGraph) {
 		this.executionGraph = executionGraph;
 		this.instances = new ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance>();
-		initProfilingSequenceManagers();
+		this.initProfilingSequenceManagers();
 	}
 
 	private void initProfilingSequenceManagers() {
 		// FIXME naive implementation until we can annotate the job
 		// subgraphStart and subgraphEnd should be derived from the annotations
-		ExecutionGroupVertex startVertex = this.executionGraph.getInputVertex(0).getGroupVertex();
-		ExecutionGroupVertex endVertex = this.executionGraph.getOutputVertex(0).getGroupVertex();
+		ExecutionGroupVertex startVertex = this.executionGraph
+				.getInputVertex(0).getGroupVertex();
+		ExecutionGroupVertex endVertex = this.executionGraph.getOutputVertex(0)
+				.getGroupVertex();
 
-		List<ProfilingSequence> profilingSequences = ProfilingGraphFactory.createProfilingSequences(
-			this.executionGraph, startVertex,
-			false, endVertex, false);
-		this.profilingSequenceManagers = new ArrayList<ProfilingSequenceManager>(profilingSequences.size());
+		List<ProfilingSequence> profilingSequences = ProfilingGraphFactory
+				.createProfilingSequences(startVertex, false, endVertex, false);
+		this.profilingSequenceManagers = new ArrayList<ProfilingSequenceManager>(
+				profilingSequences.size());
 
 		for (ProfilingSequence profilingSequence : profilingSequences) {
-			LOG.info("Setting up profiling sequence " + profilingSequence.toString());
-			ProfilingSequenceManager sequenceManager = new ProfilingSequenceManager(profilingSequence,
-				this.executionGraph,
-				this.instances);
+			LOG.info("Setting up profiling sequence "
+					+ profilingSequence.toString());
+			ProfilingSequenceManager sequenceManager = new ProfilingSequenceManager(
+					profilingSequence, this.executionGraph, this.instances);
 			sequenceManager.attachListenersToExecutionGraph();
 			this.profilingSequenceManagers.add(sequenceManager);
 		}

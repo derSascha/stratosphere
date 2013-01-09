@@ -24,14 +24,16 @@ import eu.stratosphere.nephele.template.AbstractInvokable;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
- * This class contains convenience methods to access wrapped Nephele task classes.
+ * This class contains convenience methods to access wrapped Nephele task
+ * classes.
  * 
  * @author warneke
  */
 public final class WrapperUtils {
 
 	/**
-	 * The configuration key to access the name of the wrapped class from the task configuration.
+	 * The configuration key to access the name of the wrapped class from the
+	 * task configuration.
 	 */
 	public static final String WRAPPED_CLASS_KEY = "streaming.class.name";
 
@@ -42,22 +44,26 @@ public final class WrapperUtils {
 	}
 
 	/**
-	 * Retrieves the name of the original class from the task configuration, loads the class, creates an instances of
-	 * it, and finally wraps the given environment in an {@link StreamingEnvironment} object.
+	 * Retrieves the name of the original class from the task configuration,
+	 * loads the class, creates an instances of it, and finally wraps the given
+	 * environment in an {@link StreamingEnvironment} object.
 	 * 
 	 * @param environment
-	 *        the original environment
+	 *            the original environment
 	 * @param streamListener
-	 *        the stream listener object
+	 *            the stream listener object
 	 * @return an instance of the wrapped invokable class
 	 */
-	static AbstractInvokable getWrappedInvokable(final Environment environment, final StreamListener streamListener) {
+	static AbstractInvokable getWrappedInvokable(final Environment environment,
+			final StreamListener streamListener) {
 
 		AbstractInvokable wrappedInvokable = null;
 
-		final Configuration taskConfiguration = environment.getTaskConfiguration();
+		final Configuration taskConfiguration = environment
+				.getTaskConfiguration();
 		final JobID jobID = environment.getJobID();
-		final String className = taskConfiguration.getString(WRAPPED_CLASS_KEY, null);
+		final String className = taskConfiguration.getString(WRAPPED_CLASS_KEY,
+				null);
 		if (className == null) {
 			throw new IllegalStateException("Cannot find name of wrapped class");
 		}
@@ -67,14 +73,15 @@ public final class WrapperUtils {
 
 			@SuppressWarnings("unchecked")
 			final Class<? extends AbstractInvokable> invokableClass = (Class<? extends AbstractInvokable>) Class
-				.forName(className, true, cl);
+					.forName(className, true, cl);
 
 			wrappedInvokable = invokableClass.newInstance();
 		} catch (Exception e) {
 			throw new RuntimeException(StringUtils.stringifyException(e));
 		}
 
-		wrappedInvokable.setEnvironment(new StreamingEnvironment(environment, streamListener));
+		wrappedInvokable.setEnvironment(new StreamingEnvironment(environment,
+				streamListener));
 
 		return wrappedInvokable;
 	}
@@ -83,7 +90,7 @@ public final class WrapperUtils {
 	 * Creates and configures a new stream listener.
 	 * 
 	 * @param environment
-	 *        the environment for the newly created stream listener
+	 *            the environment for the newly created stream listener
 	 * @return the configured stream listener
 	 */
 	static StreamListener createStreamListener(final Environment environment) {

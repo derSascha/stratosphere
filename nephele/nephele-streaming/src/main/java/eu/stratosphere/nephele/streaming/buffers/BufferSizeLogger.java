@@ -14,11 +14,13 @@ import eu.stratosphere.nephele.streaming.profiling.model.ProfilingVertex;
 public class BufferSizeLogger {
 
 	/**
-	 * Provides access to the configuration entry which defines the log file location.
+	 * Provides access to the configuration entry which defines the log file
+	 * location.
 	 */
 	private static final String BUFFERSIZE_LOGFILE_KEY = "streaming.profilingmaster.logging.buffersfile";
 
-	private static final String DEFAULT_LOGFILE = "/tmp/buffersizes_" + System.getProperty("user.name") + ".txt";
+	private static final String DEFAULT_LOGFILE = "/tmp/buffersizes_"
+			+ System.getProperty("user.name") + ".txt";
 
 	private FileWriter out;
 
@@ -26,22 +28,24 @@ public class BufferSizeLogger {
 
 	private long timeBase;
 
-	public BufferSizeLogger(ProfilingSequence profilingSequence) throws IOException {
-		timeBase = System.currentTimeMillis();
+	public BufferSizeLogger(ProfilingSequence profilingSequence)
+			throws IOException {
+		this.timeBase = System.currentTimeMillis();
 
 		String logFile = StreamingTaskManagerPlugin.getPluginConfiguration()
-			.getString(BUFFERSIZE_LOGFILE_KEY, DEFAULT_LOGFILE);
+				.getString(BUFFERSIZE_LOGFILE_KEY, DEFAULT_LOGFILE);
 
-		out = new FileWriter("buffersizes.txt");
-		initEdges(profilingSequence);
+		this.out = new FileWriter("buffersizes.txt");
+		this.initEdges(profilingSequence);
 	}
 
 	private void initEdges(ProfilingSequence profilingSequence) {
-		edges = new ArrayList<HashSet<ProfilingEdge>>();
+		this.edges = new ArrayList<HashSet<ProfilingEdge>>();
 
 		int forwardEdgeCount = profilingSequence.getSequenceVertices().size() - 1;
 		for (int i = 0; i < forwardEdgeCount; i++) {
-			ProfilingGroupVertex groupVertex = profilingSequence.getSequenceVertices().get(i);
+			ProfilingGroupVertex groupVertex = profilingSequence
+					.getSequenceVertices().get(i);
 			HashSet<ProfilingEdge> edgeSet = new HashSet<ProfilingEdge>();
 
 			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
@@ -49,7 +53,7 @@ public class BufferSizeLogger {
 					edgeSet.add(edge);
 				}
 			}
-			edges.add(edgeSet);
+			this.edges.add(edgeSet);
 		}
 	}
 

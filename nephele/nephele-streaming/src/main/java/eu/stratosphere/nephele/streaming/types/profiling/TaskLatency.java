@@ -22,7 +22,8 @@ import java.io.IOException;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 
 /**
- * This class stores information about the latency of a specific (sub) path from a start to an end vertex.
+ * This class stores information about the latency of a specific (sub) path from
+ * a start to an end vertex.
  * 
  * @author warneke
  */
@@ -44,13 +45,14 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	 * Constructs a new task latency object.
 	 * 
 	 * @param jobID
-	 *        the ID of the job this path latency information refers to
+	 *            the ID of the job this path latency information refers to
 	 * @param vertexID
-	 *        the ID of the vertex this task latency information refers to
+	 *            the ID of the vertex this task latency information refers to
 	 * @param taskLatency
-	 *        the task latency in milliseconds
+	 *            the task latency in milliseconds
 	 */
-	public TaskLatency(final ExecutionVertexID vertexID, final double taskLatency) {
+	public TaskLatency(final ExecutionVertexID vertexID,
+			final double taskLatency) {
 
 		if (vertexID == null) {
 			throw new IllegalArgumentException("vertexID must not be null");
@@ -95,11 +97,25 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof TaskLatency) {
 			TaskLatency other = (TaskLatency) otherObj;
-			isEqual = other.getVertexID().equals(getVertexID())
-				&& (other.getTaskLatency() == getTaskLatency());
+			isEqual = other.getVertexID().equals(this.getVertexID())
+					&& other.getTaskLatency() == this.getTaskLatency();
 		}
 
 		return isEqual;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		long temp = Double.doubleToLongBits(this.taskLatency);
+		int result = prime + (int) (temp ^ temp >>> 32);
+		result = prime * result + this.vertexID.hashCode();
+		return result;
 	}
 
 	/**
@@ -108,7 +124,7 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.vertexID.write(out);
-		out.writeDouble(getTaskLatency());
+		out.writeDouble(this.getTaskLatency());
 	}
 
 	/**

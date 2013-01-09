@@ -39,7 +39,7 @@ public class ProfilingGroupVertex {
 	}
 
 	public ProfilingGroupEdge getForwardEdge() {
-		return forwardEdge;
+		return this.forwardEdge;
 	}
 
 	public void setForwardEdge(ProfilingGroupEdge forwardEdge) {
@@ -47,7 +47,7 @@ public class ProfilingGroupVertex {
 	}
 
 	public ProfilingGroupEdge getBackwardEdge() {
-		return backwardEdge;
+		return this.backwardEdge;
 	}
 
 	public void setBackwardEdge(ProfilingGroupEdge backwardEdge) {
@@ -55,24 +55,24 @@ public class ProfilingGroupVertex {
 	}
 
 	public String getName() {
-		return name;
+		return this.name;
 	}
 
 	public JobVertexID getJobVertexID() {
-		return jobVertexID;
+		return this.jobVertexID;
 	}
 
 	public ArrayList<ProfilingVertex> getGroupMembers() {
-		return groupMembers;
+		return this.groupMembers;
 	}
 
 	public void addGroupMember(ProfilingVertex groupMember) {
-		groupMembers.add(groupMember);
+		this.groupMembers.add(groupMember);
 	}
 
 	public int getNumberOfExecutingInstances() {
 		if (this.noOfExecutingInstances == -1) {
-			countExecutingInstances();
+			this.countExecutingInstances();
 		}
 
 		return this.noOfExecutingInstances;
@@ -80,12 +80,13 @@ public class ProfilingGroupVertex {
 
 	private void countExecutingInstances() {
 		HashSet<InstanceConnectionInfo> instances = new HashSet<InstanceConnectionInfo>();
-		for (ProfilingVertex memberVertex : getGroupMembers()) {
+		for (ProfilingVertex memberVertex : this.getGroupMembers()) {
 			instances.add(memberVertex.getProfilingReporter());
 		}
 		this.noOfExecutingInstances = instances.size();
 	}
-	
+
+	@Override
 	public String toString() {
 		return this.name;
 	}

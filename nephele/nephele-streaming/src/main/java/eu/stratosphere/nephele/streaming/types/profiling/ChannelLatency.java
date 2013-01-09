@@ -44,14 +44,16 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 * Constructs a new path latency object.
 	 * 
 	 * @param sourceChannelID
-	 *        {@link ChannelID} representing the source end of the channel
+	 *            {@link ChannelID} representing the source end of the channel
 	 * @param channelLatency
-	 *        the channel latency in milliseconds
+	 *            the channel latency in milliseconds
 	 */
-	public ChannelLatency(final ChannelID sourceChannelID, final double channelLatency) {
+	public ChannelLatency(final ChannelID sourceChannelID,
+			final double channelLatency) {
 
 		if (sourceChannelID == null) {
-			throw new IllegalArgumentException("sourceChannelID must not be null");
+			throw new IllegalArgumentException(
+					"sourceChannelID must not be null");
 		}
 
 		this.sourceChannelID = sourceChannelID;
@@ -76,7 +78,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.sourceChannelID.write(out);
-		out.writeDouble(getChannelLatency());
+		out.writeDouble(this.getChannelLatency());
 	}
 
 	/**
@@ -128,10 +130,25 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof ChannelLatency) {
 			ChannelLatency other = (ChannelLatency) otherObj;
-			isEqual = other.getSourceChannelID().equals(getSourceChannelID())
-				&& (other.getChannelLatency() == getChannelLatency());
+			isEqual = other.getSourceChannelID().equals(
+					this.getSourceChannelID())
+					&& other.getChannelLatency() == this.getChannelLatency();
 		}
 
 		return isEqual;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		long temp = Double.doubleToLongBits(this.channelLatency);
+		int result = prime + (int) (temp ^ temp >>> 32);
+		result = prime * result + this.sourceChannelID.hashCode();
+		return result;
 	}
 }

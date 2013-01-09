@@ -24,22 +24,23 @@ public class ProfilingSequenceSummary {
 
 	public ProfilingSequenceSummary(ProfilingSequence sequence) {
 		this.sequence = sequence;
-		countTotalNoOfSubsequences();
-		createAggregatedElementLatencies();
+		this.countTotalNoOfSubsequences();
+		this.createAggregatedElementLatencies();
 		this.avgSubsequenceLatency = 0;
 		this.minSubsequenceLatency = Double.MAX_VALUE;
 		this.maxSubsequenceLatency = Double.MIN_VALUE;
 		this.enumeratingSummary = new ProfilingSubsequenceSummary(sequence);
 		if (this.enumeratingSummary.isSubsequenceActive()) {
-			updateAggregatedFields();
+			this.updateAggregatedFields();
 		} else {
-			finalizeAggregatedFields();
+			this.finalizeAggregatedFields();
 		}
 	}
 
 	private void createAggregatedElementLatencies() {
 		// 2 values per edge and one for each vertex
-		int size = 2 * (this.sequence.getSequenceVertices().size() - 1) + this.sequence.getSequenceVertices().size();
+		int size = 2 * (this.sequence.getSequenceVertices().size() - 1)
+				+ this.sequence.getSequenceVertices().size();
 		if (!this.sequence.isIncludeStartVertex()) {
 			size--;
 		}
@@ -51,11 +52,14 @@ public class ProfilingSequenceSummary {
 
 	private void countTotalNoOfSubsequences() {
 		int index = 0;
-		for (ProfilingGroupVertex groupVertex : sequence.getSequenceVertices()) {
+		for (ProfilingGroupVertex groupVertex : this.sequence
+				.getSequenceVertices()) {
 			if (index == 0) {
-				this.totalNoOfSubsequences = groupVertex.getGroupMembers().size();
+				this.totalNoOfSubsequences = groupVertex.getGroupMembers()
+						.size();
 			} else if (groupVertex.getBackwardEdge().getDistributionPattern() == DistributionPattern.BIPARTITE) {
-				this.totalNoOfSubsequences *= groupVertex.getGroupMembers().size();
+				this.totalNoOfSubsequences *= groupVertex.getGroupMembers()
+						.size();
 			}
 
 			index++;
@@ -67,35 +71,39 @@ public class ProfilingSequenceSummary {
 			@Override
 			public Iterator<ProfilingSubsequenceSummary> iterator() {
 				return new Iterator<ProfilingSubsequenceSummary>() {
-					private boolean done = !enumeratingSummary.isSubsequenceActive();
+					private boolean done = !ProfilingSequenceSummary.this.enumeratingSummary
+							.isSubsequenceActive();
 
-					private boolean hasNext = enumeratingSummary.isSubsequenceActive();
+					private boolean hasNext = ProfilingSequenceSummary.this.enumeratingSummary
+							.isSubsequenceActive();
 
 					private boolean currentHasBeenReturned = false;
 
 					@Override
 					public boolean hasNext() {
-						if (!done && currentHasBeenReturned) {
-							hasNext = enumeratingSummary.switchToNextActivePathIfPossible();
-							if (hasNext) {
-								updateAggregatedFields();
-								currentHasBeenReturned = false;
+						if (!this.done && this.currentHasBeenReturned) {
+							this.hasNext = ProfilingSequenceSummary.this.enumeratingSummary
+									.switchToNextActivePathIfPossible();
+							if (this.hasNext) {
+								ProfilingSequenceSummary.this
+										.updateAggregatedFields();
+								this.currentHasBeenReturned = false;
 							} else {
-								done = true;
-								finalizeAggregatedFields();
+								this.done = true;
+								ProfilingSequenceSummary.this
+										.finalizeAggregatedFields();
 							}
 						}
-						return hasNext;
+						return this.hasNext;
 					}
 
 					@Override
 					public ProfilingSubsequenceSummary next() {
-						if (currentHasBeenReturned) {
+						if (this.currentHasBeenReturned) {
 							return null;
-						} else {
-							currentHasBeenReturned = true;
-							return enumeratingSummary;
 						}
+						this.currentHasBeenReturned = true;
+						return ProfilingSequenceSummary.this.enumeratingSummary;
 					}
 
 					@Override
@@ -110,16 +118,21 @@ public class ProfilingSequenceSummary {
 	private void updateAggregatedFields() {
 		double latency = this.enumeratingSummary.getSubsequenceLatency();
 		this.avgSubsequenceLatency += latency;
-		this.minSubsequenceLatency = Math.min(latency, this.minSubsequenceLatency);
-		this.maxSubsequenceLatency = Math.max(latency, this.maxSubsequenceLatency);
-		this.enumeratingSummary.addCurrentSubsequenceLatencies(this.avgSequenceElementLatencies);
+		this.minSubsequenceLatency = Math.min(latency,
+				this.minSubsequenceLatency);
+		this.maxSubsequenceLatency = Math.max(latency,
+				this.maxSubsequenceLatency);
+		this.enumeratingSummary
+				.addCurrentSubsequenceLatencies(this.avgSequenceElementLatencies);
 	}
 
 	private void finalizeAggregatedFields() {
-		if (enumeratingSummary.getNoOfActiveSubsequencesFound() > 0) {
-			this.avgSubsequenceLatency /= enumeratingSummary.getNoOfActiveSubsequencesFound();
+		if (this.enumeratingSummary.getNoOfActiveSubsequencesFound() > 0) {
+			this.avgSubsequenceLatency /= this.enumeratingSummary
+					.getNoOfActiveSubsequencesFound();
 			for (int i = 0; i < this.avgSequenceElementLatencies.length; i++) {
-				this.avgSequenceElementLatencies[i] /= enumeratingSummary.getNoOfActiveSubsequencesFound();
+				this.avgSequenceElementLatencies[i] /= this.enumeratingSummary
+						.getNoOfActiveSubsequencesFound();
 			}
 		} else {
 			this.avgSubsequenceLatency = 0;
@@ -129,27 +142,28 @@ public class ProfilingSequenceSummary {
 	}
 
 	public ProfilingSequence getSequence() {
-		return sequence;
+		return this.sequence;
 	}
 
 	public int getNoOfInactiveSubsequences() {
-		return totalNoOfSubsequences - enumeratingSummary.getNoOfActiveSubsequencesFound();
+		return this.totalNoOfSubsequences
+				- this.enumeratingSummary.getNoOfActiveSubsequencesFound();
 	}
 
 	public int getTotalNoOfSubsequences() {
-		return totalNoOfSubsequences;
+		return this.totalNoOfSubsequences;
 	}
 
 	public double getAvgSubsequenceLatency() {
-		return avgSubsequenceLatency;
+		return this.avgSubsequenceLatency;
 	}
 
 	public double getMinSubsequenceLatency() {
-		return minSubsequenceLatency;
+		return this.minSubsequenceLatency;
 	}
 
 	public double getMaxSubsequenceLatency() {
-		return maxSubsequenceLatency;
+		return this.maxSubsequenceLatency;
 	}
 
 	public double getMedianPathLatency() {
@@ -161,10 +175,10 @@ public class ProfilingSequenceSummary {
 	}
 
 	public Object getNoOfActiveSubsequences() {
-		return enumeratingSummary.getNoOfActiveSubsequencesFound();
+		return this.enumeratingSummary.getNoOfActiveSubsequencesFound();
 	}
 
 	public ProfilingSequence getProfilingSequence() {
-		return sequence;
+		return this.sequence;
 	}
 }

@@ -14,11 +14,13 @@ import eu.stratosphere.nephele.streaming.profiling.ng.ProfilingSequenceSummary;
 public class ProfilingLogger {
 
 	/**
-	 * Provides access to the configuration entry which defines the log file location.
+	 * Provides access to the configuration entry which defines the log file
+	 * location.
 	 */
 	private static final String PROFILING_LOGFILE_KEY = "streaming.profilingmaster.logging.profilingfile";
 
-	private static final String DEFAULT_LOGFILE = "/tmp/profiling_" + System.getProperty("user.name") + ".txt";
+	private static final String DEFAULT_LOGFILE = "/tmp/profiling_"
+			+ System.getProperty("user.name") + ".txt";
 
 	private BufferedWriter writer;
 
@@ -31,7 +33,7 @@ public class ProfilingLogger {
 	public ProfilingLogger(long loggingInterval) throws IOException {
 
 		String logFile = StreamingTaskManagerPlugin.getPluginConfiguration()
-			.getString(PROFILING_LOGFILE_KEY, DEFAULT_LOGFILE);
+				.getString(PROFILING_LOGFILE_KEY, DEFAULT_LOGFILE);
 
 		this.writer = new BufferedWriter(new FileWriter(logFile));
 
@@ -40,34 +42,36 @@ public class ProfilingLogger {
 	}
 
 	public boolean isLoggingNecessary(long now) {
-		return now >= timeOfNextLogging;
+		return now >= this.timeOfNextLogging;
 	}
 
-	public void logLatencies(ProfilingSequenceSummary summary) throws IOException {
-		if (!headersWritten) {
-			writeHeaders(summary);
+	public void logLatencies(ProfilingSequenceSummary summary)
+			throws IOException {
+		if (!this.headersWritten) {
+			this.writeHeaders(summary);
 		}
 
 		StringBuilder builder = new StringBuilder();
-		builder.append(getLogTimestamp());
+		builder.append(this.getLogTimestamp());
 		builder.append(';');
 		builder.append(summary.getNoOfActiveSubsequences());
 		builder.append(';');
 		builder.append(summary.getNoOfInactiveSubsequences());
 		builder.append(';');
-		builder.append(formatDouble(summary.getAvgSubsequenceLatency()));
+		builder.append(this.formatDouble(summary.getAvgSubsequenceLatency()));
 		builder.append(';');
-		builder.append(formatDouble(summary.getMinSubsequenceLatency()));
+		builder.append(this.formatDouble(summary.getMinSubsequenceLatency()));
 		builder.append(';');
-		builder.append(formatDouble(summary.getMaxSubsequenceLatency()));
+		builder.append(this.formatDouble(summary.getMaxSubsequenceLatency()));
 
-		for (double avgElementLatency : summary.getAvgSequenceElementLatencies()) {
+		for (double avgElementLatency : summary
+				.getAvgSequenceElementLatencies()) {
 			builder.append(';');
-			builder.append(formatDouble(avgElementLatency));
+			builder.append(this.formatDouble(avgElementLatency));
 		}
 		builder.append('\n');
-		writer.write(builder.toString());
-		writer.flush();
+		this.writer.write(builder.toString());
+		this.writer.flush();
 	}
 
 	private String formatDouble(double doubleValue) {
@@ -75,10 +79,12 @@ public class ProfilingLogger {
 	}
 
 	private Object getLogTimestamp() {
-		return ProfilingUtils.alignToInterval(System.currentTimeMillis(), loggingInterval) / 1000;
+		return ProfilingUtils.alignToInterval(System.currentTimeMillis(),
+				this.loggingInterval) / 1000;
 	}
 
-	private void writeHeaders(ProfilingSequenceSummary summary) throws IOException {
+	private void writeHeaders(ProfilingSequenceSummary summary)
+			throws IOException {
 		StringBuilder builder = new StringBuilder();
 		builder.append("timestamp;");
 		builder.append("noOfActivePaths;");
@@ -90,14 +96,16 @@ public class ProfilingLogger {
 		int nextEdgeIndex = 1;
 
 		ProfilingSequence sequence = summary.getProfilingSequence();
-		List<ProfilingGroupVertex> groupVertices = sequence.getSequenceVertices();
+		List<ProfilingGroupVertex> groupVertices = sequence
+				.getSequenceVertices();
 
 		for (int i = 0; i < groupVertices.size(); i++) {
 			ProfilingGroupVertex groupVertex = groupVertices.get(i);
 
-			boolean includeVertex = (i == 0 && sequence.isIncludeStartVertex())
-				|| (i > 0 && (i < groupVertices.size() - 1))
-				|| ((i == groupVertices.size() - 1) && sequence.isIncludeEndVertex());
+			boolean includeVertex = i == 0 && sequence.isIncludeStartVertex()
+					|| i > 0 && i < groupVertices.size() - 1
+					|| i == groupVertices.size() - 1
+					&& sequence.isIncludeEndVertex();
 
 			if (includeVertex) {
 				builder.append(';');
@@ -114,7 +122,7 @@ public class ProfilingLogger {
 			}
 		}
 		builder.append('\n');
-		writer.write(builder.toString());
-		headersWritten = true;
+		this.writer.write(builder.toString());
+		this.headersWritten = true;
 	}
 }

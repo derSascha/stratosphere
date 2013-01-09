@@ -28,18 +28,19 @@ import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
 
-public final class StreamingOutputGate<T extends Record> extends AbstractOutputGateWrapper<T> {
+public final class StreamingOutputGate<T extends Record> extends
+		AbstractOutputGateWrapper<T> {
 
 	private final StreamListener streamListener;
 
-//	private long lastThroughputTimestamp = -1L;
-//
-//	private long[] lastSentBytes = null;
+	// private long lastThroughputTimestamp = -1L;
+	//
+	// private long[] lastSentBytes = null;
 
 	private StreamChain streamChain = null;
 
 	private Map<ChannelID, BufferLatency> bufferLatencyMap = new HashMap<ChannelID, BufferLatency>();
-	
+
 	private OutputGateRecordTagger<T> recordTagger;
 
 	private class BufferLatency {
@@ -63,7 +64,8 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 
 		private int getLatency() {
 
-			if (this.accumulatedLatency < streamListener.getContext().getAggregationInterval()) {
+			if (this.accumulatedLatency < StreamingOutputGate.this.streamListener
+					.getContext().getAggregationInterval()) {
 				return -1;
 			}
 
@@ -75,17 +77,19 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 		}
 	}
 
-	StreamingOutputGate(final OutputGate<T> wrappedOutputGate, final StreamListener streamListener) {
+	StreamingOutputGate(final OutputGate<T> wrappedOutputGate,
+			final StreamListener streamListener) {
 		super(wrappedOutputGate);
 
 		if (streamListener == null) {
-			throw new IllegalArgumentException("Argument streamListener must not be null");
+			throw new IllegalArgumentException(
+					"Argument streamListener must not be null");
 		}
 
 		streamListener.registerOutputGate(this);
 
 		this.streamListener = streamListener;
-		
+
 		this.recordTagger = new OutputGateRecordTagger<T>(this, streamListener);
 	}
 
@@ -93,51 +97,59 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void writeRecord(final T record) throws IOException, InterruptedException {
+	public void writeRecord(final T record) throws IOException,
+			InterruptedException {
 
-		reportRecordEmitted(record);
+		this.reportRecordEmitted(record);
 
 		if (this.streamChain == null) {
-			getWrappedOutputGate().writeRecord(record);
+			this.getWrappedOutputGate().writeRecord(record);
 		} else {
 			this.streamChain.writeRecord(record);
 		}
 	}
-	
-	public void reportRecordEmitted(final Record record) throws InterruptedException {
+
+	public void reportRecordEmitted(final Record record)
+			throws InterruptedException {
 		AbstractTaggableRecord taggableRecord = (AbstractTaggableRecord) record;
 		this.recordTagger.tagRecordIfNecessary(taggableRecord);
-		
+
 		this.streamListener.recordEmitted(record);
-	
+
 		// FIXME: do throughput reporting on a time basis ("once every second")
 		// not based on whether records are tagged (this will create WAY to many
 		// throughput reports)
-//		
-//		if (timestamp >= 0) {
-//
-//			final int numberOfOutputChannels = getNumberOfOutputChannels();
-//
-//			if (this.lastThroughputTimestamp < 0) {
-//				// Initialize array and fill it
-//				this.lastSentBytes = new long[numberOfOutputChannels];
-//				for (int i = 0; i < numberOfOutputChannels; ++i) {
-//					this.lastSentBytes[i] = getOutputChannel(i).getAmountOfDataTransmitted();
-//				}
-//			} else {
-//				for (int i = 0; i < numberOfOutputChannels; ++i) {
-//					final AbstractOutputChannel<? extends Record> outputChannel = getOutputChannel(i);
-//					final long amountOfDataTransmitted = outputChannel.getAmountOfDataTransmitted();
-//					final long dataDiff = amountOfDataTransmitted - this.lastSentBytes[i];
-//					this.lastSentBytes[i] = amountOfDataTransmitted;
-//					final long timeDiff = timestamp - this.lastThroughputTimestamp;
-//					final double throughput = (double) (1000 * 8 * dataDiff) / (double) (1024 * 1024 * timeDiff);
-//					this.streamListener.reportChannelThroughput(outputChannel.getID(), throughput);
-//				}
-//			}
-//
-//			this.lastThroughputTimestamp = timestamp;
-//		}
+		//
+		// if (timestamp >= 0) {
+		//
+		// final int numberOfOutputChannels = getNumberOfOutputChannels();
+		//
+		// if (this.lastThroughputTimestamp < 0) {
+		// // Initialize array and fill it
+		// this.lastSentBytes = new long[numberOfOutputChannels];
+		// for (int i = 0; i < numberOfOutputChannels; ++i) {
+		// this.lastSentBytes[i] =
+		// getOutputChannel(i).getAmountOfDataTransmitted();
+		// }
+		// } else {
+		// for (int i = 0; i < numberOfOutputChannels; ++i) {
+		// final AbstractOutputChannel<? extends Record> outputChannel =
+		// getOutputChannel(i);
+		// final long amountOfDataTransmitted =
+		// outputChannel.getAmountOfDataTransmitted();
+		// final long dataDiff = amountOfDataTransmitted -
+		// this.lastSentBytes[i];
+		// this.lastSentBytes[i] = amountOfDataTransmitted;
+		// final long timeDiff = timestamp - this.lastThroughputTimestamp;
+		// final double throughput = (double) (1000 * 8 * dataDiff) / (double)
+		// (1024 * 1024 * timeDiff);
+		// this.streamListener.reportChannelThroughput(outputChannel.getID(),
+		// throughput);
+		// }
+		// }
+		//
+		// this.lastThroughputTimestamp = timestamp;
+		// }
 	}
 
 	/**
@@ -147,7 +159,8 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 	public void outputBufferSent(final ChannelID channelID) {
 
 		final long timestamp = System.currentTimeMillis();
-		final BufferLatency bufferLatency = this.bufferLatencyMap.get(channelID);
+		final BufferLatency bufferLatency = this.bufferLatencyMap
+				.get(channelID);
 		if (bufferLatency == null) {
 			this.bufferLatencyMap.put(channelID, new BufferLatency(timestamp));
 			return;
@@ -159,16 +172,15 @@ public final class StreamingOutputGate<T extends Record> extends AbstractOutputG
 			this.streamListener.reportBufferLatency(channelID, latency);
 		}
 
-		getWrappedOutputGate().outputBufferSent(channelID);
+		this.getWrappedOutputGate().outputBufferSent(channelID);
 	}
 
-	public void redirectToStreamChain(final StreamChain streamChain) throws IOException, InterruptedException {
-
+	public void redirectToStreamChain(final StreamChain streamChain) {
 		this.streamChain = streamChain;
 	}
 
 	@Override
 	public void initializeCompressors() throws CompressionException {
-		getWrappedOutputGate().initializeCompressors();
+		this.getWrappedOutputGate().initializeCompressors();
 	}
 }

@@ -25,95 +25,105 @@ public class ProfilingValueStatistic {
 	}
 
 	public void addValue(ProfilingValue value) {
-		ProfilingValue droppedValue = insertIntoSortedByTimestamp(value);
+		ProfilingValue droppedValue = this.insertIntoSortedByTimestamp(value);
 
 		if (droppedValue != null) {
-			removeFromSortedByValue(droppedValue);
-			noOfStoredValues--;
-			sumOfValues -= droppedValue.getValue();
+			this.removeFromSortedByValue(droppedValue);
+			this.noOfStoredValues--;
+			this.sumOfValues -= droppedValue.getValue();
 		}
 
-		insertIntoSortedByValue(value);
-		noOfStoredValues++;
-		sumOfValues += value.getValue();
+		this.insertIntoSortedByValue(value);
+		this.noOfStoredValues++;
+		this.sumOfValues += value.getValue();
 	}
 
 	private ProfilingValue insertIntoSortedByTimestamp(ProfilingValue value) {
-		if (!sortedById.isEmpty() && sortedById.getLast().getId() >= value.getId()) {
-			throw new IllegalArgumentException("Trying to add stale profiling values. This should not happen.");
+		if (!this.sortedById.isEmpty()
+				&& this.sortedById.getLast().getId() >= value.getId()) {
+			throw new IllegalArgumentException(
+					"Trying to add stale profiling values. This should not happen.");
 		}
-		sortedById.add(value);
+		this.sortedById.add(value);
 
-		if (noOfStoredValues >= statisticWindowSize) {
-			return sortedById.removeFirst();
-		} else {
-			return null;
+		if (this.noOfStoredValues >= this.statisticWindowSize) {
+			return this.sortedById.removeFirst();
 		}
+		return null;
 	}
 
 	protected void insertIntoSortedByValue(ProfilingValue value) {
-		int insertionIndex = Collections.binarySearch(sortedByValue, value);
+		int insertionIndex = Collections
+				.binarySearch(this.sortedByValue, value);
 		if (insertionIndex < 0) {
 			insertionIndex = -(insertionIndex + 1);
 		}
 
-		sortedByValue.add(insertionIndex, value);
+		this.sortedByValue.add(insertionIndex, value);
 	}
 
 	protected void removeFromSortedByValue(ProfilingValue toRemove) {
-		int removeIndex = Collections.binarySearch(sortedByValue, toRemove);
+		int removeIndex = Collections
+				.binarySearch(this.sortedByValue, toRemove);
 		if (removeIndex < 0) {
-			throw new IllegalArgumentException("Trying to drop inexistant profiling value. This should not happen.");
+			throw new IllegalArgumentException(
+					"Trying to drop inexistant profiling value. This should not happen.");
 		}
-		sortedByValue.remove(removeIndex);
+		this.sortedByValue.remove(removeIndex);
 	}
 
 	public double getMedianValue() {
-		if (noOfStoredValues == 0) {
-			throw new RuntimeException("Cannot calculate median of empty value set");
+		if (this.noOfStoredValues == 0) {
+			throw new RuntimeException(
+					"Cannot calculate median of empty value set");
 		}
 
-		int medianIndex = noOfStoredValues / 2;
-		return sortedByValue.get(medianIndex).getValue();
+		int medianIndex = this.noOfStoredValues / 2;
+		return this.sortedByValue.get(medianIndex).getValue();
 	}
 
 	public double getMaxValue() {
-		if (noOfStoredValues == 0) {
-			throw new RuntimeException("Cannot calculate the max value of empty value set");
+		if (this.noOfStoredValues == 0) {
+			throw new RuntimeException(
+					"Cannot calculate the max value of empty value set");
 		}
-		return sortedByValue.get(noOfStoredValues - 1).getValue();
+		return this.sortedByValue.get(this.noOfStoredValues - 1).getValue();
 	}
 
 	public double getMinValue() {
-		if (noOfStoredValues == 0) {
-			throw new RuntimeException("Cannot calculate the min value of empty value set");
+		if (this.noOfStoredValues == 0) {
+			throw new RuntimeException(
+					"Cannot calculate the min value of empty value set");
 		}
-		return sortedByValue.get(0).getValue();
+		return this.sortedByValue.get(0).getValue();
 	}
 
 	public ProfilingValue getOldestValue() {
-		if (noOfStoredValues == 0) {
-			throw new RuntimeException("Cannot get the oldest value of empty value set");
+		if (this.noOfStoredValues == 0) {
+			throw new RuntimeException(
+					"Cannot get the oldest value of empty value set");
 		}
-		return sortedById.getFirst();
+		return this.sortedById.getFirst();
 	}
 
 	public ProfilingValue getNewestValue() {
-		if (noOfStoredValues == 0) {
-			throw new RuntimeException("Cannot get the newest value of empty value set");
+		if (this.noOfStoredValues == 0) {
+			throw new RuntimeException(
+					"Cannot get the newest value of empty value set");
 		}
-		return sortedById.getLast();
+		return this.sortedById.getLast();
 	}
 
 	public double getArithmeticMean() {
-		if (noOfStoredValues == 0) {
-			throw new RuntimeException("Cannot calculate the arithmetic mean of empty value set");
+		if (this.noOfStoredValues == 0) {
+			throw new RuntimeException(
+					"Cannot calculate the arithmetic mean of empty value set");
 		}
 
-		return sumOfValues / noOfStoredValues;
+		return this.sumOfValues / this.noOfStoredValues;
 	}
 
 	public boolean hasValues() {
-		return noOfStoredValues > 0;
+		return this.noOfStoredValues > 0;
 	}
 }

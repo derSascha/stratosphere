@@ -36,32 +36,39 @@ public final class StreamChainCoordinator {
 	/**
 	 * The log object.
 	 */
-	private static final Log LOG = LogFactory.getLog(StreamChainCoordinator.class);
+	private static final Log LOG = LogFactory
+			.getLog(StreamChainCoordinator.class);
 
-	private final ConcurrentMap<ExecutionVertexID, StreamChainLink<?,?>> chainLinks = new ConcurrentHashMap<ExecutionVertexID, StreamChainLink<?,?>>();
+	private final ConcurrentMap<ExecutionVertexID, StreamChainLink<?, ?>> chainLinks = new ConcurrentHashMap<ExecutionVertexID, StreamChainLink<?, ?>>();
 
-	public <I extends Record, O extends Record> void  registerMapper(final ExecutionVertexID vertexID,
-			final Mapper<I, O> mapper,
-			final StreamingInputGate<I> inputGate, final StreamingOutputGate<O> outputGate) {
+	public <I extends Record, O extends Record> void registerMapper(
+			final ExecutionVertexID vertexID, final Mapper<I, O> mapper,
+			final StreamingInputGate<I> inputGate,
+			final StreamingOutputGate<O> outputGate) {
 
-		final StreamChainLink<?,?> chainLink = new StreamChainLink<I,O>(mapper, inputGate, outputGate);
+		final StreamChainLink<?, ?> chainLink = new StreamChainLink<I, O>(
+				mapper, inputGate, outputGate);
 
 		if (this.chainLinks.putIfAbsent(vertexID, chainLink) == null) {
 			LOG.info("Registering stream chain link for vertex ID " + vertexID);
 		}
 	}
 
-	public StreamChain constructStreamChain(final List<ExecutionVertexID> vertexIDs) {
+	public StreamChain constructStreamChain(
+			final List<ExecutionVertexID> vertexIDs) {
 
 		final Iterator<ExecutionVertexID> it = vertexIDs.iterator();
-		final List<StreamChainLink<?,?>> chainLinkList = new ArrayList<StreamChainLink<?,?>>();
+		final List<StreamChainLink<?, ?>> chainLinkList = new ArrayList<StreamChainLink<?, ?>>();
 		while (it.hasNext()) {
 
 			final ExecutionVertexID vertexID = it.next();
-			final StreamChainLink<?,?> chainLink = this.chainLinks.get(vertexID);
+			final StreamChainLink<?, ?> chainLink = this.chainLinks
+					.get(vertexID);
 			if (chainLink == null) {
-				LOG.error("Cannot construct stream chain from " + vertexIDs.get(0) + " to "
-					+ vertexIDs.get(vertexIDs.size() - 1) + ": No chain link for vertex ID " + vertexID);
+				LOG.error("Cannot construct stream chain from "
+						+ vertexIDs.get(0) + " to "
+						+ vertexIDs.get(vertexIDs.size() - 1)
+						+ ": No chain link for vertex ID " + vertexID);
 				return null;
 			}
 

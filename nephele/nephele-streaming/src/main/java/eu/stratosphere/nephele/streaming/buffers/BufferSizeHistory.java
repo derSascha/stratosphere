@@ -1,6 +1,5 @@
 package eu.stratosphere.nephele.streaming.buffers;
 
-
 public class BufferSizeHistory {
 
 	private BufferSizeHistoryEntry[] entries;
@@ -13,39 +12,41 @@ public class BufferSizeHistory {
 	}
 
 	public void addToHistory(long timestamp, int newBufferSize) {
-		BufferSizeHistoryEntry newEntry = new BufferSizeHistoryEntry(Math.min(entriesInHistory, entries.length - 1),
-			timestamp, newBufferSize);
+		BufferSizeHistoryEntry newEntry = new BufferSizeHistoryEntry(Math.min(
+				this.entriesInHistory, this.entries.length - 1), timestamp,
+				newBufferSize);
 
-		if (entriesInHistory < entries.length) {
-			entries[entriesInHistory] = newEntry;
-			entriesInHistory++;
+		if (this.entriesInHistory < this.entries.length) {
+			this.entries[this.entriesInHistory] = newEntry;
+			this.entriesInHistory++;
 		} else {
-			System.arraycopy(entries, 1, entries, 0, entriesInHistory - 1);
-			entries[entriesInHistory - 1] = newEntry;
+			System.arraycopy(this.entries, 1, this.entries, 0,
+					this.entriesInHistory - 1);
+			this.entries[this.entriesInHistory - 1] = newEntry;
 		}
 	}
 
 	public BufferSizeHistoryEntry[] getEntries() {
-		return entries;
+		return this.entries;
 	}
 
 	public BufferSizeHistoryEntry getFirstEntry() {
-		return entries[0];
+		return this.entries[0];
 	}
 
 	public BufferSizeHistoryEntry getLastEntry() {
-		if (entriesInHistory > 0) {
-			return entries[entriesInHistory - 1];
-		} else {
-			return null;
+		if (this.entriesInHistory > 0) {
+			return this.entries[this.entriesInHistory - 1];
 		}
+
+		return null;
 	}
 
 	public boolean hasEntries() {
-		return entriesInHistory > 0;
+		return this.entriesInHistory > 0;
 	}
 
 	public int getNumberOfEntries() {
-		return entriesInHistory;
+		return this.entriesInHistory;
 	}
 }

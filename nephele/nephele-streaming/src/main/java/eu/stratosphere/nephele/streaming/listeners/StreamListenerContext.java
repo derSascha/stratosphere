@@ -53,32 +53,41 @@ public final class StreamListenerContext {
 
 	private final int taggingInterval;
 
-	private StreamListenerContext(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
-			final TaskType taskType, final int aggregationInterval, final int taggingInterval) {
+	private StreamListenerContext(final JobID jobID,
+			final ExecutionVertexID vertexID,
+			final StreamProfilingReporterThread profilingReporter,
+			final StreamChainCoordinator chainCoordinator,
+			final TaskType taskType, final int aggregationInterval,
+			final int taggingInterval) {
 
 		if (jobID == null) {
-			throw new IllegalArgumentException("Parameter jobID must not be null");
+			throw new IllegalArgumentException(
+					"Parameter jobID must not be null");
 		}
 
 		if (vertexID == null) {
-			throw new IllegalArgumentException("Parameter vertexID must not be null");
+			throw new IllegalArgumentException(
+					"Parameter vertexID must not be null");
 		}
 
 		if (profilingReporter == null) {
-			throw new IllegalArgumentException("Parameter profilingReporter must not be null");
+			throw new IllegalArgumentException(
+					"Parameter profilingReporter must not be null");
 		}
 
 		if (taskType == null) {
-			throw new IllegalArgumentException("Parameter taskType must not be null");
+			throw new IllegalArgumentException(
+					"Parameter taskType must not be null");
 		}
 
 		if (aggregationInterval <= 0) {
-			throw new IllegalArgumentException("Parameter aggregationInterval must be greater than zero");
+			throw new IllegalArgumentException(
+					"Parameter aggregationInterval must be greater than zero");
 		}
 
 		if (taggingInterval <= 0) {
-			throw new IllegalArgumentException("Parameter taggingInterval must be greater than zero");
+			throw new IllegalArgumentException(
+					"Parameter taggingInterval must be greater than zero");
 		}
 
 		this.jobID = jobID;
@@ -90,43 +99,52 @@ public final class StreamListenerContext {
 		this.taggingInterval = taggingInterval;
 	}
 
-	public static StreamListenerContext createForInputTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
+	public static StreamListenerContext createForInputTask(final JobID jobID,
+			final ExecutionVertexID vertexID,
+			final StreamProfilingReporterThread profilingReporter,
+			final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, final int taggingInterval) {
 
-		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.INPUT,
-			aggregationInterval, taggingInterval);
+		return new StreamListenerContext(jobID, vertexID, profilingReporter,
+				chainCoordinator, TaskType.INPUT, aggregationInterval,
+				taggingInterval);
 	}
 
-	public static StreamListenerContext createForRegularTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
+	public static StreamListenerContext createForRegularTask(final JobID jobID,
+			final ExecutionVertexID vertexID,
+			final StreamProfilingReporterThread profilingReporter,
+			final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, int taggingInterval) {
 
-		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.REGULAR,
-			aggregationInterval, taggingInterval);
+		return new StreamListenerContext(jobID, vertexID, profilingReporter,
+				chainCoordinator, TaskType.REGULAR, aggregationInterval,
+				taggingInterval);
 	}
 
-	public static StreamListenerContext createForOutputTask(final JobID jobID, final ExecutionVertexID vertexID,
-			final StreamProfilingReporterThread profilingReporter, final StreamChainCoordinator chainCoordinator,
+	public static StreamListenerContext createForOutputTask(final JobID jobID,
+			final ExecutionVertexID vertexID,
+			final StreamProfilingReporterThread profilingReporter,
+			final StreamChainCoordinator chainCoordinator,
 			final int aggregationInterval, int taggingInterval) {
 
-		return new StreamListenerContext(jobID, vertexID, profilingReporter, chainCoordinator, TaskType.OUTPUT,
-			aggregationInterval, taggingInterval);
+		return new StreamListenerContext(jobID, vertexID, profilingReporter,
+				chainCoordinator, TaskType.OUTPUT, aggregationInterval,
+				taggingInterval);
 	}
 
 	boolean isInputVertex() {
 
-		return (this.taskType == TaskType.INPUT);
+		return this.taskType == TaskType.INPUT;
 	}
 
 	boolean isOutputVertex() {
 
-		return (this.taskType == TaskType.OUTPUT);
+		return this.taskType == TaskType.OUTPUT;
 	}
 
 	boolean isRegularVertex() {
 
-		return (this.taskType == TaskType.REGULAR);
+		return this.taskType == TaskType.REGULAR;
 	}
 
 	TaskType getTaskType() {
@@ -154,7 +172,7 @@ public final class StreamListenerContext {
 	}
 
 	public StreamProfilingReporterThread getProfilingReporter() {
-		return profilingReporter;
+		return this.profilingReporter;
 	}
 
 	public void queuePendingAction(final AbstractAction action) {
@@ -165,10 +183,12 @@ public final class StreamListenerContext {
 		return this.pendingActions;
 	}
 
-	<I extends Record, O extends Record> void registerMapper(final Mapper<I, O> mapper,
-			final StreamingInputGate<I> inputGate, final StreamingOutputGate<O> outputGate) {
+	<I extends Record, O extends Record> void registerMapper(
+			final Mapper<I, O> mapper, final StreamingInputGate<I> inputGate,
+			final StreamingOutputGate<O> outputGate) {
 
-		this.chainCoordinator.registerMapper(this.vertexID, mapper, inputGate, outputGate);
+		this.chainCoordinator.registerMapper(this.vertexID, mapper, inputGate,
+				outputGate);
 	}
 
 	StreamChain constructStreamChain(final List<ExecutionVertexID> vertexIDs) {

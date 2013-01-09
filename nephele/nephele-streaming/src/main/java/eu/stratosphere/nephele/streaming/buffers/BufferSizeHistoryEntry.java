@@ -1,6 +1,5 @@
 package eu.stratosphere.nephele.streaming.buffers;
 
-
 public class BufferSizeHistoryEntry {
 	private int entryIndex;
 
@@ -15,15 +14,15 @@ public class BufferSizeHistoryEntry {
 	}
 
 	public int getEntryIndex() {
-		return entryIndex;
+		return this.entryIndex;
 	}
 
 	public long getTimestamp() {
-		return timestamp;
+		return this.timestamp;
 	}
 
 	public int getBufferSize() {
-		return bufferSize;
+		return this.bufferSize;
 	}
 
 }

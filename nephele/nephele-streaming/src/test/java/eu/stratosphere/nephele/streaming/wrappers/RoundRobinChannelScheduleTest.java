@@ -121,12 +121,12 @@ public class RoundRobinChannelScheduleTest {
 		this.schedule.unscheduleCurrentChannel();
 		assertEquals(-1, this.schedule.nextChannel());
 	}
-	
+
 	@Test
 	public void testScheduleRunsEmptyAndIsRefilled() {
 		this.schedule.scheduleChannel(7);
 		this.schedule.unscheduleCurrentChannel();
-				
+
 		assertEquals(-1, this.schedule.nextChannel());
 		this.schedule.scheduleChannel(3);
 		this.schedule.scheduleChannel(4);
@@ -137,9 +137,9 @@ public class RoundRobinChannelScheduleTest {
 		this.schedule.unscheduleCurrentChannel();
 		this.schedule.unscheduleCurrentChannel();
 		this.schedule.unscheduleCurrentChannel();
-		assertEquals(-1, this.schedule.nextChannel());	
+		assertEquals(-1, this.schedule.nextChannel());
 	}
-	
+
 	@Test
 	public void testInternalResize() {
 		this.schedule.scheduleChannel(7);
@@ -156,9 +156,9 @@ public class RoundRobinChannelScheduleTest {
 		assertEquals(8, this.schedule.nextChannel());
 		assertEquals(9, this.schedule.nextChannel());
 		assertEquals(10, this.schedule.nextChannel());
-		assertEquals(11, this.schedule.nextChannel());		
+		assertEquals(11, this.schedule.nextChannel());
 	}
-	
+
 	@Test
 	public void testInternalResizeWithWraparound() {
 		this.schedule.scheduleChannel(7);
@@ -167,7 +167,7 @@ public class RoundRobinChannelScheduleTest {
 		this.schedule.scheduleChannel(10);
 		assertEquals(7, this.schedule.nextChannel());
 		assertEquals(8, this.schedule.nextChannel());
-		
+
 		this.schedule.scheduleChannel(11);
 
 		assertEquals(9, this.schedule.nextChannel());
@@ -176,7 +176,7 @@ public class RoundRobinChannelScheduleTest {
 		assertEquals(8, this.schedule.nextChannel());
 		assertEquals(11, this.schedule.nextChannel());
 		assertEquals(9, this.schedule.nextChannel());
-		assertEquals(10, this.schedule.nextChannel());		
+		assertEquals(10, this.schedule.nextChannel());
 	}
 
 }

@@ -19,8 +19,9 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.types.AbstractStreamingData;
 
 /**
- * This class implements an abstract base class for actions the job manager component of the Nephele streaming plugin
- * can initiate to achieve particular latency or throughput goals.
+ * This class implements an abstract base class for actions the job manager
+ * component of the Nephele streaming plugin can initiate to achieve particular
+ * latency or throughput goals.
  * 
  * @author warneke
  */
@@ -30,7 +31,7 @@ public abstract class AbstractAction extends AbstractStreamingData {
 	 * Constructs a new abstract action object.
 	 * 
 	 * @param jobID
-	 *        the ID of the job the initiated action applies to
+	 *            the ID of the job the initiated action applies to
 	 */
 	AbstractAction(final JobID jobID) {
 		super(jobID);

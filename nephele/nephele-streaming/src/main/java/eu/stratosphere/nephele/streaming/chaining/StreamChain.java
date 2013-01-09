@@ -36,7 +36,8 @@ public final class StreamChain {
 	StreamChain(final List<StreamChainLink<?, ?>> chainLinks) {
 
 		if (chainLinks.isEmpty()) {
-			throw new IllegalArgumentException("List chainLinks must not be empty");
+			throw new IllegalArgumentException(
+					"List chainLinks must not be empty");
 		}
 
 		this.chainLinks = chainLinks;
@@ -47,17 +48,18 @@ public final class StreamChain {
 		return this.chainLinks.get(0).getOutputGate();
 	}
 
-	public void writeRecord(final Record record) throws IOException, InterruptedException {
+	public void writeRecord(final Record record) throws IOException {
 
 		try {
-			executeMapper(record, 1);
+			this.executeMapper(record, 1);
 		} catch (Exception e) {
 			throw new IOException(StringUtils.stringifyException(e));
 		}
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	void executeMapper(final Record record, final int chainIndex) throws Exception {
+	void executeMapper(final Record record, final int chainIndex)
+			throws Exception {
 
 		final StreamChainLink chainLink = this.chainLinks.get(chainIndex);
 		final Mapper mapper = chainLink.getMapper();
@@ -80,7 +82,8 @@ public final class StreamChain {
 			while (!outputCollector.isEmpty()) {
 				final Record outputRecord = (Record) outputCollector.poll();
 				outputGate.reportRecordEmitted(outputRecord);
-				executeMapper(RecordUtils.createCopy(outputRecord), chainIndex + 1);
+				this.executeMapper(RecordUtils.createCopy(outputRecord),
+						chainIndex + 1);
 			}
 		}
 	}
@@ -88,8 +91,8 @@ public final class StreamChain {
 	public void waitUntilFlushed() throws InterruptedException {
 		try {
 			LOG.info("Locking task threads in chain");
-			for (int i = 0; i < chainLinks.size(); i++) {
-				StreamChainLink<?, ?> chainLink = chainLinks.get(i);
+			for (int i = 0; i < this.chainLinks.size(); i++) {
+				StreamChainLink<?, ?> chainLink = this.chainLinks.get(i);
 				if (i == 0) {
 					chainLink.getOutputGate().flush();
 					chainLink.getOutputGate().redirectToStreamChain(this);
@@ -99,7 +102,7 @@ public final class StreamChain {
 				}
 			}
 			LOG.info("Task threads chain in successfully locked");
-		} catch (Exception e) {
+		} catch (IOException e) {
 			LOG.error(StringUtils.stringifyException(e));
 		}
 
