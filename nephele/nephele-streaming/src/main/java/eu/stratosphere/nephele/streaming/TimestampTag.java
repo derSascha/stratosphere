@@ -19,38 +19,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.types.Tag;
 
-public final class StreamingTag implements Tag {
-
-	private final ChannelID sourceChannelID;
+public final class TimestampTag implements Tag {
 
 	private long timestamp = 0L;
 
-	public StreamingTag(final ChannelID sourceChannelID) {
-
-		if (sourceChannelID == null) {
-			throw new IllegalArgumentException(
-					"sourceChannelID must not be null");
-		}
-
-		this.sourceChannelID = sourceChannelID;
-	}
-
-	/**
-	 * Default constructor for deserialization.
-	 */
-	public StreamingTag() {
-		this.sourceChannelID = new ChannelID();
-	}
-
 	public void setTimestamp(final long timestamp) {
 		this.timestamp = timestamp;
-	}
-
-	public ChannelID getSourceChannelID() {
-		return this.sourceChannelID;
 	}
 
 	public long getTimestamp() {
@@ -62,9 +38,6 @@ public final class StreamingTag implements Tag {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		// TODO Auto-generated method stub
-
-		this.sourceChannelID.write(out);
 		out.writeLong(this.timestamp);
 	}
 
@@ -73,8 +46,6 @@ public final class StreamingTag implements Tag {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-
-		this.sourceChannelID.read(in);
 		this.timestamp = in.readLong();
 	}
 }

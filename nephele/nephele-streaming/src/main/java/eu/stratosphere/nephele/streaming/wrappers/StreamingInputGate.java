@@ -20,8 +20,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
+import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.io.compression.CompressionException;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractInputGateWrapper;
+import eu.stratosphere.nephele.streaming.TimestampTag;
 import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
@@ -76,8 +78,9 @@ public final class StreamingInputGate<T extends Record> extends
 		}
 
 		T record = null;
+		int channelToReadFrom;
 		do {
-			int channelToReadFrom = this.channelChooser
+			channelToReadFrom = this.channelChooser
 					.chooseNextAvailableChannel();
 
 			if (channelToReadFrom != -1) {
@@ -89,7 +92,7 @@ public final class StreamingInputGate<T extends Record> extends
 			}
 		} while (record == null);
 
-		this.reportRecordReceived(record);
+		this.reportRecordReceived(record, getInputChannel(channelToReadFrom).getConnectedChannelID());
 
 		return record;
 	}
@@ -112,10 +115,13 @@ public final class StreamingInputGate<T extends Record> extends
 	 * @param sourceChannelID
 	 *            The ID of the source channel (output channel)
 	 */
-	public void reportRecordReceived(final Record record) {
+	public void reportRecordReceived(final Record record, ChannelID sourceChannel) {
 		this.streamListener.recordReceived(record);
-		this.channelLatencyReporter
-				.reportLatencyIfNecessary((AbstractTaggableRecord) record);
+		
+		TimestampTag timestampTag = (TimestampTag) ((AbstractTaggableRecord) record).getTag();
+		if(timestampTag != null) {
+			this.channelLatencyReporter.reportLatencyIfNecessary(timestampTag, sourceChannel);			
+		}
 	}
 
 	/**

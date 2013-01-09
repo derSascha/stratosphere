@@ -1,8 +1,7 @@
 package eu.stratosphere.nephele.streaming.wrappers;
 
 import eu.stratosphere.nephele.io.OutputGate;
-import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.streaming.StreamingTag;
+import eu.stratosphere.nephele.streaming.TimestampTag;
 import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
@@ -36,17 +35,15 @@ public class OutputGateRecordTagger<T extends Record> {
 
 		if (this.recordsSinceLastTag[outputChannel] >= this.streamListener
 				.getContext().getTaggingInterval()) {
-			record.setTag(this.createTag(System.currentTimeMillis(),
-					this.outputGate.getOutputChannel(outputChannel).getID()));
+			record.setTag(this.createTag(System.currentTimeMillis()));
 			this.recordsSinceLastTag[outputChannel] = 0;
 		} else {
 			record.setTag(null);
 		}
 	}
 
-	private StreamingTag createTag(final long timestamp,
-			final ChannelID sourceChannelID) {
-		StreamingTag tag = new StreamingTag(sourceChannelID);
+	private TimestampTag createTag(final long timestamp) {
+		TimestampTag tag = new TimestampTag();
 		tag.setTimestamp(timestamp);
 		return tag;
 	}

@@ -3,10 +3,9 @@ package eu.stratosphere.nephele.streaming.wrappers;
 import java.util.HashMap;
 
 import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.streaming.StreamingTag;
+import eu.stratosphere.nephele.streaming.TimestampTag;
 import eu.stratosphere.nephele.streaming.listeners.StreamListener;
 import eu.stratosphere.nephele.streaming.types.profiling.ChannelLatency;
-import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 
 public class InputGateChannelLatencyReporter {
 
@@ -46,19 +45,18 @@ public class InputGateChannelLatencyReporter {
 		this.streamListener = streamListener;
 	}
 
-	public boolean reportLatencyIfNecessary(AbstractTaggableRecord record) {
+	public boolean reportLatencyIfNecessary(TimestampTag timestampTag,
+			ChannelID sourceChannel) {
 		boolean reportSent = false;
 
-		StreamingTag tag = (StreamingTag) record.getTag();
-		if (tag != null) {
-			long now = System.currentTimeMillis();
+		long now = System.currentTimeMillis();
 
-			ChannelLatencyInfo latencyInfo = this.processTagLatency(tag, now);
+		ChannelLatencyInfo latencyInfo = this.processTagLatency(timestampTag,
+				sourceChannel, now);
 
-			if (latencyInfo.reportIsDue()) {
-				this.doReport(now, latencyInfo);
-				reportSent = true;
-			}
+		if (latencyInfo.reportIsDue()) {
+			this.doReport(now, latencyInfo);
+			reportSent = true;
 		}
 
 		return reportSent;
@@ -73,17 +71,18 @@ public class InputGateChannelLatencyReporter {
 		latencyInfo.reset(now);
 	}
 
-	private ChannelLatencyInfo processTagLatency(StreamingTag tag, long now) {
-		ChannelLatencyInfo info = this.channelLatencyInfos.get(tag
-				.getSourceChannelID());
+	private ChannelLatencyInfo processTagLatency(TimestampTag tag,
+			ChannelID sourceChannel, long now) {
+		
+		ChannelLatencyInfo info = this.channelLatencyInfos.get(sourceChannel);
 
 		if (info == null) {
 			info = new ChannelLatencyInfo();
-			info.sourceChannelID = tag.getSourceChannelID();
+			info.sourceChannelID = sourceChannel;
 			info.timeOfLastReport = now;
 			info.accumulatedLatency = 0;
 			info.tagsReceived = 0;
-			this.channelLatencyInfos.put(tag.getSourceChannelID(), info);
+			this.channelLatencyInfos.put(sourceChannel, info);
 		}
 
 		info.timeOfLastReceivedTag = now;

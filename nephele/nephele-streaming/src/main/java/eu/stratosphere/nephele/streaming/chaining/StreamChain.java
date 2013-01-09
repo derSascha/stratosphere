@@ -64,7 +64,10 @@ public final class StreamChain {
 		final StreamChainLink chainLink = this.chainLinks.get(chainIndex);
 		final Mapper mapper = chainLink.getMapper();
 
-		chainLink.getInputGate().reportRecordReceived(record);
+		chainLink.getInputGate().reportRecordReceived(
+				record,
+				chainLink.getInputGate().getInputChannel(0)
+						.getConnectedChannelID());
 		mapper.map(record);
 
 		final StreamingOutputGate outputGate = chainLink.getOutputGate();
