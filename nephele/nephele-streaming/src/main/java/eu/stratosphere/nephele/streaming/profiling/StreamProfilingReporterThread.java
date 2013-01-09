@@ -42,7 +42,7 @@ import eu.stratosphere.nephele.util.StringUtils;
  */
 public class StreamProfilingReporterThread extends Thread {
 
-	private Log LOG = LogFactory.getLog(StreamProfilingReporterThread.class);
+	private static final Log LOG = LogFactory.getLog(StreamProfilingReporterThread.class);
 
 	private JobID jobID;
 

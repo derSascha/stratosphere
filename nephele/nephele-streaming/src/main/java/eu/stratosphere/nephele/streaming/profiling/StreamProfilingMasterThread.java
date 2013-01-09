@@ -29,7 +29,7 @@ import eu.stratosphere.nephele.util.StringUtils;
 
 public class StreamProfilingMasterThread extends Thread {
 
-	private Log LOG = LogFactory.getLog(StreamProfilingMasterThread.class);
+	private static final Log LOG = LogFactory.getLog(StreamProfilingMasterThread.class);
 
 	private final LinkedBlockingQueue<AbstractStreamingData> streamingDataQueue;
 

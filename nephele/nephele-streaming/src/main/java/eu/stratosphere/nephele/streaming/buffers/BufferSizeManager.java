@@ -27,7 +27,7 @@ import eu.stratosphere.nephele.util.StringUtils;
 
 public class BufferSizeManager {
 
-	private Log LOG = LogFactory.getLog(BufferSizeManager.class);
+	private static final Log LOG = LogFactory.getLog(BufferSizeManager.class);
 
 	/**
 	 * Provides access to the configuration entry which defines the buffer size adjustment interval-
@@ -203,10 +203,10 @@ public class BufferSizeManager {
 	private int proposedReducedBufferSize(EdgeCharacteristics edgeChar, int oldBufferSize) {
 		double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
 
-		double reductionFactor = Math.pow(0.98, avgOutputBufferLatency);
-		reductionFactor = Math.max(0.1, reductionFactor);
+		double reductionFactor = Math.pow(0.95, avgOutputBufferLatency);
+		reductionFactor = Math.max(0.01, reductionFactor);
 
-		int newBufferSize = (int) Math.max(200, oldBufferSize * reductionFactor);
+		int newBufferSize = (int) Math.max(1, oldBufferSize * reductionFactor);
 
 		return newBufferSize;
 	}

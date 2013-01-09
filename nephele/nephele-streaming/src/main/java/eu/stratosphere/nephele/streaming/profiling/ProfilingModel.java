@@ -20,7 +20,7 @@ import eu.stratosphere.nephele.streaming.types.profiling.OutputBufferLatency;
 import eu.stratosphere.nephele.streaming.types.profiling.TaskLatency;
 
 public class ProfilingModel {
-	private Log LOG = LogFactory.getLog(ProfilingModel.class);
+	private static final Log LOG = LogFactory.getLog(ProfilingModel.class);
 
 	private ProfilingSequence profilingGroupSequence;
 
