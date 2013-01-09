@@ -47,21 +47,23 @@ public class StreamProfilingReporterThread extends Thread {
 	private static final Log LOG = LogFactory
 			.getLog(StreamProfilingReporterThread.class);
 
-	private JobID jobID;
+	private final JobID jobID;
 
-	private StreamingCommunicationThread communicationThread;
+	private final StreamingCommunicationThread communicationThread;
 
-	private long aggregationInterval;
+	private final long aggregationInterval;
 
 	private PendingReport[] pendingReports;
 
-	private Map<InstanceConnectionInfo, PendingReport> reportByProfilingMaster;
+	private int currentReportIndex;
 
-	private Map<ExecutionVertexID, Set<PendingReport>> reportByVertexID;
+	private final Map<InstanceConnectionInfo, PendingReport> reportByProfilingMaster;
 
-	private Map<ChannelID, Set<PendingReport>> reportByChannelID;
+	private final Map<ExecutionVertexID, Set<PendingReport>> reportByVertexID;
 
-	private LinkedBlockingQueue<AbstractStreamProfilingRecord> pendingProfilingRecords;
+	private final Map<ChannelID, Set<PendingReport>> reportByChannelID;
+
+	private final LinkedBlockingQueue<AbstractStreamProfilingRecord> pendingProfilingRecords;
 
 	private volatile boolean started;
 
@@ -113,6 +115,10 @@ public class StreamProfilingReporterThread extends Thread {
 			return this.reportingOffset;
 		}
 
+		public boolean isEmpty() {
+			return this.report.isEmpty();
+		}
+
 		@Override
 		public int compareTo(PendingReport o) {
 			if (this.getReportingOffset() < o.getReportingOffset()) {
@@ -133,6 +139,7 @@ public class StreamProfilingReporterThread extends Thread {
 		this.communicationThread = communicationThread;
 		this.aggregationInterval = aggregationInterval;
 		this.pendingReports = new PendingReport[0];
+		this.currentReportIndex = -1;
 
 		// concurrent maps are necessary here because THIS thread and and
 		// another thread registering/unregistering
@@ -148,42 +155,21 @@ public class StreamProfilingReporterThread extends Thread {
 	@Override
 	public void run() {
 		try {
-			int currentReportIndex = -1;
 			while (!interrupted()) {
 
-				PendingReport currentReport;
-				synchronized (this.pendingReports) {
-					currentReportIndex = (currentReportIndex + 1)
-							% this.pendingReports.length;
-					currentReport = this.pendingReports[currentReportIndex];
-				}
-
+				PendingReport currentReport = getCurrentReport();
 				this.processPendingProfilingData();
-				long sleepTime = Math.max(0, currentReport.getDueTime()
-						- System.currentTimeMillis());
-				if (sleepTime > 0) {
-					sleep(sleepTime);
-				}
+				this.sleepUntilReportDue(currentReport);
 				this.processPendingProfilingData();
 
-				if (!currentReport.getReport().isEmpty()) {
-					if (currentReport.getProfilingMaster().equals(
-							this.localhost)) {
-						try {
-							StreamingTaskManagerPlugin.getInstance().sendData(
-									currentReport.getReport());
-						} catch (IOException e) {
-							LOG.error(StringUtils.stringifyException(e));
-						}
+				if (!currentReport.isEmpty()) {
+					if (isLocalReport(currentReport)) {
+						sendToLocal(currentReport);
 					} else {
-						this.communicationThread
-								.sendToTaskManagerAsynchronously(
-										currentReport.getProfilingMaster(),
-										currentReport.getReport());
+						sendToRemote(currentReport);
 					}
 				}
 				currentReport.refreshReport();
-
 			}
 		} catch (InterruptedException e) {
 		}
@@ -191,11 +177,59 @@ public class StreamProfilingReporterThread extends Thread {
 		this.cleanUp();
 	}
 
+	private boolean isLocalReport(PendingReport currentReport) {
+		return currentReport.getProfilingMaster().equals(this.localhost);
+	}
+
+	private void sendToRemote(PendingReport currentReport)
+			throws InterruptedException {
+		this.communicationThread.sendToTaskManagerAsynchronously(
+				currentReport.getProfilingMaster(), currentReport.getReport());
+	}
+
+	/**
+	 * @param currentReport
+	 */
+	private void sendToLocal(PendingReport currentReport) {
+		try {
+			StreamingTaskManagerPlugin.getInstance().sendData(
+					currentReport.getReport());
+		} catch (IOException e) {
+			LOG.error(StringUtils.stringifyException(e));
+		}
+	}
+
+	/**
+	 * @param currentReport
+	 * @throws InterruptedException
+	 */
+	private void sleepUntilReportDue(PendingReport currentReport)
+			throws InterruptedException {
+		long sleepTime = Math.max(0,
+				currentReport.getDueTime() - System.currentTimeMillis());
+		if (sleepTime > 0) {
+			sleep(sleepTime);
+		}
+	}
+
+	/**
+	 * @return
+	 */
+	private PendingReport getCurrentReport() {
+		PendingReport currentReport;
+		synchronized (this.pendingReports) {
+			this.currentReportIndex = (this.currentReportIndex + 1)
+					% this.pendingReports.length;
+			currentReport = this.pendingReports[this.currentReportIndex];
+		}
+		return currentReport;
+	}
+
 	private void cleanUp() {
 		this.pendingReports = null;
-		this.reportByProfilingMaster = null;
-		this.reportByVertexID = null;
-		this.pendingProfilingRecords = null;
+		this.reportByProfilingMaster.clear();
+		this.reportByVertexID.clear();
+		this.pendingProfilingRecords.clear();
 	}
 
 	private ArrayList<AbstractStreamProfilingRecord> tmpRecords = new ArrayList<AbstractStreamProfilingRecord>();
@@ -258,6 +292,7 @@ public class StreamProfilingReporterThread extends Thread {
 
 	public void registerProfilingReporterInfo(
 			StreamProfilingReporterInfo reporterInfo) {
+
 		synchronized (this.pendingReports) {
 			this.localhost = reporterInfo.getReporterConnectionInfo();
 			int tasks = 0;
@@ -370,6 +405,7 @@ public class StreamProfilingReporterThread extends Thread {
 
 	private PendingReport createAndEnqueueReport(
 			InstanceConnectionInfo profilingMaster) {
+
 		PendingReport newReport = new PendingReport(profilingMaster,
 				(long) (Math.random() * this.aggregationInterval));
 		this.reportByProfilingMaster.put(profilingMaster, newReport);
@@ -385,32 +421,8 @@ public class StreamProfilingReporterThread extends Thread {
 		return newReport;
 	}
 
-	public void addToNextReport(ChannelLatency channelLatency) {
-		// may be null when profiling was shut down
-		if (this.pendingProfilingRecords != null) {
-			this.pendingProfilingRecords.add(channelLatency);
-		}
-	}
-
-	public void addToNextReport(ChannelThroughput channelThroughput) {
-		// may be null when profiling was shut down
-		if (this.pendingProfilingRecords != null) {
-			this.pendingProfilingRecords.add(channelThroughput);
-		}
-	}
-
-	public void addToNextReport(OutputBufferLatency outputBufferLatency) {
-		// may be null when profiling was shut down
-		if (this.pendingProfilingRecords != null) {
-			this.pendingProfilingRecords.add(outputBufferLatency);
-		}
-	}
-
-	public void addToNextReport(TaskLatency taskLatency) {
-		// may be null when profiling was shut down
-		if (this.pendingProfilingRecords != null) {
-			this.pendingProfilingRecords.add(taskLatency);
-		}
+	public void addToNextReport(AbstractStreamProfilingRecord profilingRecord) {
+		this.pendingProfilingRecords.add(profilingRecord);
 	}
 
 	public void shutdown() {
