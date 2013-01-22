@@ -21,7 +21,8 @@ import eu.stratosphere.nephele.plugins.JobManagerPlugin;
 import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.plugins.PluginLookupService;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
-import eu.stratosphere.nephele.streaming.jobmanager.StreamingJobManagerPlugin;
+import eu.stratosphere.nephele.streaming.jobmanager.StreamJobManagerPlugin;
+import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 
 /**
  * This class implements the loader functionality for the Nephele streaming
@@ -36,12 +37,12 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	/**
 	 * The job manager component of this plugin.
 	 */
-	private StreamingJobManagerPlugin jobManagerPlugin = null;
+	private StreamJobManagerPlugin jobManagerPlugin = null;
 
 	/**
 	 * The task manager component of this plugin.
 	 */
-	private StreamingTaskManagerPlugin taskManagerPlugin = null;
+	private StreamTaskManagerPlugin taskManagerPlugin = null;
 
 	/**
 	 * The ID of this plugin.
@@ -76,7 +77,7 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	public synchronized JobManagerPlugin getJobManagerPlugin() {
 
 		if (this.jobManagerPlugin == null) {
-			this.jobManagerPlugin = new StreamingJobManagerPlugin(
+			this.jobManagerPlugin = new StreamJobManagerPlugin(
 					STREAMING_PLUGIN_ID, this.getPluginConfiguration());
 		}
 
@@ -90,7 +91,7 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	public synchronized TaskManagerPlugin getTaskManagerPlugin() {
 
 		if (this.taskManagerPlugin == null) {
-			this.taskManagerPlugin = new StreamingTaskManagerPlugin(
+			this.taskManagerPlugin = new StreamTaskManagerPlugin(
 					this.getPluginConfiguration());
 		}
 

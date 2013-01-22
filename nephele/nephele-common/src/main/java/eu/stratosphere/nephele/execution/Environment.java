@@ -249,5 +249,5 @@ public interface Environment {
 	 */
 	Set<ChannelID> getInputChannelIDsOfGate(GateID gateID);
 	
-	<I extends Record, O extends Record> void registerMapper(Mapper<I, O> mapper);
+	void registerMapper(Mapper<? extends Record, ? extends Record> mapper);
 }

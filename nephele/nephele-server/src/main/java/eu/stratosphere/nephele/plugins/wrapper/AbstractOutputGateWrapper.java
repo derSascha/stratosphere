@@ -330,8 +330,7 @@ public abstract class AbstractOutputGateWrapper<T extends Record> implements Out
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void outputBufferSent(final ChannelID channelID) {
-
-		this.wrappedOutputGate.outputBufferSent(channelID);
+	public void outputBufferSent(final int channelIndex) {
+		this.wrappedOutputGate.outputBufferSent(channelIndex);
 	}
 }

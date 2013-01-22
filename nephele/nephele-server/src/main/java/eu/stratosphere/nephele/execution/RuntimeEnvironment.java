@@ -944,7 +944,7 @@ public class RuntimeEnvironment implements Environment, Runnable {
 	}
 
 	@Override
-	public <I extends Record, O extends Record> void registerMapper(Mapper<I, O> mapper) {
+	public void registerMapper(Mapper<? extends Record, ? extends Record> mapper) {
 		// Nothing to do here
 	}
 }

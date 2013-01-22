@@ -181,8 +181,8 @@ public interface OutputGate<T extends Record> extends Gate<T> {
 	 * This method is called by one of the attached output channels to indicate that the buffer which is internally used
 	 * to store written records has been forwarded to the next step in the processing pipeline.
 	 * 
-	 * @param channelID
-	 *        the ID of the output channel which has forwarded its buffer
+	 * @param channelIndex
+	 *        the index of the channel within the gate
 	 */
-	void outputBufferSent(ChannelID channelID);
+	void outputBufferSent(int channelIndex);
 }

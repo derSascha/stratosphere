@@ -21,14 +21,25 @@ import eu.stratosphere.nephele.instance.AbstractInstance;
 import eu.stratosphere.nephele.instance.AllocatedResource;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.streaming.StreamingPluginLoader;
-import eu.stratosphere.nephele.streaming.actions.ActAsProfilingMasterAction;
-import eu.stratosphere.nephele.streaming.profiling.model.ProfilingEdge;
-import eu.stratosphere.nephele.streaming.profiling.model.ProfilingGroupVertex;
-import eu.stratosphere.nephele.streaming.profiling.model.ProfilingSequence;
-import eu.stratosphere.nephele.streaming.profiling.model.ProfilingVertex;
-import eu.stratosphere.nephele.streaming.types.StreamProfilingReporterInfo;
+import eu.stratosphere.nephele.streaming.message.action.ActAsQosManagerAction;
+import eu.stratosphere.nephele.streaming.message.action.ActAsQosReporterAction;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingVertex;
 import eu.stratosphere.nephele.util.StringUtils;
 
+/**
+ * This class is used on the job manager to compute a QoS setup for a given
+ * {@link ProfilingSequence}. To do so, it attaches itself as an
+ * {@link VertexAssignmentListener} to the respective exection vertices and as
+ * soon as there are no more pending instance assignments, it will compute the
+ * QoS setup (which QoS managers and reportes reside on which task manager) and
+ * distributes this information to the task managers via RPC.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 	private static final Log LOG = LogFactory
@@ -44,7 +55,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 	private ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance> instances;
 
-	private ConcurrentHashMap<InstanceConnectionInfo, StreamProfilingReporterInfo> profilingReporterInfos;
+	private ConcurrentHashMap<InstanceConnectionInfo, ActAsQosReporterAction> qosReporterInfos;
 
 	public ProfilingSequenceManager(
 			ProfilingSequence profilingSequence,
@@ -54,7 +65,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		this.profilingSequence = profilingSequence;
 		this.executionGraph = executionGraph;
 		this.instances = instances;
-		this.profilingReporterInfos = new ConcurrentHashMap<InstanceConnectionInfo, StreamProfilingReporterInfo>();
+		this.qosReporterInfos = new ConcurrentHashMap<InstanceConnectionInfo, ActAsQosReporterAction>();
 		this.init();
 	}
 
@@ -64,7 +75,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 				.getSequenceVertices()) {
 			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
 				this.verticesByID.put(vertex.getID(), vertex);
-				if (vertex.getProfilingReporter() == null) {
+				if (vertex.getQosReporter() == null) {
 					this.verticesWithPendingAllocation++;
 				}
 			}
@@ -96,39 +107,38 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 	public synchronized void vertexAssignmentChanged(ExecutionVertexID id,
 			AllocatedResource newAllocatedResource) {
 		ProfilingVertex vertex = this.verticesByID.get(id);
-		if (vertex.getProfilingReporter() == null) {
+		if (vertex.getQosReporter() == null) {
 			this.verticesWithPendingAllocation--;
 		}
 		AbstractInstance instance = newAllocatedResource.getInstance();
 		this.instances.putIfAbsent(instance.getInstanceConnectionInfo(),
 				instance);
-		vertex.setProfilingReporter(instance.getInstanceConnectionInfo());
+		vertex.setQosReporter(instance.getInstanceConnectionInfo());
 		if (this.verticesWithPendingAllocation == 0) {
 			try {
-				this.setupProfilingMasters();
-				this.setupProfilingReporters();
+				this.setupQosManagers();
+				this.setupQosReporters();
 			} catch (Exception e) {
 				LOG.error(StringUtils.stringifyException(e));
 			}
 
 			// clear large memory structures
-			this.profilingReporterInfos = null;
+			this.qosReporterInfos = null;
 			this.verticesByID = null;
 		}
 	}
 
-	private void setupProfilingReporters() throws Exception {
+	private void setupQosReporters() throws Exception {
 		ExecutorService threadPool = Executors.newFixedThreadPool(8);
 		final AtomicReference<Exception> exceptionCollector = new AtomicReference<Exception>();
 
-		for (final StreamProfilingReporterInfo reporterInfo : this.profilingReporterInfos
-				.values()) {
+		for (final ActAsQosReporterAction reporterInfo : this.qosReporterInfos.values()) {
 			threadPool.execute(new Runnable() {
 				@Override
 				public void run() {
 					try {
 						ProfilingSequenceManager.this
-								.setupProfilingReporter(reporterInfo);
+								.setupQosReporter(reporterInfo);
 					} catch (Exception e) {
 						LOG.error(StringUtils.stringifyException(e));
 						exceptionCollector.set(e);
@@ -143,16 +153,16 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 			if (exceptionCollector.get() != null) {
 				throw exceptionCollector.get();
 			}
-			LOG.info("Successfully set up profiling reporters for "
+			LOG.info("Successfully set up QoS reporters for "
 					+ this.profilingSequence.toString());
 		} catch (InterruptedException e) {
-			LOG.info("Interrupted while setting up profiling reporters for "
+			LOG.info("Interrupted while setting up QoS reporters for "
 					+ this.profilingSequence.toString());
 			threadPool.shutdownNow();
 		}
 	}
 
-	private void setupProfilingReporter(StreamProfilingReporterInfo reporterInfo)
+	private void setupQosReporter(ActAsQosReporterAction reporterInfo)
 			throws IOException {
 		int attempts = 0;
 		boolean success = false;
@@ -178,35 +188,35 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 				+ reporterInfo.getReporterConnectionInfo());
 	}
 
-	private void setupProfilingMasters() throws Exception {
+	private void setupQosManagers() throws Exception {
 		final ProfilingGroupVertex anchor = this.determineProfilingAnchor();
 
-		final HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>> verticesByProfilingMaster = new HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>>();
+		final HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>> verticesByQosManager = new HashMap<InstanceConnectionInfo, LinkedList<ProfilingVertex>>();
 
 		for (ProfilingVertex vertex : anchor.getGroupMembers()) {
-			InstanceConnectionInfo profilingMaster = vertex
-					.getProfilingReporter();
-			LinkedList<ProfilingVertex> verticesOnProfilingMaster = verticesByProfilingMaster
-					.get(profilingMaster);
-			if (verticesOnProfilingMaster == null) {
-				verticesOnProfilingMaster = new LinkedList<ProfilingVertex>();
-				verticesByProfilingMaster.put(profilingMaster,
-						verticesOnProfilingMaster);
+			InstanceConnectionInfo qosManager = vertex
+					.getQosReporter();
+			LinkedList<ProfilingVertex> verticesOnQosManager = verticesByQosManager
+					.get(qosManager);
+			if (verticesOnQosManager == null) {
+				verticesOnQosManager = new LinkedList<ProfilingVertex>();
+				verticesByQosManager.put(qosManager,
+						verticesOnQosManager);
 			}
-			verticesOnProfilingMaster.add(vertex);
+			verticesOnQosManager.add(vertex);
 		}
 
 		ExecutorService threadPool = Executors.newFixedThreadPool(8);
 		final AtomicReference<Exception> exceptionCollector = new AtomicReference<Exception>();
 
-		for (final LinkedList<ProfilingVertex> profilingMasterVertices : verticesByProfilingMaster
+		for (final LinkedList<ProfilingVertex> qosManagerVertices : verticesByQosManager
 				.values()) {
 			threadPool.execute(new Runnable() {
 				@Override
 				public void run() {
 					try {
-						ProfilingSequenceManager.this.setupProfilingMaster(
-								anchor, profilingMasterVertices);
+						ProfilingSequenceManager.this.setupQosManager(
+								anchor, qosManagerVertices);
 					} catch (Exception e) {
 						LOG.error(StringUtils.stringifyException(e));
 						exceptionCollector.set(e);
@@ -230,27 +240,27 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		}
 	}
 
-	private void setupProfilingMaster(ProfilingGroupVertex anchor,
-			LinkedList<ProfilingVertex> anchorVerticesOnProfilingMaster)
+	private void setupQosManager(ProfilingGroupVertex anchor,
+			LinkedList<ProfilingVertex> anchorVerticesOnQosManager)
 			throws IOException {
 
-		InstanceConnectionInfo profilingMaster = anchorVerticesOnProfilingMaster
-				.getFirst().getProfilingReporter();
+		InstanceConnectionInfo qosManager = anchorVerticesOnQosManager
+				.getFirst().getQosReporter();
 		ProfilingSequence partialSequence = this
 				.expandToPartialProfilingSequence(anchor,
-						anchorVerticesOnProfilingMaster);
-		partialSequence.setProfilingMaster(profilingMaster);
+						anchorVerticesOnQosManager);
+		partialSequence.setQosManager(qosManager);
 
-		this.registerProfilingMasterOnExecutionVertices(partialSequence,
-				profilingMaster);
-		this.sendPartialProfilingSequenceToProfilingMaster(profilingMaster,
+		this.registerQosManagerOnExecutionVertices(partialSequence,
+				qosManager);
+		this.sendPartialProfilingSequenceToQosManager(qosManager,
 				partialSequence);
-		LOG.info("Successfully set up profiling master " + profilingMaster);
+		LOG.info("Successfully set up profiling master " + qosManager);
 	}
 
-	private void registerProfilingMasterOnExecutionVertices(
+	private void registerQosManagerOnExecutionVertices(
 			ProfilingSequence partialSequence,
-			InstanceConnectionInfo profilingMaster) {
+			InstanceConnectionInfo qosManager) {
 
 		List<ProfilingGroupVertex> groupVertices = partialSequence
 				.getSequenceVertices();
@@ -258,58 +268,52 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 
 			boolean isStartVertex = i == 0;
 			boolean isEndVertex = i == groupVertices.size() - 1;
-			boolean includeVertexInProfiling = true;
-			/**
-			 * For end vertices that are not part of a profiling sequence we do
-			 * not need profiling data. Note however that for start vertices we
-			 * need profiling data whether or they are included in the profiling
-			 * sequence. This is due to the channel buffers are resized (see
-			 * BufferSizeManager.collectEdgesToAdjust()).
-			 */
-			if (isEndVertex && !partialSequence.isIncludeEndVertex()) {
-				includeVertexInProfiling = false;
-			}
-
-			for (ProfilingVertex vertex : groupVertices.get(i)
-					.getGroupMembers()) {
-				StreamProfilingReporterInfo tmProfilingInfo = this
-						.getProfilingReporterInfo(vertex.getProfilingReporter());
+			boolean includeVertexInProfiling = (!isStartVertex || partialSequence.isIncludeStartVertex())
+					&& (!isEndVertex || partialSequence.isIncludeEndVertex());
+			
+			for (ProfilingVertex vertex : groupVertices.get(i).getGroupMembers()) {
+				ActAsQosReporterAction tmProfilingInfo = this
+						.getQosReporterAction(vertex.getQosReporter());
 
 				if (includeVertexInProfiling) {
-					tmProfilingInfo.addTaskProfilingMaster(vertex.getID(),
-							profilingMaster);
+					// FIXME: add info InputGate -> OutputGate to profiling
+					// as this may not be unique in case of multiple input- or
+					// output gates
+					tmProfilingInfo.addTaskQosManager(vertex.getID(),
+							qosManager);
 				}
 
-				// register for channel throughput and output buffer lifetimes
+				// register for output buffer lifetimes, emission frequency and records per buffer
 				// (measured at output channel)
 				if (!isEndVertex) {
 					for (ProfilingEdge forwardEdge : vertex.getForwardEdges()) {
-						tmProfilingInfo.addChannelProfilingMaster(
+						tmProfilingInfo.addChannelQosManager(
 								forwardEdge.getSourceChannelID(),
-								profilingMaster);
+								qosManager);
 					}
 				}
 
-				// register for channel latencies (measured an input channel)
+				// register for channel latencies and channel throughput 
+				// (measured an input channel)
 				if (!isStartVertex) {
 					for (ProfilingEdge backwardEdge : vertex.getBackwardEdges()) {
-						tmProfilingInfo.addChannelProfilingMaster(
+						tmProfilingInfo.addChannelQosManager(
 								backwardEdge.getSourceChannelID(),
-								profilingMaster);
+								qosManager);
 					}
 				}
 			}
 		}
 	}
 
-	private StreamProfilingReporterInfo getProfilingReporterInfo(
+	private ActAsQosReporterAction getQosReporterAction(
 			InstanceConnectionInfo reporter) {
-		StreamProfilingReporterInfo profilingInfo = this.profilingReporterInfos
+		ActAsQosReporterAction profilingInfo = this.qosReporterInfos
 				.get(reporter);
 		if (profilingInfo == null) {
-			profilingInfo = new StreamProfilingReporterInfo(
+			profilingInfo = new ActAsQosReporterAction(
 					this.executionGraph.getJobID(), reporter);
-			StreamProfilingReporterInfo previous = this.profilingReporterInfos
+			ActAsQosReporterAction previous = this.qosReporterInfos
 					.putIfAbsent(reporter, profilingInfo);
 			if (previous != null) {
 				profilingInfo = previous;
@@ -345,7 +349,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		ProfilingVertex cloned = alreadyClonedVertices.get(toClone.getID());
 		if (cloned == null) {
 			cloned = new ProfilingVertex(toClone.getID(), toClone.getName());
-			cloned.setProfilingReporter(toClone.getProfilingReporter());
+			cloned.setQosReporter(toClone.getQosReporter());
 			alreadyClonedVertices.put(toClone.getID(), cloned);
 			groupVertex.addGroupMember(cloned);
 		}
@@ -388,7 +392,7 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		ProfilingVertex cloned = alreadyClonedVertices.get(toClone.getID());
 		if (cloned == null) {
 			cloned = new ProfilingVertex(toClone.getID(), toClone.getName());
-			cloned.setProfilingReporter(toClone.getProfilingReporter());
+			cloned.setQosReporter(toClone.getQosReporter());
 			alreadyClonedVertices.put(toClone.getID(), cloned);
 			groupVertex.addGroupMember(cloned);
 		}
@@ -413,18 +417,18 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 		return cloned;
 	}
 
-	private void sendPartialProfilingSequenceToProfilingMaster(
-			InstanceConnectionInfo profilingMaster,
+	private void sendPartialProfilingSequenceToQosManager(
+			InstanceConnectionInfo qosManager,
 			ProfilingSequence partialSequence) throws IOException {
 		int attempts = 0;
 		boolean success = false;
 		while (!success) {
 			attempts++;
-			AbstractInstance instance = this.instances.get(profilingMaster);
+			AbstractInstance instance = this.instances.get(qosManager);
 			try {
 				instance.sendData(
 						StreamingPluginLoader.STREAMING_PLUGIN_ID,
-						new ActAsProfilingMasterAction(this.executionGraph
+						new ActAsQosManagerAction(this.executionGraph
 								.getJobID(), partialSequence));
 				success = true;
 			} catch (IOException e) {

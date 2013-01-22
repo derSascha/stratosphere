@@ -158,7 +158,7 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 		this.dataBuffer = null;
 
 		// Notify the output gate to enable statistics collection by plugins
-		getOutputGate().outputBufferSent(getID());
+		getOutputGate().outputBufferSent(getChannelIndex());
 	}
 
 	/**
