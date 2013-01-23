@@ -36,9 +36,7 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 
 	private HashMap<Integer, ChannelLatency> channelLatencies;
 
-	private HashMap<Integer, ChannelThroughput> channelThroughputs;
-
-	private HashMap<Integer, OutputBufferLatency> outputBufferLatencies;
+	private HashMap<Integer, OutputChannelStatistics> outputChannelStats;
 
 	private HashMap<Integer, TaskLatency> taskLatencies;
 
@@ -69,18 +67,11 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 		return this.channelLatencies;
 	}
 
-	private HashMap<Integer, ChannelThroughput> getOrCreateChannelThroughputMap() {
-		if (this.channelThroughputs == null) {
-			this.channelThroughputs = new HashMap<Integer, ChannelThroughput>();
+	private HashMap<Integer, OutputChannelStatistics> getOrCreateOutputChannelStatsMap() {
+		if (this.outputChannelStats == null) {
+			this.outputChannelStats = new HashMap<Integer, OutputChannelStatistics>();
 		}
-		return this.channelThroughputs;
-	}
-
-	private HashMap<Integer, OutputBufferLatency> getOrCreateOutputBufferLatencyMap() {
-		if (this.outputBufferLatencies == null) {
-			this.outputBufferLatencies = new HashMap<Integer, OutputBufferLatency>();
-		}
-		return this.outputBufferLatencies;
+		return this.outputChannelStats;
 	}
 
 	private HashMap<Integer, TaskLatency> getOrCreateTaskLatencyMap() {
@@ -111,46 +102,25 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 		return this.channelLatencies.values();
 	}
 
-	public void addChannelThroughput(ChannelThroughput channelThroughput) {
+	public void addOutputChannelStatistics(OutputChannelStatistics channelStats) {
 		int sourceChannelID = this.getOrCreateChannelIDMap().getIntID(
-				channelThroughput.getSourceChannelID());
+				channelStats.getSourceChannelID());
 
-		ChannelThroughput existing = this.getOrCreateChannelThroughputMap()
+		OutputChannelStatistics existing = this.getOrCreateOutputChannelStatsMap()
 				.get(sourceChannelID);
 		if (existing == null) {
-			this.getOrCreateChannelThroughputMap().put(sourceChannelID,
-					channelThroughput);
+			this.getOrCreateOutputChannelStatsMap().put(sourceChannelID,
+					channelStats);
 		} else {
-			existing.add(channelThroughput);
+			existing.add(channelStats);
 		}
 	}
 
-	public Collection<ChannelThroughput> getChannelThroughputs() {
-		if (this.channelThroughputs == null) {
+	public Collection<OutputChannelStatistics> getOutputChannelStatistics() {
+		if (this.outputChannelStats == null) {
 			return Collections.emptyList();
 		}
-		return this.channelThroughputs.values();
-	}
-
-	public void addOutputBufferLatency(OutputBufferLatency outputBufferLatency) {
-		int sourceChannelID = this.getOrCreateChannelIDMap().getIntID(
-				outputBufferLatency.getSourceChannelID());
-
-		OutputBufferLatency existing = this.getOrCreateOutputBufferLatencyMap()
-				.get(sourceChannelID);
-		if (existing == null) {
-			this.getOrCreateOutputBufferLatencyMap().put(sourceChannelID,
-					outputBufferLatency);
-		} else {
-			existing.add(outputBufferLatency);
-		}
-	}
-
-	public Collection<OutputBufferLatency> getOutputBufferLatencies() {
-		if (this.outputBufferLatencies == null) {
-			return Collections.emptyList();
-		}
-		return this.outputBufferLatencies.values();
+		return this.outputChannelStats.values();
 	}
 
 	public void addTaskLatency(TaskLatency taskLatency) {
@@ -226,8 +196,7 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 		this.writeExecutionVertexIDMap(out);
 		this.writeChannelIDMap(out);
 		this.writeChannelLatencies(out);
-		this.writeChannelThroughputs(out);
-		this.writeOutputBufferLatencies(out);
+		this.writeOutputChannelStatistics(out);
 		this.writeTaskLatencies(out);
 	}
 
@@ -263,26 +232,16 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 		}
 	}
 
-	private void writeChannelThroughputs(DataOutput out) throws IOException {
-		if (this.channelThroughputs != null) {
-			out.writeInt(this.channelThroughputs.size());
-			for (Entry<Integer, ChannelThroughput> entry : this.channelThroughputs
+	private void writeOutputChannelStatistics(DataOutput out) throws IOException {
+		if (this.outputChannelStats != null) {
+			out.writeInt(this.outputChannelStats.size());
+			for (Entry<Integer, OutputChannelStatistics> entry : this.outputChannelStats
 					.entrySet()) {
 				out.writeInt(entry.getKey());
 				out.writeDouble(entry.getValue().getThroughput());
-			}
-		} else {
-			out.writeInt(0);
-		}
-	}
-
-	private void writeOutputBufferLatencies(DataOutput out) throws IOException {
-		if (this.outputBufferLatencies != null) {
-			out.writeInt(this.outputBufferLatencies.size());
-			for (Entry<Integer, OutputBufferLatency> entry : this.outputBufferLatencies
-					.entrySet()) {
-				out.writeInt(entry.getKey());
-				out.writeDouble(entry.getValue().getBufferLatency());
+				out.writeDouble(entry.getValue().getOutputBufferLifetime());
+				out.writeDouble(entry.getValue().getRecordsPerBuffer());
+				out.writeDouble(entry.getValue().getRecordsPerSecond());
 			}
 		} else {
 			out.writeInt(0);
@@ -311,8 +270,7 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 		this.readExecutionVertexIDMap(in);
 		this.readChannelIDMap(in);
 		this.readChannelLatencies(in);
-		this.readChannelThroughputs(in);
-		this.readOutputBufferLatencies(in);
+		this.readOutputChannelStatistics(in);
 		this.readTaskLatencies(in);
 	}
 
@@ -340,27 +298,18 @@ public class StreamProfilingReport extends AbstractStreamMessage {
 		}
 	}
 
-	private void readChannelThroughputs(DataInput in) throws IOException {
+	private void readOutputChannelStatistics(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			int sourceChannelID = in.readInt();
-			ChannelThroughput channelThroughput = new ChannelThroughput(this
+			OutputChannelStatistics channelStats = new OutputChannelStatistics(this
 					.getOrCreateChannelIDMap().getFullID(sourceChannelID),
+					in.readDouble(),
+					in.readDouble(),
+					in.readDouble(),
 					in.readDouble());
-			this.getOrCreateChannelThroughputMap().put(sourceChannelID,
-					channelThroughput);
-		}
-	}
-
-	private void readOutputBufferLatencies(DataInput in) throws IOException {
-		int toRead = in.readInt();
-		for (int i = 0; i < toRead; i++) {
-			int sourceChannelID = in.readInt();
-			OutputBufferLatency outputBufferLatency = new OutputBufferLatency(
-					this.getOrCreateChannelIDMap().getFullID(sourceChannelID),
-					in.readDouble());
-			this.getOrCreateOutputBufferLatencyMap().put(sourceChannelID,
-					outputBufferLatency);
+			this.getOrCreateOutputChannelStatsMap().put(sourceChannelID,
+					channelStats);
 		}
 	}
 

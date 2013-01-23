@@ -60,9 +60,9 @@ public class StreamTaskQosCoordinator {
 
 	private StreamChainCoordinator chainCoordinator;
 	
-	private ChannelOutputBufferLifetimeReporter bufferLatencyReporter;
-	
 	private ChannelLookupHelper channelLookup;
+	
+	private OutputChannelStatisticsReporter outputChannelReporter;
 	
 	public StreamTaskQosCoordinator(ExecutionVertexID vertexID,
 			StreamTaskEnvironment taskEnvironment, QosReporterThread reporterThread,
@@ -199,13 +199,14 @@ public class StreamTaskQosCoordinator {
 
 	public void recordEmitted(int outputGateIndex, int outputChannelIndex, AbstractTaggableRecord record) {
 		this.recordTagger.tagRecordIfNecessary(outputChannelIndex, record);
+		this.outputChannelReporter.recordEmitted(outputChannelIndex);
 	}
 	
 	public void outputBufferSent(int outputGateIndex, int outputChannelIndex) {
-		ChannelID outputChannelID = this.channelLookup.getOutputChannel(
-				outputGateIndex, outputChannelIndex).getID();
-		this.bufferLatencyReporter.outputBufferSent(outputChannelIndex,
-				outputChannelID);
+		AbstractByteBufferedOutputChannel<?> channel = this.channelLookup
+				.getOutputChannel(outputGateIndex, outputChannelIndex);
+		this.outputChannelReporter.outputBufferSent(outputChannelIndex,
+				channel.getID(), channel.getAmountOfDataTransmitted());
 	}
 
 	public void queueAction(AbstractAction action) {

@@ -15,8 +15,7 @@ import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelThroughput;
-import eu.stratosphere.nephele.streaming.message.profiling.OutputBufferLatency;
+import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
 import eu.stratosphere.nephele.streaming.message.profiling.StreamProfilingReport;
 import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
@@ -71,8 +70,7 @@ public class QosManagerThread extends Thread {
 		int totalNoOfMessages = 0;
 		int channelLats = 0;
 		int taskLats = 0;
-		int throughputs = 0;
-		int obls = 0;
+		int outChannelStats = 0;
 
 		this.triggerChainingDelayed(45000);
 		try {
@@ -93,11 +91,11 @@ public class QosManagerThread extends Thread {
 						channelLats++;
 					}
 
-					for (ChannelThroughput channelThroughput : profilingReport
-							.getChannelThroughputs()) {
-						this.profilingModel.refreshChannelThroughput(now,
-								channelThroughput);
-						throughputs++;
+					for (OutputChannelStatistics channelStat : profilingReport
+							.getOutputChannelStatistics()) {
+						this.profilingModel.refreshOutputChannelStatistics(now,
+								channelStat);
+						outChannelStats++;
 					}
 
 					for (TaskLatency taskLatency : profilingReport
@@ -105,13 +103,6 @@ public class QosManagerThread extends Thread {
 						this.profilingModel
 								.refreshTaskLatency(now, taskLatency);
 						taskLats++;
-					}
-
-					for (OutputBufferLatency outputBufferLatency : profilingReport
-							.getOutputBufferLatencies()) {
-						this.profilingModel.refreshChannelOutputBufferLatency(
-								now, outputBufferLatency);
-						obls++;
 					}
 				} else if (streamingData instanceof StreamChainAnnounce) {
 					this.profilingModel
@@ -134,17 +125,16 @@ public class QosManagerThread extends Thread {
 					long buffersizeAdjustmentOverhead = System
 							.currentTimeMillis() - beginTime;
 					LOG.info(String
-							.format("total messages: %d (channel: %d | task: %d | throughput: %d | obl: %d) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
+							.format("total messages: %d (channel: %d | task: %d | outChanStats: %d ) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
 									totalNoOfMessages, channelLats, taskLats,
-									throughputs, obls,
+									outChannelStats,
 									this.streamingDataQueue.size(),
 									buffersizeAdjustmentOverhead));
 
 					totalNoOfMessages = 0;
 					channelLats = 0;
 					taskLats = 0;
-					throughputs = 0;
-					obls = 0;
+					outChannelStats = 0;
 				}
 			}
 

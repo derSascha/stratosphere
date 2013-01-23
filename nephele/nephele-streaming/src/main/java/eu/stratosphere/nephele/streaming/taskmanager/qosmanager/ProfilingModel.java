@@ -10,8 +10,7 @@ import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelThroughput;
-import eu.stratosphere.nephele.streaming.message.profiling.OutputBufferLatency;
+import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
 import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeCharacteristics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingEdge;
@@ -97,24 +96,13 @@ public class ProfilingModel {
 				.addLatencyMeasurement(timestamp, taskLatency.getTaskLatency());
 	}
 
-	public void refreshChannelThroughput(long timestamp,
-			ChannelThroughput channelThroughput) {
-		// FIXME workaround for bug that causes NaNs
-		if (Double.isInfinite(channelThroughput.getThroughput())
-				|| Double.isNaN(channelThroughput.getThroughput())) {
-			return;
-		}
-
+	public void refreshOutputChannelStatistics(long timestamp,
+			OutputChannelStatistics channelThroughput) {
+		//FIXME insert new profiling data into profiling model  
+		
 		this.edgeCharacteristics.get(channelThroughput.getSourceChannelID())
 				.addThroughputMeasurement(timestamp,
 						channelThroughput.getThroughput());
-	}
-
-	public void refreshChannelOutputBufferLatency(long timestamp,
-			OutputBufferLatency latency) {
-		this.edgeCharacteristics.get(latency.getSourceChannelID())
-				.addOutputBufferLatencyMeasurement(timestamp,
-						latency.getBufferLatency());
 	}
 
 	public ProfilingSequenceSummary computeProfilingSummary() {

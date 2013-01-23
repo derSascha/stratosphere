@@ -40,13 +40,9 @@ public class StreamProfilingReportTest {
 
 	private ChannelLatency channel13Latency;
 
-	private ChannelThroughput channel12Throughput;
+	private OutputChannelStatistics channel12Throughput;
 
-	private ChannelThroughput channel13Throughput;
-
-	private OutputBufferLatency obl12;
-
-	private OutputBufferLatency obl13;
+	private OutputChannelStatistics channel13Throughput;
 
 	private TaskLatency taskLatency1;
 
@@ -66,12 +62,10 @@ public class StreamProfilingReportTest {
 		this.channel13Target = new ChannelID();
 		this.channel12Latency = new ChannelLatency(this.channel12Target, 13);
 		this.channel13Latency = new ChannelLatency(this.channel13Target, 25);
-		this.channel12Throughput = new ChannelThroughput(this.channel12Source,
-				47);
-		this.channel13Throughput = new ChannelThroughput(this.channel13Source,
-				5);
-		this.obl12 = new OutputBufferLatency(this.channel12Source, 13);
-		this.obl13 = new OutputBufferLatency(this.channel13Source, 11);
+		this.channel12Throughput = new OutputChannelStatistics(this.channel12Source,
+				21, 13, 22, 23);
+		this.channel13Throughput = new OutputChannelStatistics(this.channel13Source,
+				31, 11, 33, 34);
 		this.taskLatency1 = new TaskLatency(this.vertex1, 1);
 		this.taskLatency2 = new TaskLatency(this.vertex2, 1);
 		this.taskLatency3 = new TaskLatency(this.vertex3, 1);
@@ -100,45 +94,25 @@ public class StreamProfilingReportTest {
 	}
 
 	@Test
-	public void testAddChannelThroughput() {
+	public void testAddOutputChannelStatistics() {
 		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
-		report.addChannelThroughput(this.channel12Throughput);
-		report.addChannelThroughput(this.channel13Throughput);
-		this.checkChannelThroughputs(report);
+		report.addOutputChannelStatistics(this.channel12Throughput);
+		report.addOutputChannelStatistics(this.channel13Throughput);
+		this.checkOutputChannelStatistics(report);
 	}
 
-	private void checkChannelThroughputs(StreamProfilingReport report) {
-		assertEquals(report.getChannelThroughputs().size(), 2);
-		Iterator<ChannelThroughput> iter = report.getChannelThroughputs()
+	private void checkOutputChannelStatistics(StreamProfilingReport report) {
+		assertEquals(report.getOutputChannelStatistics().size(), 2);
+		Iterator<OutputChannelStatistics> iter = report.getOutputChannelStatistics()
 				.iterator();
-		ChannelThroughput first = iter.next();
-		ChannelThroughput second = iter.next();
+		OutputChannelStatistics first = iter.next();
+		OutputChannelStatistics second = iter.next();
 
 		assertTrue(!first.equals(second));
 		assertTrue(first.equals(this.channel12Throughput)
 				|| first.equals(this.channel13Throughput));
 		assertTrue(second.equals(this.channel12Throughput)
 				|| second.equals(this.channel13Throughput));
-	}
-
-	@Test
-	public void testAddOutputBufferLatency() {
-		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
-		report.addOutputBufferLatency(this.obl12);
-		report.addOutputBufferLatency(this.obl13);
-		this.checkOutputBufferLatencies(report);
-	}
-
-	private void checkOutputBufferLatencies(StreamProfilingReport report) {
-		assertEquals(report.getOutputBufferLatencies().size(), 2);
-		Iterator<OutputBufferLatency> iter = report.getOutputBufferLatencies()
-				.iterator();
-		OutputBufferLatency first = iter.next();
-		OutputBufferLatency second = iter.next();
-
-		assertTrue(!first.equals(second));
-		assertTrue(first.equals(this.obl12) || first.equals(this.obl13));
-		assertTrue(second.equals(this.obl12) || second.equals(this.obl13));
 	}
 
 	@Test
@@ -174,13 +148,11 @@ public class StreamProfilingReportTest {
 	@Test
 	public void testReadWrite() throws IOException {
 		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
-		report.addChannelThroughput(this.channel13Throughput);
+		report.addOutputChannelStatistics(this.channel13Throughput);
 		report.addTaskLatency(this.taskLatency3);
-		report.addOutputBufferLatency(this.obl12);
 		report.addTaskLatency(this.taskLatency1);
 		report.addChannelLatency(this.channel13Latency);
-		report.addOutputBufferLatency(this.obl13);
-		report.addChannelThroughput(this.channel12Throughput);
+		report.addOutputChannelStatistics(this.channel12Throughput);
 		report.addTaskLatency(this.taskLatency2);
 		report.addChannelLatency(this.channel12Latency);
 
@@ -193,8 +165,7 @@ public class StreamProfilingReportTest {
 		report = new StreamProfilingReport();
 		report.read(in);
 		this.checkChannelLatencies(report);
-		this.checkChannelThroughputs(report);
-		this.checkOutputBufferLatencies(report);
+		this.checkOutputChannelStatistics(report);
 		this.checkTaskLatencies(report);
 	}
 
@@ -206,8 +177,8 @@ public class StreamProfilingReportTest {
 		DataOutput out = new DataOutputStream(byteArrayOutStream);
 		report.write(out);
 
-		// jobID + false + false + 4 * emptyMap
-		int expectedLength = 16 + 1 + 1 + 4 * 4;
+		// jobID + false + false + 3 * emptyMap
+		int expectedLength = 16 + 1 + 1 + 3 * 4;
 		byte[] serializedData = byteArrayOutStream.toByteArray();
 		assertEquals(expectedLength, serializedData.length);
 		DataInput in = new DataInputStream(new ByteArrayInputStream(
@@ -215,8 +186,7 @@ public class StreamProfilingReportTest {
 		report = new StreamProfilingReport();
 		report.read(in);
 		assertTrue(report.getChannelLatencies().isEmpty());
-		assertTrue(report.getChannelThroughputs().isEmpty());
-		assertTrue(report.getOutputBufferLatencies().isEmpty());
+		assertTrue(report.getOutputChannelStatistics().isEmpty());
 		assertTrue(report.getTaskLatencies().isEmpty());
 	}
 

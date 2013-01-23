@@ -18,8 +18,7 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.action.ActAsQosReporterAction;
 import eu.stratosphere.nephele.streaming.message.profiling.AbstractStreamProfilingRecord;
 import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelThroughput;
-import eu.stratosphere.nephele.streaming.message.profiling.OutputBufferLatency;
+import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
 import eu.stratosphere.nephele.streaming.message.profiling.StreamProfilingReport;
 import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
@@ -241,10 +240,8 @@ public class QosReporterThread extends Thread {
 		for (AbstractStreamProfilingRecord profilingRecord : this.tmpRecords) {
 			if (profilingRecord instanceof ChannelLatency) {
 				this.processChannelLatency((ChannelLatency) profilingRecord);
-			} else if (profilingRecord instanceof ChannelThroughput) {
-				this.processChannelThroughput((ChannelThroughput) profilingRecord);
-			} else if (profilingRecord instanceof OutputBufferLatency) {
-				this.processOutputBufferLatency((OutputBufferLatency) profilingRecord);
+			} else if (profilingRecord instanceof OutputChannelStatistics) {
+				this.processOutputChannelStatistics((OutputChannelStatistics) profilingRecord);
 			} else if (profilingRecord instanceof TaskLatency) {
 				this.processTaskLatency((TaskLatency) profilingRecord);
 			}
@@ -262,22 +259,12 @@ public class QosReporterThread extends Thread {
 		}
 	}
 
-	private void processOutputBufferLatency(OutputBufferLatency obl) {
-		Set<PendingReport> reports = this.reportByChannelID.get(obl
-				.getSourceChannelID());
-		if (reports != null) {
-			for (PendingReport report : reports) {
-				report.getReport().addOutputBufferLatency(obl);
-			}
-		}
-	}
-
-	private void processChannelThroughput(ChannelThroughput channelThroughput) {
+	private void processOutputChannelStatistics(OutputChannelStatistics channelStats) {
 		Set<PendingReport> reports = this.reportByChannelID
-				.get(channelThroughput.getSourceChannelID());
+				.get(channelStats.getSourceChannelID());
 		if (reports != null) {
 			for (PendingReport report : reports) {
-				report.getReport().addChannelThroughput(channelThroughput);
+				report.getReport().addOutputChannelStatistics(channelStats);
 			}
 		}
 	}
