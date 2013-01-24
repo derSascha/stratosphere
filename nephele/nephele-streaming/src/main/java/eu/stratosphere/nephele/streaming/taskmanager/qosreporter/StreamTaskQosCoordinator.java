@@ -14,6 +14,7 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.qosreporter;
 
+import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
@@ -25,8 +26,7 @@ import eu.stratosphere.nephele.io.channels.bytebuffered.AbstractByteBufferedOutp
 import eu.stratosphere.nephele.streaming.message.action.AbstractAction;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
-import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.TaskLatencyReporter.TaskType;
-import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.QosReportingListenerManager;
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.QosReportingListenerHelper;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChain;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChainCoordinator;
@@ -50,9 +50,28 @@ public class StreamTaskQosCoordinator {
 
 	private QosReporterThread reporterThread;
 
-	private RecordTagger recordTagger;
+	/**
+	 * For each input gate of the task for whose channels latency reporting
+	 * is required, this list contains a latency reporter. Such a latency reporter
+	 * keeps reports latencies for all of the input gate's channels.
+	 */
+	private ArrayList<ChannelLatencyReporter> inputGateReporters;
+	
+	/**
+	 * For each output gate of the task for whose output channels QoS statistics
+	 * are required (throughput, output buffer lifetime, ...), this list
+	 * contains a statistics reporter. Each statistics reporter reports for all
+	 * of the output gate's channels.
+	 */
+	private ArrayList<OutputChannelStatisticsReporter> outputGateReporters;	
 
-	private ChannelLatencyReporter channelLatencyReporter;
+	/**
+	 * For each output gate of the task for whose output channels QoS statistics
+	 * are required (such as latency), this list contains a record tagger. Each
+	 * record tagger manages the tag of the output gate's channels. Tags are
+	 * used to mark perform latency measurements on the channel.
+	 */
+	private ArrayList<RecordTagger> recordTaggers;
 
 	private TaskLatencyReporter taskLatencyReporter;
 
@@ -61,8 +80,6 @@ public class StreamTaskQosCoordinator {
 	private StreamChainCoordinator chainCoordinator;
 	
 	private ChannelLookupHelper channelLookup;
-	
-	private OutputChannelStatisticsReporter outputChannelReporter;
 	
 	public StreamTaskQosCoordinator(ExecutionVertexID vertexID,
 			StreamTaskEnvironment taskEnvironment, QosReporterThread reporterThread,
@@ -74,17 +91,13 @@ public class StreamTaskQosCoordinator {
 		this.chainCoordinator = chainCoordinator;
 		this.pendingActions = new LinkedBlockingQueue<AbstractAction>();
 		
-		registerTaskAsChainMapperIfNecessary();
-		
-		// FIXME taskType stuff is actually incorrect. depends not on task
-		// type
-		// but on the profiling sequence and whether input channels need to
-		// be profiled
-		this.taskLatencyReporter = new TaskLatencyReporter(vertexID,
-				determineTaskType(), reporterThread);
-		
+		this.inputGateReporters = new ArrayList<ChannelLatencyReporter>();
+		this.outputGateReporters = new ArrayList<OutputChannelStatisticsReporter>();
+		this.recordTaggers = new ArrayList<RecordTagger>();	
 		this.channelLookup = new ChannelLookupHelper();
-		populateChannelLookupAndRegisterQosListeners();				
+		
+		prepareQosReporting();
+		registerTaskAsChainMapperIfNecessary();
 	}
 
 	private void registerTaskAsChainMapperIfNecessary() {
@@ -93,30 +106,20 @@ public class StreamTaskQosCoordinator {
 		}
 	}
 
-	private void populateChannelLookupAndRegisterQosListeners() {
+	private void prepareQosReporting() {
 		boolean vertexNeedsProfiling = this.reporterThread.needsQosReporting(this.vertexID);
-		 
-		boolean inputListenerInstalled = installInputGateListeners(vertexNeedsProfiling);
-		if (inputListenerInstalled) {
-			// FIXME
+		if (vertexNeedsProfiling) {		
+			this.taskLatencyReporter = new TaskLatencyReporter(this.vertexID,
+					this.reporterThread);
 		}
-
-		boolean outputListenerInstalled = installOutputGateListeners(vertexNeedsProfiling);
-		if (inputListenerInstalled) {
-			// FIXME
-		}
+		
+		installInputGateListeners(vertexNeedsProfiling);
+		installOutputGateListeners(vertexNeedsProfiling);
 	}
 	
-	public boolean installInputGateListeners(boolean vertexNeedsProfiling) {
+	private void installInputGateListeners(boolean vertexNeedsProfiling) {
 
-		boolean listenerInstalled = false;
 		for (StreamInputGate<?> gate : this.taskEnvironment.getInputGates()) {
-
-			int noOfChannels = gate.getNumberOfInputChannels();
-			if (noOfChannels <= 0) {
-				LOG.warn("Cannot register QoS reporting listener on input gate without channels");
-				continue;
-			}
 
 			// assumption: QoS constraints are defined on the job graph level.
 			// Hence, if one channel of a gate needs QoS reporting, all other
@@ -125,30 +128,34 @@ public class StreamTaskQosCoordinator {
 					.needsQosReporting(gate.getInputChannel(0)
 							.getConnectedChannelID());
 
-			if (qosReportingRequired) {
-				int inputGateIndex = this.channelLookup.registerInputGate(gate);
-				QosReportingListenerManager.installInputGateListener(gate,
-						this, inputGateIndex, vertexNeedsProfiling);
-				listenerInstalled = true;
-				// FIXME all this code here currently only works for ONE input gate
-				break; 
+			if (qosReportingRequired) {				
+				installInputGateListener(gate, vertexNeedsProfiling);
 			}
 		}
+	}
+
+	private void installInputGateListener(StreamInputGate<?> gate, boolean vertexNeedsProfiling) {
+		int noOfChannels = gate.getNumberOfInputChannels();
+		if (noOfChannels <= 0) {
+			LOG.warn("Cannot register QoS reporting listener on input gate without channels");
+			return;
+		}
 		
-		return listenerInstalled;
+		int inputGateIndex = this.channelLookup.registerInputGate(gate);
+		
+		if(vertexNeedsProfiling) {
+			QosReportingListenerHelper.installInputGateListenerWithVertexProfiling(gate, this, inputGateIndex);					
+		} else {
+			QosReportingListenerHelper.installInputGateListenerWithoutVertexProfiling(gate, this, inputGateIndex);
+		}
+	
+		this.inputGateReporters.add(new ChannelLatencyReporter(this.reporterThread, noOfChannels));
 	}
 
 
-	private boolean installOutputGateListeners(boolean vertexNeedsProfiling) {
+	private void installOutputGateListeners(boolean vertexNeedsProfiling) {
 		
-		boolean outputListenerInstalled = false;
 		for (StreamOutputGate<?> gate : this.taskEnvironment.getOutputGates()) {
-
-			int noOfChannels = gate.getNumberOfOutputChannels();
-			if (noOfChannels <= 0) {
-				LOG.warn("Cannot register QoS reporting listener on output gate without channels");
-				continue;
-			}
 
 			// assumption: QoS constraints are defined on the job graph level.
 			// Hence, if one channel of a gate needs QoS reporting, all other
@@ -157,26 +164,34 @@ public class StreamTaskQosCoordinator {
 					.needsQosReporting(gate.getOutputChannel(0).getID());
 
 			if (qosReportingRequired) {
-				int outputGateIndex = this.channelLookup.registerChannelsFromOutputGate(gate);
-				QosReportingListenerManager.installOutputGateListener(gate,
-						this, outputGateIndex, vertexNeedsProfiling);
-				outputListenerInstalled = true;
-				// FIXME all this code here currently only works for ONE output gate
-				break; 
+				installOutputGateListener(gate, vertexNeedsProfiling);
 			}
 		}
-		return outputListenerInstalled;
 	}
 
-
-	private TaskType determineTaskType() {
-		if (this.taskEnvironment.getNumberOfInputGates() == 0) {
-			return TaskType.INPUT;
-		} else if (this.taskEnvironment.getNumberOfOutputGates() == 0) {
-			return TaskType.OUTPUT;
-		} else {
-			return TaskType.REGULAR;
+	private void installOutputGateListener(StreamOutputGate<?> gate,
+			boolean vertexNeedsProfiling) {
+		
+		int noOfChannels = gate.getNumberOfOutputChannels();
+		if (noOfChannels <= 0) {
+			LOG.warn("Cannot register QoS reporting listener on output gate without channels");
+			return;
 		}
+		
+		int outputGateIndex = this.channelLookup.registerChannelsFromOutputGate(gate);
+		
+		if(vertexNeedsProfiling) {
+			QosReportingListenerHelper.installOutputGateListenerWithVertexProfiling(gate,
+					this, outputGateIndex);					
+		} else {
+			QosReportingListenerHelper.installOutputGateListenerWithoutVertexProfiling(gate,
+					this, outputGateIndex);										
+		}
+		
+		this.outputGateReporters.add(new OutputChannelStatisticsReporter(
+						this.reporterThread, noOfChannels));
+		this.recordTaggers.add(new RecordTagger(this.reporterThread,
+				noOfChannels));
 	}
 
 	public void recordReceived(int inputGateIndex, int inputChannelIndex, Record record) {
@@ -185,7 +200,9 @@ public class StreamTaskQosCoordinator {
 		if (timestampTag != null) {
 			ChannelID outputChannelID = this.channelLookup.getInputChannel(
 					inputGateIndex, inputChannelIndex).getConnectedChannelID();
-			this.channelLatencyReporter.reportLatencyIfNecessary(inputChannelIndex, outputChannelID, timestampTag);
+			
+			this.inputGateReporters.get(inputGateIndex).reportLatencyIfNecessary(inputChannelIndex,
+							outputChannelID, timestampTag);
 		}
 	}
 	
@@ -198,22 +215,22 @@ public class StreamTaskQosCoordinator {
 	}
 
 	public void recordEmitted(int outputGateIndex, int outputChannelIndex, AbstractTaggableRecord record) {
-		this.recordTagger.tagRecordIfNecessary(outputChannelIndex, record);
-		this.outputChannelReporter.recordEmitted(outputChannelIndex);
+		this.recordTaggers.get(outputGateIndex).tagRecordIfNecessary(outputChannelIndex, record);
+		this.outputGateReporters.get(outputGateIndex).recordEmitted(outputChannelIndex);
 	}
 	
 	public void outputBufferSent(int outputGateIndex, int outputChannelIndex) {
 		AbstractByteBufferedOutputChannel<?> channel = this.channelLookup
 				.getOutputChannel(outputGateIndex, outputChannelIndex);
-		this.outputChannelReporter.outputBufferSent(outputChannelIndex,
+		this.outputGateReporters.get(outputGateIndex).outputBufferSent(outputChannelIndex,
 				channel.getID(), channel.getAmountOfDataTransmitted());
 	}
 
-	public void queueAction(AbstractAction action) {
+	public void queueQosAction(AbstractAction action) {
 		this.pendingActions.add(action);
 	}
 
-	public void executePendingQosActions() throws InterruptedException {
+	public void executeQueuedQosActions() throws InterruptedException {
 		AbstractAction action;
 		while ((action = this.pendingActions.poll()) != null) {
 			if (action instanceof LimitBufferSizeAction) {

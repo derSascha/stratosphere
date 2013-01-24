@@ -73,36 +73,22 @@ public class ProfilingModel {
 		}
 	}
 
-	public void refreshEdgeLatency(long timestamp, ChannelLatency channelLatency) {
-		// FIXME workaround for bug that causes NaNs
-		if (Double.isInfinite(channelLatency.getChannelLatency())
-				|| Double.isNaN(channelLatency.getChannelLatency())) {
-			return;
-		}
-
+	public void refreshChannelLatency(long timestamp, ChannelLatency channelLatency) {
 		this.edgeCharacteristics.get(channelLatency.getSourceChannelID())
 				.addLatencyMeasurement(timestamp,
 						channelLatency.getChannelLatency());
 	}
 
 	public void refreshTaskLatency(long timestamp, TaskLatency taskLatency) {
-		// FIXME workaround for bug that causes NaNs
-		if (Double.isInfinite(taskLatency.getTaskLatency())
-				|| Double.isNaN(taskLatency.getTaskLatency())) {
-			return;
-		}
-
 		this.vertexLatencies.get(taskLatency.getVertexID())
 				.addLatencyMeasurement(timestamp, taskLatency.getTaskLatency());
 	}
 
 	public void refreshOutputChannelStatistics(long timestamp,
-			OutputChannelStatistics channelThroughput) {
-		//FIXME insert new profiling data into profiling model  
+			OutputChannelStatistics channelStats) {
 		
-		this.edgeCharacteristics.get(channelThroughput.getSourceChannelID())
-				.addThroughputMeasurement(timestamp,
-						channelThroughput.getThroughput());
+		this.edgeCharacteristics.get(channelStats.getSourceChannelID())
+				.addOutputChannelStatisticsMeasurement(timestamp, channelStats);
 	}
 
 	public ProfilingSequenceSummary computeProfilingSummary() {

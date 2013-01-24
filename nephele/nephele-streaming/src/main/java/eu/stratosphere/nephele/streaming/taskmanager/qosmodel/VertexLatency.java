@@ -6,10 +6,17 @@ public class VertexLatency {
 	private ProfilingVertex vertex;
 
 	private ProfilingValueStatistic latencyStatistics;
-
+	
+	private final static int DEFAULT_NO_OF_STATISTICS_ENTRIES = 4;
+	
 	public VertexLatency(ProfilingVertex vertex) {
+		this(vertex, DEFAULT_NO_OF_STATISTICS_ENTRIES);
+	}
+
+	public VertexLatency(ProfilingVertex vertex, int noOfStatisticsEntries) {
 		this.vertex = vertex;
-		this.latencyStatistics = new ProfilingValueStatistic(10);
+		this.latencyStatistics = new ProfilingValueStatistic(
+				noOfStatisticsEntries);
 	}
 
 	public ProfilingVertex getVertex() {

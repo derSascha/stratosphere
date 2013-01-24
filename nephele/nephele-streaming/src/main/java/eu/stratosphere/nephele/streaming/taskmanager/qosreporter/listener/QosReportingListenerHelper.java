@@ -23,12 +23,11 @@ import eu.stratosphere.nephele.types.AbstractTaggableRecord;
  * @author Bjoern Lohrmann
  * 
  */
-public class QosReportingListenerManager {
+public class QosReportingListenerHelper {
 
-	public static void installInputGateListener(StreamInputGate<?> inputGate,
+	public static void installInputGateListenerWithVertexProfiling(StreamInputGate<?> inputGate,
 			final StreamTaskQosCoordinator taskQosCoordinator,
-			final int inputGateIndex,
-			final boolean vertexNeedsProfiling) {
+			final int inputGateIndex) {
 
 		inputGate.setQosReportingListener(new InputGateQosReportingListener() {
 			@Override
@@ -39,17 +38,30 @@ public class QosReportingListenerManager {
 							inputChannelIndex,
 							record);
 				
-				if (vertexNeedsProfiling) {
-					taskQosCoordinator.taskReadsRecord();
-				}
+				taskQosCoordinator.taskReadsRecord();
 			}
 		});
 	}
 	
-	public static void installOutputGateListener(StreamOutputGate<?> outputGate,
+	public static void installInputGateListenerWithoutVertexProfiling(StreamInputGate<?> inputGate,
 			final StreamTaskQosCoordinator taskQosCoordinator,
-			final int outputGateIndex,
-			final boolean vertexNeedsProfiling) {
+			final int inputGateIndex) {
+
+		inputGate.setQosReportingListener(new InputGateQosReportingListener() {
+			@Override
+			public void recordReceived(int inputChannelIndex, AbstractTaggableRecord record) {		
+				taskQosCoordinator.recordReceived(
+							inputGateIndex,
+							inputChannelIndex,
+							record);
+			}
+		});
+	}
+
+	
+	public static void installOutputGateListenerWithVertexProfiling(StreamOutputGate<?> outputGate,
+			final StreamTaskQosCoordinator taskQosCoordinator,
+			final int outputGateIndex) {
 		
 
 		outputGate.setQosReportingCallback(new OutputGateQosReportingListener() {
@@ -57,10 +69,7 @@ public class QosReportingListenerManager {
 			public void recordEmitted(int outputChannelIndex,
 					AbstractTaggableRecord record) {
 
-				if (vertexNeedsProfiling) {
-					taskQosCoordinator.taskEmitsRecord();
-				}
-				
+				taskQosCoordinator.taskEmitsRecord();			
 				taskQosCoordinator.recordEmitted(outputGateIndex, outputChannelIndex, record);
 			}
 
@@ -71,7 +80,32 @@ public class QosReportingListenerManager {
 
 			@Override
 			public void handlePendingQosActions() throws InterruptedException {
-				taskQosCoordinator.executePendingQosActions();
+				taskQosCoordinator.executeQueuedQosActions();
+			}
+		});
+	}
+	
+	public static void installOutputGateListenerWithoutVertexProfiling(StreamOutputGate<?> outputGate,
+			final StreamTaskQosCoordinator taskQosCoordinator,
+			final int outputGateIndex) {
+		
+
+		outputGate.setQosReportingCallback(new OutputGateQosReportingListener() {
+			@Override
+			public void recordEmitted(int outputChannelIndex,
+					AbstractTaggableRecord record) {
+			
+				taskQosCoordinator.recordEmitted(outputGateIndex, outputChannelIndex, record);
+			}
+
+			@Override
+			public void outputBufferSent(int outputChannelIndex) {
+				taskQosCoordinator.outputBufferSent(outputGateIndex, outputChannelIndex);
+			}
+
+			@Override
+			public void handlePendingQosActions() throws InterruptedException {
+				taskQosCoordinator.executeQueuedQosActions();
 			}
 		});
 	}

@@ -216,7 +216,7 @@ public class StreamJobEnvironment {
 		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators.get(action.getVertexID());
 		
 		if(qosCoordinator != null) {
-			qosCoordinator.queueAction(action);
+			qosCoordinator.queueQosAction(action);
 		} else {
 			LOG.error("Cannot find QoS coordinator for vertex with ID "+ action.getVertexID());			
 		}
@@ -228,7 +228,7 @@ public class StreamJobEnvironment {
 		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators.get(action.getVertexID());
 		
 		if(qosCoordinator != null) {
-			qosCoordinator.queueAction(action);
+			qosCoordinator.queueQosAction(action);
 		} else {
 			LOG.error("Cannot find QoS coordinator for vertex with ID "+ action.getVertexID());			
 		}

@@ -160,9 +160,7 @@ public class BufferSizeManager {
 				continue;
 			}
 
-			if (!this.hasFreshValues(edgeChar)
-					|| !this.hasFreshValues(edge.getSourceVertex()
-							.getVertexLatency())) {
+			if (!this.hasFreshValues(edgeChar)) {
 				this.staleEdges.add(edge.getSourceChannelID());
 				// LOG.info("Rejecting edge due to stale values: " +
 				// ProfilingUtils.formatName(edge));
@@ -170,17 +168,12 @@ public class BufferSizeManager {
 			}
 
 			// double edgeLatency = edgeChar.getChannelLatencyInMillis();
-			double avgOutputBufferLatency = edgeChar
-					.getOutputBufferLifetimeInMillis() / 2;
-			double sourceTaskLatency = edge.getSourceVertex()
-					.getVertexLatency().getLatencyInMillis();
-
-			// if (avgOutputBufferLatency > 5 && avgOutputBufferLatency >= 0.05
-			// * edgeLatency) {
-			if (avgOutputBufferLatency > 5
-					&& avgOutputBufferLatency > sourceTaskLatency) {
+			double outputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
+			double millisBetweenRecordEmissions = 1 / (edgeChar.getRecordsPerSecond()*1000);
+						
+			if (outputBufferLatency > 5 && outputBufferLatency > millisBetweenRecordEmissions) {
 				this.reduceBufferSize(edgeChar, edgesToAdjust);
-			} else if (avgOutputBufferLatency <= 1) {
+			} else if (outputBufferLatency <= 1 && edgeChar.getBufferSize() < this.maximumBufferSize) {
 				this.increaseBufferSize(edgeChar, edgesToAdjust);
 			}
 		}
@@ -188,13 +181,14 @@ public class BufferSizeManager {
 
 	private void increaseBufferSize(EdgeCharacteristics edgeChar,
 			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
-		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry()
-				.getBufferSize();
+		
+		int oldBufferSize = edgeChar.getBufferSize();
 		int newBufferSize = Math.min(
 				this.proposedIncreasedBufferSize(oldBufferSize),
 				this.maximumBufferSize);
 
-		if (this.isRelevantIncrease(oldBufferSize, newBufferSize)) {
+		if (this.isRelevantIncrease(oldBufferSize, newBufferSize)
+				|| newBufferSize == this.maximumBufferSize) {
 			edgesToAdjust.put(edgeChar.getEdge(), newBufferSize);
 		}
 	}
@@ -209,9 +203,10 @@ public class BufferSizeManager {
 
 	private void reduceBufferSize(EdgeCharacteristics edgeChar,
 			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+		
 		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry()
 				.getBufferSize();
-		int newBufferSize = this.proposedReducedBufferSize(edgeChar,
+		int newBufferSize = this.proposeReducedBufferSize(edgeChar,
 				oldBufferSize);
 
 		// filters pointless minor changes in buffer size
@@ -229,15 +224,15 @@ public class BufferSizeManager {
 		return newBufferSize < oldBufferSize * 0.98;
 	}
 
-	private int proposedReducedBufferSize(EdgeCharacteristics edgeChar,
+	private int proposeReducedBufferSize(EdgeCharacteristics edgeChar,
 			int oldBufferSize) {
-		double avgOutputBufferLatency = edgeChar
-				.getOutputBufferLifetimeInMillis() / 2;
+		
+		double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
 
 		double reductionFactor = Math.pow(0.95, avgOutputBufferLatency);
 		reductionFactor = Math.max(0.01, reductionFactor);
 
-		int newBufferSize = (int) Math.max(1, oldBufferSize * reductionFactor);
+		int newBufferSize = (int) Math.max(50, oldBufferSize * reductionFactor);
 
 		return newBufferSize;
 	}
@@ -247,12 +242,7 @@ public class BufferSizeManager {
 				.getLastEntry().getTimestamp();
 
 		return edgeChar.isChannelLatencyFresherThan(freshnessThreshold)
-				&& edgeChar
-						.isOutputBufferLatencyFresherThan(freshnessThreshold);
-	}
-
-	private boolean hasFreshValues(VertexLatency vertexLatency) {
-		return vertexLatency.isActive();
+				&& edgeChar.isOutputBufferLifetimeFresherThan(freshnessThreshold);
 	}
 
 	public boolean isAdjustmentNecessary(long now) {

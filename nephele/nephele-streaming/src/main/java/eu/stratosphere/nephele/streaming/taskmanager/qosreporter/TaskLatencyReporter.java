@@ -40,17 +40,9 @@ public class TaskLatencyReporter {
 
 	private QosReporterThread qosReporter;
 
-	private TaskType taskType;
-
-	public static enum TaskType {
-		INPUT, REGULAR, OUTPUT
-	};
-
-	public TaskLatencyReporter(ExecutionVertexID vertexID, TaskType taskType,
-			QosReporterThread qosReporter) {
+	public TaskLatencyReporter(ExecutionVertexID vertexID, QosReporterThread qosReporter) {
 
 		this.vertexId = vertexID;
-		this.taskType = taskType;
 		this.qosReporter = qosReporter;
 
 		this.recordsSinceLastMeasurement = 0;
@@ -64,32 +56,12 @@ public class TaskLatencyReporter {
 		this.noOfMeasurements = 0;
 	}
 
-	public boolean processRecordReceived() {
-		boolean reportSent = false;
+	public void processRecordReceived() {
 		this.recordsSinceLastMeasurement++;
 
 		if (this.isMeasurementDue()) {
-			switch (this.taskType) {
-			case REGULAR:
-				this.beginRegularTaskLatencyMeasurement();
-				break;
-			case OUTPUT:
-				long now = System.currentTimeMillis();
-				if (this.isReportDue(now)) {
-					long latency = (now - this.timeOfNextReport)
-							/ this.recordsSinceLastMeasurement;
-					this.doReport(new TaskLatency(this.vertexId, latency));
-					this.recordsSinceLastMeasurement = 0;
-					reportSent = true;
-				}
-				break;
-			case INPUT:
-				// input vertices never receive records
-				break;
-			}
+			this.beginRegularTaskLatencyMeasurement();
 		}
-
-		return reportSent;
 	}
 
 	private void beginRegularTaskLatencyMeasurement() {
@@ -112,8 +84,7 @@ public class TaskLatencyReporter {
 	}
 
 	private boolean isMeasurementDue() {
-		return this.recordsSinceLastMeasurement >= this.qosReporter
-				.getConfiguration().getTaggingInterval()
+		return this.recordsSinceLastMeasurement >= this.qosReporter.getConfiguration().getTaggingInterval()
 				&& !this.measurementInProgress;
 	}
 
@@ -124,41 +95,18 @@ public class TaskLatencyReporter {
 	public boolean processRecordEmitted() {
 		boolean reportSent = false;
 
-		switch (this.taskType) {
-		case REGULAR:
-			if (this.measurementInProgress) {
-				long now = System.currentTimeMillis();
-				this.finishRegularTaskLatencyMeasurement(now);
+		if (this.measurementInProgress) {
+			long now = System.currentTimeMillis();
+			this.finishRegularTaskLatencyMeasurement(now);
 
-				if (this.isReportDue(now)) {
-					long latency = this.accumulatedLatency
-							/ this.noOfMeasurements;
-					this.doReport(new TaskLatency(this.vertexId, latency));
-					this.accumulatedLatency = 0;
-					this.noOfMeasurements = 0;
-					reportSent = true;
-				}
+			if (this.isReportDue(now)) {
+				long latency = this.accumulatedLatency / this.noOfMeasurements;
+				this.doReport(new TaskLatency(this.vertexId, latency));
+				this.accumulatedLatency = 0;
+				this.noOfMeasurements = 0;
+				reportSent = true;
 			}
-			break;
-		case INPUT:
-			this.recordsSinceLastMeasurement++;
-			if (this.isMeasurementDue()) {
-				long now = System.currentTimeMillis();
-				if (this.isReportDue(now)) {
-					long latency = (now - this.timeOfNextReport)
-							/ this.recordsSinceLastMeasurement;
-					this.doReport(new TaskLatency(this.vertexId, latency));
-					this.recordsSinceLastMeasurement = 0;
-					reportSent = true;
-				}
-
-			}
-			break;
-		case OUTPUT:
-			// output vertices never emit records
-			break;
 		}
-
 		return reportSent;
 	}
 }

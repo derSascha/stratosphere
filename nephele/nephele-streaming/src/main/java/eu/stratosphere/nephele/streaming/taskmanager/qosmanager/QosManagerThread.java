@@ -86,7 +86,7 @@ public class QosManagerThread extends Thread {
 
 					for (ChannelLatency channelLatency : profilingReport
 							.getChannelLatencies()) {
-						this.profilingModel.refreshEdgeLatency(now,
+						this.profilingModel.refreshChannelLatency(now,
 								channelLatency);
 						channelLats++;
 					}
@@ -100,8 +100,7 @@ public class QosManagerThread extends Thread {
 
 					for (TaskLatency taskLatency : profilingReport
 							.getTaskLatencies()) {
-						this.profilingModel
-								.refreshTaskLatency(now, taskLatency);
+						this.profilingModel.refreshTaskLatency(now, taskLatency);
 						taskLats++;
 					}
 				} else if (streamingData instanceof StreamChainAnnounce) {

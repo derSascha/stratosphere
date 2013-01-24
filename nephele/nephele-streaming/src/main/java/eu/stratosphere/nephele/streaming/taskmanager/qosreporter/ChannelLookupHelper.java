@@ -67,11 +67,7 @@ public class ChannelLookupHelper {
 	}
 
 
-	public int registerInputGate(StreamInputGate<?> gate) {
-		if (this.registeredGates.containsKey(gate.getGateID())) {
-			return this.registeredGates.get(gate.getGateID());
-		}
-		
+	public int registerInputGate(StreamInputGate<?> gate) {		
 		int gateIndex = this.inputGates.size();
 		this.registeredGates.put(gate.getGateID(), gateIndex);
 		this.inputGates.add(gate);
