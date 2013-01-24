@@ -24,22 +24,27 @@ import eu.stratosphere.nephele.template.AbstractOutputTask;
  * <p>
  * This class is thread-safe.
  * 
- * @author warneke
+ * @author warneke, Bjoern Lohrmann
  */
 public final class StreamOutputTaskWrapper extends AbstractOutputTask {
 
-	/**
-	 * The wrapped task.
-	 */
 	private volatile AbstractInvokable wrappedInvokable = null;
+	
+	private volatile StreamTaskEnvironment wrappedEnvironment = null;
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public void registerInputOutput() {
-
-		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(this.getEnvironment());
+		// registerInputOutput() is called by the RuntimeEnvironment at the time of its
+		// instantiation. Before registerInputOutput() is called the RuntimeEnvironment has set
+		// itself using setEnvironment(). Here we replace the RuntimeEnvironment with its
+		// wrapped instance.
+		this.wrappedEnvironment = WrapperUtils.getWrappedEnvironment(this.getEnvironment());
+		this.setEnvironment(this.wrappedEnvironment);
+		
+		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(this.wrappedEnvironment);
 		this.wrappedInvokable.registerInputOutput();
 	}
 
@@ -49,5 +54,5 @@ public final class StreamOutputTaskWrapper extends AbstractOutputTask {
 	@Override
 	public void invoke() throws Exception {
 		this.wrappedInvokable.invoke();
-	}
+	}	
 }

@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.Environment;
+import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
@@ -142,9 +143,14 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 			final Configuration jobConfiguration,
 			final Environment environment, final IOReadableWritable pluginData) {
 
-		if (environment instanceof StreamTaskEnvironment) {
-			this.getOrCreateJobEnvironment(environment.getJobID())
-					.registerTask(vertexID, (StreamTaskEnvironment) environment);
+		RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) environment;
+		if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
+			StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv.getInvokable().getEnvironment();
+			
+			// unfortunately, Nephele's runtime environment does not know
+			// its ExecutionVertexID. 
+			streamEnv.setVertexID(vertexID);
+			this.getOrCreateJobEnvironment(environment.getJobID()).registerTask(vertexID, streamEnv);
 		}
 	}
 

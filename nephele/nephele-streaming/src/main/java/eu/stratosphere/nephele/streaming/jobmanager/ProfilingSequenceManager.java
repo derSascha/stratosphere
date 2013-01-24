@@ -283,8 +283,8 @@ public class ProfilingSequenceManager implements VertexAssignmentListener {
 							qosManager);
 				}
 
-				// register for output buffer lifetimes, emission frequency and records per buffer
-				// (measured at output channel)
+				// register for throughput, output buffer lifetime, records per second
+				// and records per buffer measurements (measured at output channel)
 				if (!isEndVertex) {
 					for (ProfilingEdge forwardEdge : vertex.getForwardEdges()) {
 						tmProfilingInfo.addChannelQosManager(

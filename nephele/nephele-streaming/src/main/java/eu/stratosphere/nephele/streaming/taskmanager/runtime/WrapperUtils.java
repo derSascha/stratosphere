@@ -44,16 +44,12 @@ public final class WrapperUtils {
 
 	/**
 	 * Retrieves the name of the original class from the task configuration,
-	 * loads the class, creates an instances of it, and finally wraps the given
-	 * environment in an {@link StreamingEnvironment} object.
-	 * 
+	 * loads the class, creates an instances of it and sets its environment.
 	 * @param environment
-	 *            the original environment
-	 * @param streamListener
-	 *            the stream listener object
+	 *            the environment to set on the new invokable
 	 * @return an instance of the wrapped invokable class
 	 */
-	public static AbstractInvokable getWrappedInvokable(final Environment environment) {
+	public static AbstractInvokable getWrappedInvokable(final StreamTaskEnvironment environment) {
 
 		AbstractInvokable wrappedInvokable = null;
 
@@ -78,8 +74,12 @@ public final class WrapperUtils {
 			throw new RuntimeException(StringUtils.stringifyException(e));
 		}
 
-		wrappedInvokable.setEnvironment(new StreamTaskEnvironment(environment));
+		wrappedInvokable.setEnvironment(environment);
 
 		return wrappedInvokable;
+	}
+
+	public static StreamTaskEnvironment getWrappedEnvironment(Environment environment) {
+		return new StreamTaskEnvironment(environment);
 	}
 }
