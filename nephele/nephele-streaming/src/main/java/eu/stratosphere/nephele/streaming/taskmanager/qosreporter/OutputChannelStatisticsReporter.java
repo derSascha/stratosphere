@@ -92,14 +92,14 @@ public class OutputChannelStatisticsReporter {
 		double secsPassed = (now - stats.timeOfLastReport) / 1000.0;
 		double mbitPerSec = ((stats.currentAmountTransmitted - stats.amountTransmittedAtLastReport) * 8)
 				/ (1000000.0 * secsPassed);
-		long outputBufferLifetime = now - stats.timeOfLastReport;
+		long outputBufferLifetime = (now - stats.timeOfLastReport) / stats.outputBuffersSentSinceLastReport;
 		double recordsPerBuffer = ((double) stats.recordsEmittedSinceLastReport / stats.outputBuffersSentSinceLastReport);
-		double recordEmissionFrequency = stats.recordsEmittedSinceLastReport
+		double recordsPerSecond = stats.recordsEmittedSinceLastReport
 				/ secsPassed;
 
 		OutputChannelStatistics channelStatsMessage = new OutputChannelStatistics(
 				channelID, mbitPerSec, outputBufferLifetime, recordsPerBuffer,
-				recordEmissionFrequency);
+				recordsPerSecond);
 		this.qosReporter.addToNextReport(channelStatsMessage);
 	}
 }
