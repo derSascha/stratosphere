@@ -15,6 +15,7 @@
 
 package eu.stratosphere.nephele.streaming.taskmanager.runtime;
 
+import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.template.AbstractInvokable;
 import eu.stratosphere.nephele.template.AbstractTask;
 
@@ -41,7 +42,7 @@ public class StreamTaskWrapper extends AbstractTask {
 		// instantiation. Before registerInputOutput() is called the RuntimeEnvironment has set
 		// itself using setEnvironment(). Here we replace the RuntimeEnvironment with its
 		// wrapped instance.
-		this.wrappedEnvironment = WrapperUtils.getWrappedEnvironment(this.getEnvironment());
+		this.wrappedEnvironment = WrapperUtils.getWrappedEnvironment((RuntimeEnvironment) this.getEnvironment());
 		this.setEnvironment(this.wrappedEnvironment);
 		
 		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(this.wrappedEnvironment);

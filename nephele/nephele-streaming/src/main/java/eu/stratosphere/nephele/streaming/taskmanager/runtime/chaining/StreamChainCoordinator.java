@@ -57,8 +57,8 @@ public final class StreamChainCoordinator {
 			}
 			
 			chainLinkList.add(new StreamChainLink(taskEnvironment.getMapper(),
-					taskEnvironment.getInputGates().get(0),
-					taskEnvironment.getOutputGates().get(0))); 					
+					taskEnvironment.getInputGate(0),
+					taskEnvironment.getOutputGate(0))); 					
 		}
 		
 		return new StreamChain(Collections.unmodifiableList(chainLinkList));

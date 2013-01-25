@@ -16,7 +16,7 @@
 package eu.stratosphere.nephele.streaming.taskmanager.runtime;
 
 import eu.stratosphere.nephele.configuration.Configuration;
-import eu.stratosphere.nephele.execution.Environment;
+import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.execution.librarycache.LibraryCacheManager;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.template.AbstractInvokable;
@@ -79,7 +79,7 @@ public final class WrapperUtils {
 		return wrappedInvokable;
 	}
 
-	public static StreamTaskEnvironment getWrappedEnvironment(Environment environment) {
+	public static StreamTaskEnvironment getWrappedEnvironment(RuntimeEnvironment environment) {
 		return new StreamTaskEnvironment(environment);
 	}
 }

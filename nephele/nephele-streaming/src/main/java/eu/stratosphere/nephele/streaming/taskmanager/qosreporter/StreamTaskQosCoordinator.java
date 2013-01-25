@@ -118,8 +118,9 @@ public class StreamTaskQosCoordinator {
 	}
 	
 	private void installInputGateListeners(boolean vertexNeedsProfiling) {
+		for (int i = 0; i < this.taskEnvironment.getNumberOfInputGates(); i++) {
 
-		for (StreamInputGate<?> gate : this.taskEnvironment.getInputGates()) {
+			StreamInputGate<?> gate = this.taskEnvironment.getInputGate(i);
 
 			// assumption: QoS constraints are defined on the job graph level.
 			// Hence, if one channel of a gate needs QoS reporting, all other
@@ -128,7 +129,7 @@ public class StreamTaskQosCoordinator {
 					.needsQosReporting(gate.getInputChannel(0)
 							.getConnectedChannelID());
 
-			if (qosReportingRequired) {				
+			if (qosReportingRequired) {
 				installInputGateListener(gate, vertexNeedsProfiling);
 			}
 		}
@@ -155,7 +156,9 @@ public class StreamTaskQosCoordinator {
 
 	private void installOutputGateListeners(boolean vertexNeedsProfiling) {
 		
-		for (StreamOutputGate<?> gate : this.taskEnvironment.getOutputGates()) {
+		for (int i = 0; i < this.taskEnvironment.getNumberOfOutputGates(); i++) {
+
+			StreamOutputGate<?> gate = this.taskEnvironment.getOutputGate(i);
 
 			// assumption: QoS constraints are defined on the job graph level.
 			// Hence, if one channel of a gate needs QoS reporting, all other

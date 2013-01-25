@@ -15,11 +15,8 @@
 
 package eu.stratosphere.nephele.streaming.taskmanager.runtime;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.execution.Mapper;
+import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.ChannelSelector;
 import eu.stratosphere.nephele.io.GateID;
@@ -43,10 +40,6 @@ import eu.stratosphere.nephele.types.Record;
  */
 public final class StreamTaskEnvironment extends EnvironmentWrapper {
 
-	private final List<StreamInputGate<? extends Record>> streamingInputGates = new ArrayList<StreamInputGate<? extends Record>>();
-
-	private final List<StreamOutputGate<? extends Record>> streamingOutputGates = new ArrayList<StreamOutputGate<? extends Record>>();
-
 	/**
 	 * The ID of the respective execution vertex. Unfortunately the wrapped
 	 * environment does not have this information.
@@ -64,7 +57,7 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	 * @param streamListener
 	 *            the stream listener
 	 */
-	public StreamTaskEnvironment(final Environment wrappedEnvironment) {
+	public StreamTaskEnvironment(final RuntimeEnvironment wrappedEnvironment) {
 		super(wrappedEnvironment);
 
 	}
@@ -101,10 +94,7 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 
 		OutputGate<T> outputGate = this.getWrappedEnvironment()
 				.createOutputGate(gateID, outputClass, selector, isBroadcast);
-		StreamOutputGate<T> sog = new StreamOutputGate<T>(outputGate);
-		this.streamingOutputGates.add(sog);
-
-		return sog;
+		return new StreamOutputGate<T>(outputGate);
 	}
 	
 	public boolean isMapperTask() {
@@ -125,10 +115,7 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 		InputGate<T> inputGate = this.getWrappedEnvironment().createInputGate(
 				gateID, deserializer);
 
-		StreamInputGate<T> sig = new StreamInputGate<T>(inputGate);
-		this.streamingInputGates.add(sig);
-
-		return sig;
+		return new StreamInputGate<T>(inputGate);
 	}
 
 	/**
@@ -137,21 +124,23 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	@Override
 	public void registerMapper(Mapper<? extends Record, ? extends Record> mapper) {
 
-		if (this.streamingInputGates.size() != 1) {
+		if (this.getNumberOfInputGates() != 1) {
 			return;
 		}
 
-		if (this.streamingOutputGates.size() != 1) {
+		if (this.getNumberOfOutputGates() != 1) {
 			return;
 		}
 		this.mapper = mapper;
 	}
 
-	public List<StreamInputGate<? extends Record>> getInputGates() {
-		return this.streamingInputGates;
+	public StreamInputGate<? extends Record> getInputGate(int gateIndex) {
+		return (StreamInputGate<? extends Record>) ((RuntimeEnvironment) this
+				.getWrappedEnvironment()).getInputGate(gateIndex);
 	}
-	
-	public List<StreamOutputGate<? extends Record>> getOutputGates() {
-		return this.streamingOutputGates;
+
+	public StreamOutputGate<? extends Record> getOutputGate(int gateIndex) {
+		return (StreamOutputGate<? extends Record>) ((RuntimeEnvironment) this
+				.getWrappedEnvironment()).getOutputGate(gateIndex);
 	}
 }
