@@ -127,7 +127,7 @@ public class SequenceElement<T extends AbstractID> implements
 			}
 			this.inputGateIndex = in.readInt();
 			this.outputGateIndex = in.readInt();
-		} catch (ReflectiveOperationException e) {
+		} catch (Exception e) {
 			throw new IOException("Error while deserializing SequenceElement",
 					e);
 		}
