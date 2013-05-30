@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 
-public class ProfilingValueStatistic {
+public class QosStatistic {
 
-	private ArrayList<ProfilingValue> sortedByValue;
+	private ArrayList<QosValue> sortedByValue;
 
-	private LinkedList<ProfilingValue> sortedById;
+	private LinkedList<QosValue> sortedById;
 
 	private int statisticWindowSize;
 
@@ -16,16 +16,16 @@ public class ProfilingValueStatistic {
 
 	private double sumOfValues;
 
-	public ProfilingValueStatistic(int statisticWindowSize) {
-		this.sortedById = new LinkedList<ProfilingValue>();
-		this.sortedByValue = new ArrayList<ProfilingValue>();
+	public QosStatistic(int statisticWindowSize) {
+		this.sortedById = new LinkedList<QosValue>();
+		this.sortedByValue = new ArrayList<QosValue>();
 		this.statisticWindowSize = statisticWindowSize;
 		this.noOfStoredValues = 0;
 		this.sumOfValues = 0;
 	}
 
-	public void addValue(ProfilingValue value) {
-		ProfilingValue droppedValue = this.insertIntoSortedByTimestamp(value);
+	public void addValue(QosValue value) {
+		QosValue droppedValue = this.insertIntoSortedByTimestamp(value);
 
 		if (droppedValue != null) {
 			this.removeFromSortedByValue(droppedValue);
@@ -38,7 +38,7 @@ public class ProfilingValueStatistic {
 		this.sumOfValues += value.getValue();
 	}
 
-	private ProfilingValue insertIntoSortedByTimestamp(ProfilingValue value) {
+	private QosValue insertIntoSortedByTimestamp(QosValue value) {
 		if (!this.sortedById.isEmpty()
 				&& this.sortedById.getLast().getId() >= value.getId()) {
 			throw new IllegalArgumentException(
@@ -52,7 +52,7 @@ public class ProfilingValueStatistic {
 		return null;
 	}
 
-	protected void insertIntoSortedByValue(ProfilingValue value) {
+	protected void insertIntoSortedByValue(QosValue value) {
 		int insertionIndex = Collections
 				.binarySearch(this.sortedByValue, value);
 		if (insertionIndex < 0) {
@@ -62,7 +62,7 @@ public class ProfilingValueStatistic {
 		this.sortedByValue.add(insertionIndex, value);
 	}
 
-	protected void removeFromSortedByValue(ProfilingValue toRemove) {
+	protected void removeFromSortedByValue(QosValue toRemove) {
 		int removeIndex = Collections
 				.binarySearch(this.sortedByValue, toRemove);
 		if (removeIndex < 0) {
@@ -98,7 +98,7 @@ public class ProfilingValueStatistic {
 		return this.sortedByValue.get(0).getValue();
 	}
 
-	public ProfilingValue getOldestValue() {
+	public QosValue getOldestValue() {
 		if (this.noOfStoredValues == 0) {
 			throw new RuntimeException(
 					"Cannot get the oldest value of empty value set");
@@ -106,7 +106,7 @@ public class ProfilingValueStatistic {
 		return this.sortedById.getFirst();
 	}
 
-	public ProfilingValue getNewestValue() {
+	public QosValue getNewestValue() {
 		if (this.noOfStoredValues == 0) {
 			throw new RuntimeException(
 					"Cannot get the newest value of empty value set");

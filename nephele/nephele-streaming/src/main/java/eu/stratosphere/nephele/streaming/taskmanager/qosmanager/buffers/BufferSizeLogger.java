@@ -6,10 +6,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingEdge;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
  * 
@@ -31,7 +31,7 @@ public class BufferSizeLogger {
 
 	private FileWriter out;
 
-	private ArrayList<HashSet<ProfilingEdge>> edges;
+	private ArrayList<HashSet<QosEdge>> edges;
 
 	private long timeBase;
 
@@ -47,16 +47,16 @@ public class BufferSizeLogger {
 	}
 
 	private void initEdges(ProfilingSequence profilingSequence) {
-		this.edges = new ArrayList<HashSet<ProfilingEdge>>();
+		this.edges = new ArrayList<HashSet<QosEdge>>();
 
 		int forwardEdgeCount = profilingSequence.getSequenceVertices().size() - 1;
 		for (int i = 0; i < forwardEdgeCount; i++) {
-			ProfilingGroupVertex groupVertex = profilingSequence
+			QosGroupVertex groupVertex = profilingSequence
 					.getSequenceVertices().get(i);
-			HashSet<ProfilingEdge> edgeSet = new HashSet<ProfilingEdge>();
+			HashSet<QosEdge> edgeSet = new HashSet<QosEdge>();
 
-			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
-				for (ProfilingEdge edge : vertex.getForwardEdges()) {
+			for (QosVertex vertex : groupVertex.getMembers()) {
+				for (QosEdge edge : vertex.getForwardEdges()) {
 					edgeSet.add(edge);
 				}
 			}

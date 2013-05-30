@@ -3,19 +3,19 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeHistory;
 
-public class EdgeCharacteristics {
+public class EdgeQosData {
 
-	private ProfilingEdge edge;
+	private QosEdge edge;
 
-	private ProfilingValueStatistic latencyInMillisStatistic;
+	private QosStatistic latencyInMillisStatistic;
 
-	private ProfilingValueStatistic throughputInMbitStatistic;
+	private QosStatistic throughputInMbitStatistic;
 
-	private ProfilingValueStatistic outputBufferLifetimeStatistic;
+	private QosStatistic outputBufferLifetimeStatistic;
 	
-	private ProfilingValueStatistic recordsPerBufferStatistic;
+	private QosStatistic recordsPerBufferStatistic;
 	
-	private ProfilingValueStatistic recordsPerSecondStatistic;
+	private QosStatistic recordsPerSecondStatistic;
 
 	private BufferSizeHistory bufferSizeHistory;
 	
@@ -23,22 +23,22 @@ public class EdgeCharacteristics {
 
 	private boolean isInChain;
 
-	public EdgeCharacteristics(ProfilingEdge edge, int noOfStatisticsEntries) {
+	public EdgeQosData(QosEdge edge, int noOfStatisticsEntries) {
 		this.edge = edge;
 		this.isInChain = false;
-		this.latencyInMillisStatistic = new ProfilingValueStatistic(noOfStatisticsEntries);
-		this.throughputInMbitStatistic = new ProfilingValueStatistic(noOfStatisticsEntries);
-		this.outputBufferLifetimeStatistic = new ProfilingValueStatistic(noOfStatisticsEntries);
-		this.recordsPerBufferStatistic = new ProfilingValueStatistic(noOfStatisticsEntries);
-		this.recordsPerSecondStatistic = new ProfilingValueStatistic(noOfStatisticsEntries);
+		this.latencyInMillisStatistic = new QosStatistic(noOfStatisticsEntries);
+		this.throughputInMbitStatistic = new QosStatistic(noOfStatisticsEntries);
+		this.outputBufferLifetimeStatistic = new QosStatistic(noOfStatisticsEntries);
+		this.recordsPerBufferStatistic = new QosStatistic(noOfStatisticsEntries);
+		this.recordsPerSecondStatistic = new QosStatistic(noOfStatisticsEntries);
 		this.bufferSizeHistory = new BufferSizeHistory(2);
 	}
 	
-	public EdgeCharacteristics(ProfilingEdge edge) {
+	public EdgeQosData(QosEdge edge) {
 		this(edge, DEFAULT_NO_OF_STATISTICS_ENTRIES);
 	}
 
-	public ProfilingEdge getEdge() {
+	public QosEdge getEdge() {
 		return this.edge;
 	}
 
@@ -82,26 +82,26 @@ public class EdgeCharacteristics {
 	}
 
 	public void addLatencyMeasurement(long timestamp, double latencyInMillis) {
-		ProfilingValue value = new ProfilingValue(latencyInMillis, timestamp);
+		QosValue value = new QosValue(latencyInMillis, timestamp);
 		this.latencyInMillisStatistic.addValue(value);
 	}
 
 	public void addOutputChannelStatisticsMeasurement(long timestamp,
 			OutputChannelStatistics stats) {
 		
-		ProfilingValue throughput = new ProfilingValue(stats.getThroughput(),
+		QosValue throughput = new QosValue(stats.getThroughput(),
 				timestamp);
 		this.throughputInMbitStatistic.addValue(throughput);
 
-		ProfilingValue outputBufferLifetime = new ProfilingValue(
+		QosValue outputBufferLifetime = new QosValue(
 				stats.getOutputBufferLifetime(), timestamp);
 		this.outputBufferLifetimeStatistic.addValue(outputBufferLifetime);
 
-		ProfilingValue recordsPerBuffer = new ProfilingValue(
+		QosValue recordsPerBuffer = new QosValue(
 				stats.getRecordsPerBuffer(), timestamp);
 		this.recordsPerBufferStatistic.addValue(recordsPerBuffer);
 
-		ProfilingValue recordsPerSecond = new ProfilingValue(
+		QosValue recordsPerSecond = new QosValue(
 				stats.getRecordsPerSecond(), timestamp);
 		this.recordsPerSecondStatistic.addValue(recordsPerSecond);
 	}

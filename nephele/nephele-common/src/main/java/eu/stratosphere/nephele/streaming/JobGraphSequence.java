@@ -17,6 +17,8 @@ package eu.stratosphere.nephele.streaming;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 import eu.stratosphere.nephele.io.IOReadableWritable;
@@ -38,8 +40,11 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 		implements IOReadableWritable {
 
 	private static final long serialVersionUID = 1199328037569471951L;
+	
+	private HashSet<JobVertexID> verticesInSequence;
 
 	public JobGraphSequence() {
+		this.verticesInSequence = new HashSet<JobVertexID>();
 	}
 
 	public void addVertex(JobVertexID vertexID, int inputGateIndex,
@@ -47,6 +52,7 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 
 		this.add(new SequenceElement<JobVertexID>(vertexID, inputGateIndex,
 				outputGateIndex));
+		this.verticesInSequence.add(vertexID);
 	}
 
 	public void addEdge(JobVertexID sourceVertexID, int outputGateIndex,
@@ -54,6 +60,10 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 
 		this.add(new SequenceElement<JobVertexID>(sourceVertexID,
 				outputGateIndex, targetVertexID, inputGateIndex));
+	}
+	
+	public boolean isInSequence(JobVertexID vertexID) {
+		return this.verticesInSequence.contains(vertexID);
 	}
 
 	/*
@@ -83,6 +93,13 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 			SequenceElement<JobVertexID> element = new SequenceElement<JobVertexID>();
 			element.read(in);
 			this.add(element);
+			if (element.isVertex()) {
+				this.verticesInSequence.add(element.getVertexID());
+			}
 		}
+	}
+
+	public Collection<JobVertexID> getVerticesInSequence() {
+		return this.verticesInSequence;
 	}
 }

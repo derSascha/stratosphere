@@ -1,25 +1,25 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 
-public class VertexLatency {
+public class VertexQosData {
 
-	private ProfilingVertex vertex;
+	private QosVertex vertex;
 
-	private ProfilingValueStatistic latencyStatistics;
+	private QosStatistic latencyStatistics;
 	
 	private final static int DEFAULT_NO_OF_STATISTICS_ENTRIES = 4;
 	
-	public VertexLatency(ProfilingVertex vertex) {
+	public VertexQosData(QosVertex vertex) {
 		this(vertex, DEFAULT_NO_OF_STATISTICS_ENTRIES);
 	}
 
-	public VertexLatency(ProfilingVertex vertex, int noOfStatisticsEntries) {
+	public VertexQosData(QosVertex vertex, int noOfStatisticsEntries) {
 		this.vertex = vertex;
-		this.latencyStatistics = new ProfilingValueStatistic(
+		this.latencyStatistics = new QosStatistic(
 				noOfStatisticsEntries);
 	}
 
-	public ProfilingVertex getVertex() {
+	public QosVertex getVertex() {
 		return this.vertex;
 	}
 
@@ -35,7 +35,7 @@ public class VertexLatency {
 	}
 
 	public void addLatencyMeasurement(long timestamp, double latencyInMillis) {
-		ProfilingValue value = new ProfilingValue(latencyInMillis, timestamp);
+		QosValue value = new QosValue(latencyInMillis, timestamp);
 		this.latencyStatistics.addValue(value);
 	}
 

@@ -20,9 +20,9 @@ import eu.stratosphere.nephele.streaming.message.profiling.StreamProfilingReport
 import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 import eu.stratosphere.nephele.util.StringUtils;
 
 public class QosManagerThread extends Thread {
@@ -148,27 +148,27 @@ public class QosManagerThread extends Thread {
 		final LinkedList<LinkedList<ExecutionVertexID>> chainList = new LinkedList<LinkedList<ExecutionVertexID>>();
 		final HashMap<ExecutionVertexID, InstanceConnectionInfo> instances = new HashMap<ExecutionVertexID, InstanceConnectionInfo>();
 
-		for (ProfilingGroupVertex groupVertex : this.profilingSequence
+		for (QosGroupVertex groupVertex : this.profilingSequence
 				.getSequenceVertices()) {
 			if (groupVertex.getName().startsWith("Decoder")) {
 
 				LOG.info("Decoder group members: "
-						+ groupVertex.getGroupMembers().size());
-				for (ProfilingVertex decoder : groupVertex.getGroupMembers()) {
+						+ groupVertex.getMembers().size());
+				for (QosVertex decoder : groupVertex.getMembers()) {
 					instances.put(decoder.getID(),
-							decoder.getQosReporter());
+							decoder.getExecutingInstance());
 					LinkedList<ExecutionVertexID> chain = new LinkedList<ExecutionVertexID>();
 					chain.add(decoder.getID());
 
-					ProfilingVertex merger = decoder.getForwardEdges().get(0)
+					QosVertex merger = decoder.getForwardEdges().get(0)
 							.getTargetVertex();
 					chain.add(merger.getID());
 
-					ProfilingVertex overlay = merger.getForwardEdges().get(0)
+					QosVertex overlay = merger.getForwardEdges().get(0)
 							.getTargetVertex();
 					chain.add(overlay.getID());
 
-					ProfilingVertex encoder = overlay.getForwardEdges().get(0)
+					QosVertex encoder = overlay.getForwardEdges().get(0)
 							.getTargetVertex();
 					chain.add(encoder.getID());
 					chainList.add(chain);

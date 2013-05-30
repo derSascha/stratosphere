@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.List;
 
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupEdge;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
 
 public class ProfilingLogger {
@@ -95,11 +95,11 @@ public class ProfilingLogger {
 		int nextEdgeIndex = 1;
 
 		ProfilingSequence sequence = summary.getProfilingSequence();
-		List<ProfilingGroupVertex> groupVertices = sequence
+		List<QosGroupVertex> groupVertices = sequence
 				.getSequenceVertices();
 
 		for (int i = 0; i < groupVertices.size(); i++) {
-			ProfilingGroupVertex groupVertex = groupVertices.get(i);
+			QosGroupVertex groupVertex = groupVertices.get(i);
 
 			boolean includeVertex = i == 0 && sequence.isIncludeStartVertex()
 					|| i > 0 && i < groupVertices.size() - 1
@@ -111,7 +111,7 @@ public class ProfilingLogger {
 				builder.append(groupVertex.getName());
 			}
 
-			ProfilingGroupEdge forwardEdge = groupVertex.getForwardEdge();
+			QosGroupEdge forwardEdge = groupVertex.getForwardEdge();
 			if (forwardEdge != null) {
 				builder.append(';');
 				builder.append("edge" + nextEdgeIndex + "obl");

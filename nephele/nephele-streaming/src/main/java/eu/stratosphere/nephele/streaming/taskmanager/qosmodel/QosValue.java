@@ -1,6 +1,6 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
-public class ProfilingValue implements Comparable<ProfilingValue> {
+public class QosValue implements Comparable<QosValue> {
 
 	private static long nextFreeId = 0;
 
@@ -10,7 +10,7 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 
 	private long timestamp;
 
-	public ProfilingValue(double value, long timestamp) {
+	public QosValue(double value, long timestamp) {
 		this.value = value;
 		this.timestamp = timestamp;
 		this.id = nextFreeId++;
@@ -40,7 +40,7 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 	 * Sorts first by value and then by id.
 	 */
 	@Override
-	public int compareTo(ProfilingValue other) {
+	public int compareTo(QosValue other) {
 		if (this.value > other.value) {
 			return 1;
 		} else if (this.value < other.value) {
@@ -58,8 +58,8 @@ public class ProfilingValue implements Comparable<ProfilingValue> {
 
 	@Override
 	public boolean equals(Object otherObj) {
-		if (otherObj instanceof ProfilingValue) {
-			ProfilingValue other = (ProfilingValue) otherObj;
+		if (otherObj instanceof QosValue) {
+			QosValue other = (QosValue) otherObj;
 			return other.id == this.id;
 		}
 		return false;

@@ -12,21 +12,21 @@ import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
 import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
 import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeCharacteristics;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingEdge;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeQosData;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexLatency;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexQosData;
 
 public class ProfilingModel {
 	private static final Log LOG = LogFactory.getLog(ProfilingModel.class);
 
 	private ProfilingSequence profilingGroupSequence;
 
-	private HashMap<ExecutionVertexID, VertexLatency> vertexLatencies;
+	private HashMap<ExecutionVertexID, VertexQosData> vertexLatencies;
 
-	private HashMap<ChannelID, EdgeCharacteristics> edgeCharacteristics;
+	private HashMap<ChannelID, EdgeQosData> edgeCharacteristics;
 
 	private int noOfProfilingSequences;
 
@@ -38,13 +38,13 @@ public class ProfilingModel {
 
 	private void countProfilingSequences() {
 		this.noOfProfilingSequences = -1;
-		for (ProfilingGroupVertex groupVertex : this.profilingGroupSequence
+		for (QosGroupVertex groupVertex : this.profilingGroupSequence
 				.getSequenceVertices()) {
 			if (this.noOfProfilingSequences == -1) {
-				this.noOfProfilingSequences = groupVertex.getGroupMembers()
+				this.noOfProfilingSequences = groupVertex.getMembers()
 						.size();
 			} else if (groupVertex.getBackwardEdge().getDistributionPattern() == DistributionPattern.BIPARTITE) {
-				this.noOfProfilingSequences *= groupVertex.getGroupMembers()
+				this.noOfProfilingSequences *= groupVertex.getMembers()
 						.size();
 			}
 		}
@@ -53,19 +53,19 @@ public class ProfilingModel {
 	}
 
 	private void initMaps() {
-		this.vertexLatencies = new HashMap<ExecutionVertexID, VertexLatency>();
-		this.edgeCharacteristics = new HashMap<ChannelID, EdgeCharacteristics>();
+		this.vertexLatencies = new HashMap<ExecutionVertexID, VertexQosData>();
+		this.edgeCharacteristics = new HashMap<ChannelID, EdgeQosData>();
 
-		for (ProfilingGroupVertex groupVertex : this.profilingGroupSequence
+		for (QosGroupVertex groupVertex : this.profilingGroupSequence
 				.getSequenceVertices()) {
-			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
-				VertexLatency vertexLatency = new VertexLatency(vertex);
-				vertex.setVertexLatency(vertexLatency);
+			for (QosVertex vertex : groupVertex.getMembers()) {
+				VertexQosData vertexLatency = new VertexQosData(vertex);
+				vertex.setQosData(vertexLatency);
 				this.vertexLatencies.put(vertex.getID(), vertexLatency);
-				for (ProfilingEdge edge : vertex.getForwardEdges()) {
-					EdgeCharacteristics currentEdgeChars = new EdgeCharacteristics(
+				for (QosEdge edge : vertex.getForwardEdges()) {
+					EdgeQosData currentEdgeChars = new EdgeQosData(
 							edge);
-					edge.setEdgeCharacteristics(currentEdgeChars);
+					edge.setQosData(currentEdgeChars);
 					this.edgeCharacteristics.put(edge.getSourceChannelID(),
 							currentEdgeChars);
 				}
@@ -97,12 +97,12 @@ public class ProfilingModel {
 
 	public void announceStreamingChain(StreamChainAnnounce announce) {
 
-		ProfilingVertex currentVertex = this.vertexLatencies.get(
+		QosVertex currentVertex = this.vertexLatencies.get(
 				announce.getChainBeginVertexID()).getVertex();
 
 		while (!currentVertex.getID().equals(announce.getChainEndVertexID())) {
-			ProfilingEdge forwardEdge = currentVertex.getForwardEdges().get(0);
-			forwardEdge.getEdgeCharacteristics().setIsInChain(true);
+			QosEdge forwardEdge = currentVertex.getForwardEdges().get(0);
+			forwardEdge.getQosData().setIsInChain(true);
 			currentVertex = forwardEdge.getTargetVertex();
 		}
 	}

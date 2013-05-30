@@ -3,22 +3,22 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmanager;
 import java.util.ArrayList;
 import java.util.List;
 
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeCharacteristics;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeQosData;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 public class ProfilingSubsequenceSummary {
 
 	protected ProfilingSequence sequence;
 
-	protected ArrayList<ProfilingVertex> currSubsequence;
+	protected ArrayList<QosVertex> currSubsequence;
 
 	/**
 	 * For an active subsequence, this list contains all the sequence's edges,
 	 * sorted by descending latency.
 	 */
-	protected ArrayList<ProfilingEdge> edges;
+	protected ArrayList<QosEdge> edges;
 
 	/**
 	 * The i-th element is the forward edge index that connects the
@@ -53,7 +53,7 @@ public class ProfilingSubsequenceSummary {
 		this.sequence = sequence;
 		this.noOfActiveSubsequencesFound = 0;
 		this.sequenceDepth = this.sequence.getSequenceVertices().size();
-		this.currSubsequence = new ArrayList<ProfilingVertex>();
+		this.currSubsequence = new ArrayList<QosVertex>();
 		this.initForwardEdgeCounts();
 		this.initForwardEdgeIndices();
 		this.initEdges();
@@ -76,7 +76,7 @@ public class ProfilingSubsequenceSummary {
 	}
 
 	private void initEdges() {
-		this.edges = new ArrayList<ProfilingEdge>();
+		this.edges = new ArrayList<QosEdge>();
 		// init with nulls, so that sortEdgesByLatency() can use ArrayList.set()
 		// without clearing the list
 		for (int i = 0; i < this.sequenceDepth - 1; i++) {
@@ -89,10 +89,10 @@ public class ProfilingSubsequenceSummary {
 		for (int i = 0; i < this.forwardEdgeCounts.length; i++) {
 			if (i == 0) {
 				this.forwardEdgeCounts[i] = this.sequence.getSequenceVertices()
-						.get(0).getGroupMembers().size();
+						.get(0).getMembers().size();
 			} else {
 				this.forwardEdgeCounts[i] = this.sequence.getSequenceVertices()
-						.get(i - 1).getGroupMembers().get(0).getForwardEdges()
+						.get(i - 1).getMembers().get(0).getForwardEdges()
 						.size();
 			}
 		}
@@ -148,13 +148,13 @@ public class ProfilingSubsequenceSummary {
 				break; // no active path found
 			}
 
-			ProfilingEdge edgeToAdd;
-			ProfilingVertex vertexToAdd;
+			QosEdge edgeToAdd;
+			QosVertex vertexToAdd;
 
 			if (depth == 0) {
 				edgeToAdd = null;
 				vertexToAdd = this.sequence.getSequenceVertices().get(0)
-						.getGroupMembers().get(this.forwardEdgeIndices[depth]);
+						.getMembers().get(this.forwardEdgeIndices[depth]);
 			} else {
 				edgeToAdd = this.currSubsequence.get(depth - 1)
 						.getForwardEdges().get(this.forwardEdgeIndices[depth]);
@@ -188,12 +188,12 @@ public class ProfilingSubsequenceSummary {
 		return activePathFound;
 	}
 
-	protected boolean isActive(ProfilingVertex vertex) {
-		return vertex.getVertexLatency().isActive();
+	protected boolean isActive(QosVertex vertex) {
+		return vertex.getQosData().isActive();
 	}
 
-	protected boolean isActive(ProfilingEdge edge) {
-		return edge.getEdgeCharacteristics().isActive();
+	protected boolean isActive(QosEdge edge) {
+		return edge.getQosData().isActive();
 	}
 
 	public boolean isSubsequenceActive() {
@@ -215,7 +215,7 @@ public class ProfilingSubsequenceSummary {
 
 		if (this.sequence.isIncludeStartVertex()) {
 			this.addLatency(insertPosition,
-					this.currSubsequence.get(vertexIndex).getVertexLatency()
+					this.currSubsequence.get(vertexIndex).getQosData()
 							.getLatencyInMillis());
 			insertPosition++;
 		}
@@ -223,22 +223,22 @@ public class ProfilingSubsequenceSummary {
 				insertPosition,
 				this.currSubsequence.get(vertexIndex).getForwardEdges()
 						.get(this.forwardEdgeIndices[vertexIndex + 1])
-						.getEdgeCharacteristics());
+						.getQosData());
 		insertPosition += 2;
 		vertexIndex++;
 
 		while (insertPosition < this.subsequenceElementLatencies.length) {
-			ProfilingVertex vertex = this.currSubsequence.get(vertexIndex);
+			QosVertex vertex = this.currSubsequence.get(vertexIndex);
 
-			this.addLatency(insertPosition, vertex.getVertexLatency()
+			this.addLatency(insertPosition, vertex.getQosData()
 					.getLatencyInMillis());
 			insertPosition++;
 
 			if (vertex.getForwardEdges() != null) {
-				EdgeCharacteristics fwEdgeCharacteristics = vertex
+				EdgeQosData fwEdgeCharacteristics = vertex
 						.getForwardEdges()
 						.get(this.forwardEdgeIndices[vertexIndex + 1])
-						.getEdgeCharacteristics();
+						.getQosData();
 
 				this.addChannelAndOutputBufferLatency(insertPosition,
 						fwEdgeCharacteristics);
@@ -250,7 +250,7 @@ public class ProfilingSubsequenceSummary {
 	}
 
 	private void addChannelAndOutputBufferLatency(int insertPosition,
-			EdgeCharacteristics fwEdgeCharacteristics) {
+			EdgeQosData fwEdgeCharacteristics) {
 		double outputBufferLatency = fwEdgeCharacteristics
 				.getOutputBufferLifetimeInMillis() / 2;
 		this.subsequenceElementLatencies[insertPosition] = outputBufferLatency;
@@ -271,7 +271,7 @@ public class ProfilingSubsequenceSummary {
 		this.subsequenceLatency += vertexLatency;
 	}
 
-	public List<ProfilingVertex> getVertices() {
+	public List<QosVertex> getVertices() {
 		return this.currSubsequence;
 	}
 
@@ -289,7 +289,7 @@ public class ProfilingSubsequenceSummary {
 		}
 	}
 
-	public List<ProfilingEdge> getEdges() {
+	public List<QosEdge> getEdges() {
 		return this.edges;
 	}
 }

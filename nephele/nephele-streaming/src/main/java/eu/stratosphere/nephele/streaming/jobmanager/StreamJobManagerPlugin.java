@@ -16,7 +16,7 @@
 package eu.stratosphere.nephele.streaming.jobmanager;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -27,21 +27,13 @@ import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
 import eu.stratosphere.nephele.executiongraph.InternalJobStatus;
 import eu.stratosphere.nephele.executiongraph.JobStatusListener;
 import eu.stratosphere.nephele.io.IOReadableWritable;
-import eu.stratosphere.nephele.jobgraph.AbstractJobInputVertex;
-import eu.stratosphere.nephele.jobgraph.AbstractJobOutputVertex;
 import eu.stratosphere.nephele.jobgraph.JobGraph;
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.jobgraph.JobInputVertex;
-import eu.stratosphere.nephele.jobgraph.JobOutputVertex;
-import eu.stratosphere.nephele.jobgraph.JobTaskVertex;
 import eu.stratosphere.nephele.plugins.JobManagerPlugin;
 import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.profiling.ProfilingListener;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamInputTaskWrapper;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamOutputTaskWrapper;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskWrapper;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.WrapperUtils;
-import eu.stratosphere.nephele.template.AbstractInvokable;
+import eu.stratosphere.nephele.streaming.ConstraintUtil;
+import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
 
 public class StreamJobManagerPlugin implements JobManagerPlugin,
 		JobStatusListener {
@@ -53,7 +45,7 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 
 	private final Configuration pluginConfiguration;
 
-	private ConcurrentHashMap<JobID, QosSetupManager> streamProfilingManagers = new ConcurrentHashMap<JobID, QosSetupManager>();
+	private ConcurrentHashMap<JobID, QosSetupManager> qosSetupManagers = new ConcurrentHashMap<JobID, QosSetupManager>();
 
 	public StreamJobManagerPlugin(final PluginID pluginID,
 			final Configuration pluginConfiguration) {
@@ -66,83 +58,37 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 	 */
 	@Override
 	public JobGraph rewriteJobGraph(final JobGraph jobGraph) {
-		this.rewriteInputVertices(jobGraph);
-		this.rewriteTaskVertices(jobGraph);
-		this.rewriteOutputVertices(jobGraph);
+		try {
+			List<JobGraphLatencyConstraint> constraints = ConstraintUtil
+					.getConstraints(jobGraph.getJobConfiguration());
+
+			if (!constraints.isEmpty()) {
+				QosSetupManager qosSetupManager = new QosSetupManager(
+						jobGraph.getJobID(), constraints);
+				this.qosSetupManagers.put(jobGraph.getJobID(), qosSetupManager);
+				
+				qosSetupManager.rewriteJobGraph(jobGraph);
+			}
+		} catch (IOException e) {
+			LOG.error(
+					"Error when deserializing stream latency constraint(s). Not setting up any constraints.",
+					e);
+		}
 
 		return jobGraph;
 	}
 
-	private void rewriteOutputVertices(final JobGraph jobGraph) {
-		final Iterator<AbstractJobOutputVertex> outputIt = jobGraph
-				.getOutputVertices();
-		while (outputIt.hasNext()) {
-
-			final AbstractJobOutputVertex abstractOutputVertex = outputIt
-					.next();
-			final Class<? extends AbstractInvokable> originalClass = abstractOutputVertex
-					.getInvokableClass();
-
-			if (abstractOutputVertex instanceof JobOutputVertex) {
-				final JobOutputVertex outputVertex = (JobOutputVertex) abstractOutputVertex;
-				outputVertex.setOutputClass(StreamOutputTaskWrapper.class);
-			} else {
-				LOG.warn("Cannot wrap output task of type " + originalClass
-						+ ", skipping...");
-				continue;
-			}
-
-			abstractOutputVertex.getConfiguration().setString(
-					WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
-		}
-	}
-
-	private void rewriteTaskVertices(final JobGraph jobGraph) {
-		final Iterator<JobTaskVertex> taskIt = jobGraph.getTaskVertices();
-		while (taskIt.hasNext()) {
-
-			final JobTaskVertex taskVertex = taskIt.next();
-			final Class<? extends AbstractInvokable> originalClass = taskVertex
-					.getInvokableClass();
-			taskVertex.setTaskClass(StreamTaskWrapper.class);
-			taskVertex.getConfiguration().setString(
-					WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
-		}
-	}
-
-	private void rewriteInputVertices(final JobGraph jobGraph) {
-		final Iterator<AbstractJobInputVertex> inputIt = jobGraph
-				.getInputVertices();
-		while (inputIt.hasNext()) {
-
-			final AbstractJobInputVertex abstractInputVertex = inputIt.next();
-			final Class<? extends AbstractInvokable> originalClass = abstractInputVertex
-					.getInvokableClass();
-
-			if (abstractInputVertex instanceof JobInputVertex) {
-				final JobInputVertex inputVertex = (JobInputVertex) abstractInputVertex;
-				inputVertex.setInputClass(StreamInputTaskWrapper.class);
-			} else {
-				LOG.warn("Cannot wrap input task of type " + originalClass
-						+ ", skipping...");
-				continue;
-			}
-
-			abstractInputVertex.getConfiguration().setString(
-					WrapperUtils.WRAPPED_CLASS_KEY, originalClass.getName());
-		}
-	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public ExecutionGraph rewriteExecutionGraph(
-			final ExecutionGraph executionGraph) {
+	public ExecutionGraph rewriteExecutionGraph(final ExecutionGraph executionGraph) {
+		
 		JobID jobId = executionGraph.getJobID();
-		QosSetupManager profilingManager = new QosSetupManager(
-				executionGraph);
-		this.streamProfilingManagers.put(jobId, profilingManager);
+		if (this.qosSetupManagers.containsKey(jobId)) {
+			this.qosSetupManagers.get(jobId).registerOnExecutionGraph(executionGraph);
+		}
 
 		return executionGraph;
 	}
@@ -152,11 +98,11 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 	 */
 	@Override
 	public void shutdown() {
-		for (QosSetupManager streamProfilingManager : this.streamProfilingManagers
+		for (QosSetupManager qosSetupManager : this.qosSetupManagers
 				.values()) {
-			streamProfilingManager.shutdown();
+			qosSetupManager.shutdown();
 		}
-		this.streamProfilingManagers.clear();
+		this.qosSetupManagers.clear();
 	}
 
 	/**
@@ -187,11 +133,11 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 				|| newJobStatus == InternalJobStatus.CANCELED
 				|| newJobStatus == InternalJobStatus.FINISHED) {
 
-			QosSetupManager streamProfilingManager = this.streamProfilingManagers
+			QosSetupManager qosSetupManager = this.qosSetupManagers
 					.remove(executionGraph.getJobID());
 
-			if (streamProfilingManager != null) {
-				streamProfilingManager.shutdown();
+			if (qosSetupManager != null) {
+				qosSetupManager.shutdown();
 			}
 		}
 	}

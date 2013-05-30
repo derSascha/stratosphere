@@ -3,7 +3,7 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmanager;
 import java.util.Iterator;
 
 import eu.stratosphere.nephele.io.DistributionPattern;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
 
 public class ProfilingSequenceSummary {
@@ -52,13 +52,13 @@ public class ProfilingSequenceSummary {
 
 	private void countTotalNoOfSubsequences() {
 		int index = 0;
-		for (ProfilingGroupVertex groupVertex : this.sequence
+		for (QosGroupVertex groupVertex : this.sequence
 				.getSequenceVertices()) {
 			if (index == 0) {
-				this.totalNoOfSubsequences = groupVertex.getGroupMembers()
+				this.totalNoOfSubsequences = groupVertex.getMembers()
 						.size();
 			} else if (groupVertex.getBackwardEdge().getDistributionPattern() == DistributionPattern.BIPARTITE) {
-				this.totalNoOfSubsequences *= groupVertex.getGroupMembers()
+				this.totalNoOfSubsequences *= groupVertex.getMembers()
 						.size();
 			}
 

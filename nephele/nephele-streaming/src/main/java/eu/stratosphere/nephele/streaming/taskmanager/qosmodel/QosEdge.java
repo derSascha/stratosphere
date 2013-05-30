@@ -1,0 +1,131 @@
+package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
+
+import eu.stratosphere.nephele.io.channels.ChannelID;
+
+public class QosEdge {
+
+	private final ChannelID sourceChannelID;
+
+	private final ChannelID targetChannelID;
+
+	private QosGate outputGate;
+
+	private QosGate inputGate;
+
+	/**
+	 * The index of this edge in the output gate's list of edges.
+	 */
+	private int outputGateEdgeIndex;
+
+	/**
+	 * The index of this edge in the input gate's list of edges.
+	 */
+	private int inputGateEdgeIndex;
+
+	/**
+	 * Only for use on the task manager side. Will not be transferred.
+	 */
+	private transient EdgeQosData qosData;
+
+	public QosEdge(ChannelID sourceChannelID, ChannelID targetChannelID) {
+		this.sourceChannelID = sourceChannelID;
+		this.targetChannelID = targetChannelID;
+	}
+
+	/**
+	 * Returns the outputGate.
+	 * 
+	 * @return the outputGate
+	 */
+	public QosGate getOutputGate() {
+		return this.outputGate;
+	}
+
+	/**
+	 * Sets the outputGate to the specified value.
+	 * 
+	 * @param outputGate
+	 *            the outputGate to set
+	 */
+	public void setOutputGate(QosGate outputGate) {
+		this.outputGate = outputGate;
+		this.outputGateEdgeIndex = outputGate.getEdges().size();
+		this.outputGate.addEdge(this);
+	}
+
+	/**
+	 * Returns the inputGate.
+	 * 
+	 * @return the inputGate
+	 */
+	public QosGate getInputGate() {
+		return this.inputGate;
+	}
+
+	/**
+	 * Sets the inputGate to the specified value.
+	 * 
+	 * @param inputGate
+	 *            the inputGate to set
+	 */
+	public void setInputGate(QosGate inputGate) {
+		this.inputGate = inputGate;
+		this.inputGateEdgeIndex = inputGate.getEdges().size();
+		this.inputGate.addEdge(this);
+	}
+
+	/**
+	 * Returns the outputGateEdgeIndex.
+	 * 
+	 * @return the outputGateEdgeIndex
+	 */
+	public int getOutputGateEdgeIndex() {
+		return this.outputGateEdgeIndex;
+	}
+
+	/**
+	 * Returns the inputGateEdgeIndex.
+	 * 
+	 * @return the inputGateEdgeIndex
+	 */
+	public int getInputGateEdgeIndex() {
+		return this.inputGateEdgeIndex;
+	}
+
+	/**
+	 * Returns the sourceChannelID.
+	 * 
+	 * @return the sourceChannelID
+	 */
+	public ChannelID getSourceChannelID() {
+		return this.sourceChannelID;
+	}
+
+	/**
+	 * Returns the targetChannelID.
+	 * 
+	 * @return the targetChannelID
+	 */
+	public ChannelID getTargetChannelID() {
+		return this.targetChannelID;
+	}
+
+	public EdgeQosData getQosData() {
+		return this.qosData;
+	}
+
+	public void setQosData(EdgeQosData qosData) {
+		this.qosData = qosData;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("%s->%s", this.getOutputGate().getVertex().getName(),
+				this.getInputGate().getVertex().getName());
+	}
+	
+	public QosEdge cloneWithoutGates() {
+		QosEdge clone = new QosEdge(this.sourceChannelID, this.targetChannelID);
+		return clone;
+	}
+}

@@ -88,6 +88,10 @@ public class SequenceElement<T extends AbstractID> implements
 	public boolean isVertex() {
 		return this.isVertex;
 	}
+	
+	public boolean isEdge() {
+		return !this.isVertex;
+	}
 
 	/*
 	 * (non-Javadoc)

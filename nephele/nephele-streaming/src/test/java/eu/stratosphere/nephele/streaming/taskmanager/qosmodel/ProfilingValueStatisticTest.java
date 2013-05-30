@@ -7,11 +7,11 @@ import org.junit.Test;
 
 public class ProfilingValueStatisticTest {
 
-	private ProfilingValueStatistic valueStatistic;
+	private QosStatistic valueStatistic;
 
 	@Before
 	public void setup() {
-		this.valueStatistic = new ProfilingValueStatistic(7);
+		this.valueStatistic = new QosStatistic(7);
 	}
 
 	@Test
@@ -30,8 +30,8 @@ public class ProfilingValueStatisticTest {
 		assertTrue(this.valueStatistic.getArithmeticMean() - 16.5714 < 0.0001);
 	}
 
-	private ProfilingValue createProfilingValue(long timestamp, double value) {
-		return new ProfilingValue(value, timestamp);
+	private QosValue createProfilingValue(long timestamp, double value) {
+		return new QosValue(value, timestamp);
 	}
 
 	@Test

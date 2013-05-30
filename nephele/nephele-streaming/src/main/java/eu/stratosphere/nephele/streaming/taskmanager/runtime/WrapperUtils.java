@@ -19,6 +19,9 @@ import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.execution.librarycache.LibraryCacheManager;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.jobgraph.JobInputVertex;
+import eu.stratosphere.nephele.jobgraph.JobOutputVertex;
+import eu.stratosphere.nephele.jobgraph.JobTaskVertex;
 import eu.stratosphere.nephele.template.AbstractInvokable;
 import eu.stratosphere.nephele.util.StringUtils;
 
@@ -40,6 +43,27 @@ public final class WrapperUtils {
 	 * Private constructor so class cannot be instantiated.
 	 */
 	private WrapperUtils() {
+	}
+	
+	public static void wrapOutputClass(JobOutputVertex vertex) {
+		vertex.getConfiguration().setString(
+				WrapperUtils.WRAPPED_CLASS_KEY,
+				vertex.getOutputClass().getName());
+		vertex.setOutputClass(StreamOutputTaskWrapper.class);		
+	}
+	
+	public static void wrapInputClass(JobInputVertex vertex) {
+		vertex.getConfiguration().setString(
+				WrapperUtils.WRAPPED_CLASS_KEY,
+				vertex.getInputClass().getName());
+		vertex.setInputClass(StreamInputTaskWrapper.class);		
+	}
+	
+	public static void wrapTaskClass(JobTaskVertex vertex) {
+		vertex.getConfiguration().setString(
+				WrapperUtils.WRAPPED_CLASS_KEY,
+				vertex.getTaskClass().getName());
+		vertex.setTaskClass(StreamTaskWrapper.class);		
 	}
 
 	/**
@@ -82,4 +106,5 @@ public final class WrapperUtils {
 	public static StreamTaskEnvironment getWrappedEnvironment(RuntimeEnvironment environment) {
 		return new StreamTaskEnvironment(environment);
 	}
+
 }

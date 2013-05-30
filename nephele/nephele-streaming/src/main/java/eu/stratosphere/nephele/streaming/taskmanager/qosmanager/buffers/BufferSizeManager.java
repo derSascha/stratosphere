@@ -17,11 +17,11 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.ProfilingModel;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.ProfilingSequenceSummary;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.ProfilingSubsequenceSummary;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.ProfilingUtils;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeCharacteristics;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingEdge;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingGroupVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexLatency;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeQosData;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexQosData;
 import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 import eu.stratosphere.nephele.util.StringUtils;
 
@@ -85,11 +85,11 @@ public class BufferSizeManager {
 		this.maximumBufferSize = bufferSize;
 
 		long now = System.currentTimeMillis();
-		for (ProfilingGroupVertex groupVertex : this.profilingModel
+		for (QosGroupVertex groupVertex : this.profilingModel
 				.getProfilingSequence().getSequenceVertices()) {
-			for (ProfilingVertex vertex : groupVertex.getGroupMembers()) {
-				for (ProfilingEdge forwardEdge : vertex.getForwardEdges()) {
-					forwardEdge.getEdgeCharacteristics().getBufferSizeHistory()
+			for (QosVertex vertex : groupVertex.getMembers()) {
+				for (QosEdge forwardEdge : vertex.getForwardEdges()) {
+					forwardEdge.getQosData().getBufferSizeHistory()
 							.addToHistory(now, bufferSize);
 				}
 			}
@@ -104,7 +104,7 @@ public class BufferSizeManager {
 
 	public void adjustBufferSizes(ProfilingSequenceSummary summary)
 			throws InterruptedException {
-		HashMap<ProfilingEdge, Integer> edgesToAdjust = new HashMap<ProfilingEdge, Integer>();
+		HashMap<QosEdge, Integer> edgesToAdjust = new HashMap<QosEdge, Integer>();
 
 		this.staleEdges.clear();
 		for (ProfilingSubsequenceSummary activeSubsequence : summary
@@ -127,13 +127,13 @@ public class BufferSizeManager {
 		this.bufferSizeLogger.logBufferSizes();
 	}
 
-	private void doAdjust(HashMap<ProfilingEdge, Integer> edgesToAdjust)
+	private void doAdjust(HashMap<QosEdge, Integer> edgesToAdjust)
 			throws InterruptedException {
 
-		for (ProfilingEdge edge : edgesToAdjust.keySet()) {
+		for (QosEdge edge : edgesToAdjust.keySet()) {
 			int newBufferSize = edgesToAdjust.get(edge);
 
-			BufferSizeHistory sizeHistory = edge.getEdgeCharacteristics()
+			BufferSizeHistory sizeHistory = edge.getQosData()
 					.getBufferSizeHistory();
 			sizeHistory.addToHistory(this.timeOfNextAdjustment, newBufferSize);
 
@@ -150,11 +150,11 @@ public class BufferSizeManager {
 
 	private void collectEdgesToAdjust(
 			ProfilingSubsequenceSummary activeSubsequence,
-			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+			HashMap<QosEdge, Integer> edgesToAdjust) {
 
-		for (ProfilingEdge edge : activeSubsequence.getEdges()) {
+		for (QosEdge edge : activeSubsequence.getEdges()) {
 
-			EdgeCharacteristics edgeChar = edge.getEdgeCharacteristics();
+			EdgeQosData edgeChar = edge.getQosData();
 
 			if (edgesToAdjust.containsKey(edge) || edgeChar.isInChain()) {
 				continue;
@@ -179,8 +179,8 @@ public class BufferSizeManager {
 		}
 	}
 
-	private void increaseBufferSize(EdgeCharacteristics edgeChar,
-			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+	private void increaseBufferSize(EdgeQosData edgeChar,
+			HashMap<QosEdge, Integer> edgesToAdjust) {
 		
 		int oldBufferSize = edgeChar.getBufferSize();
 		int newBufferSize = Math.min(
@@ -201,8 +201,8 @@ public class BufferSizeManager {
 		return (int) (oldBufferSize * 1.2);
 	}
 
-	private void reduceBufferSize(EdgeCharacteristics edgeChar,
-			HashMap<ProfilingEdge, Integer> edgesToAdjust) {
+	private void reduceBufferSize(EdgeQosData edgeChar,
+			HashMap<QosEdge, Integer> edgesToAdjust) {
 		
 		int oldBufferSize = edgeChar.getBufferSizeHistory().getLastEntry()
 				.getBufferSize();
@@ -224,7 +224,7 @@ public class BufferSizeManager {
 		return newBufferSize < oldBufferSize * 0.98;
 	}
 
-	private int proposeReducedBufferSize(EdgeCharacteristics edgeChar,
+	private int proposeReducedBufferSize(EdgeQosData edgeChar,
 			int oldBufferSize) {
 		
 		double avgOutputBufferLatency = edgeChar.getOutputBufferLifetimeInMillis() / 2;
@@ -237,7 +237,7 @@ public class BufferSizeManager {
 		return newBufferSize;
 	}
 
-	private boolean hasFreshValues(EdgeCharacteristics edgeChar) {
+	private boolean hasFreshValues(EdgeQosData edgeChar) {
 		long freshnessThreshold = edgeChar.getBufferSizeHistory()
 				.getLastEntry().getTimestamp();
 
@@ -249,14 +249,14 @@ public class BufferSizeManager {
 		return now >= this.timeOfNextAdjustment;
 	}
 
-	private void setBufferSize(ProfilingEdge edge, int bufferSize)
+	private void setBufferSize(QosEdge edge, int bufferSize)
 			throws InterruptedException {
 		LimitBufferSizeAction bsla = new LimitBufferSizeAction(this.jobID, edge
 				.getSourceVertex().getID(), edge.getSourceChannelID(),
 				bufferSize);
 
 		if (this.profilingModel.getProfilingSequence().getQosManager()
-				.equals(edge.getSourceVertex().getQosReporter())) {
+				.equals(edge.getSourceVertex().getExecutingInstance())) {
 			try {
 				StreamTaskManagerPlugin.getInstance().sendData(bsla);
 			} catch (IOException e) {
@@ -264,7 +264,7 @@ public class BufferSizeManager {
 			}
 		} else {
 			this.messagingThread.sendToTaskManagerAsynchronously(edge
-					.getSourceVertex().getQosReporter(), bsla);
+					.getSourceVertex().getExecutingInstance(), bsla);
 		}
 	}
 }
