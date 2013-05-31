@@ -117,6 +117,7 @@ public class QosGroupVertex {
 
 	public void addGroupMember(QosVertex groupMember) {
 		groupMember.setMemberIndex(this.groupMembers.size());
+		groupMember.setGroupVertex(this);
 		this.groupMembers.add(groupMember);
 	}
 

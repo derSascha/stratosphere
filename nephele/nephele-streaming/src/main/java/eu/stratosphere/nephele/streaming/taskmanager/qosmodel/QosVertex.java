@@ -1,20 +1,27 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.jobgraph.JobVertexID;
+import eu.stratosphere.nephele.streaming.JobGraphSequence;
+import eu.stratosphere.nephele.streaming.SequenceElement;
 
 public class QosVertex {
 
-	private final ExecutionVertexID vertexID;
+	private QosGroupVertex groupVertex;
+
+	private ExecutionVertexID vertexID;
 
 	private InstanceConnectionInfo executingInstance;
 
 	private ArrayList<QosGate> inputGates;
 
 	private ArrayList<QosGate> outputGates;
-	
+
 	private int memberIndex;
 
 	private String name;
@@ -24,7 +31,8 @@ public class QosVertex {
 	 */
 	private transient VertexQosData qosData;
 
-	public QosVertex(ExecutionVertexID vertexID, String name, InstanceConnectionInfo executingInstance) {
+	public QosVertex(ExecutionVertexID vertexID, String name,
+			InstanceConnectionInfo executingInstance) {
 		this.vertexID = vertexID;
 		this.name = name;
 		this.executingInstance = executingInstance;
@@ -99,7 +107,8 @@ public class QosVertex {
 	}
 
 	public QosVertex cloneWithoutGates() {
-		QosVertex clone = new QosVertex(this.vertexID, this.name, this.executingInstance);
+		QosVertex clone = new QosVertex(this.vertexID, this.name,
+				this.executingInstance);
 		return clone;
 	}
 
@@ -110,8 +119,18 @@ public class QosVertex {
 	public int getMemberIndex() {
 		return this.memberIndex;
 	}
-	
-	/* (non-Javadoc)
+
+	public void setGroupVertex(QosGroupVertex qosGroupVertex) {
+		this.groupVertex = qosGroupVertex;
+	}
+
+	public QosGroupVertex getGroupVertex() {
+		return this.groupVertex;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
@@ -120,14 +139,18 @@ public class QosVertex {
 		int result = 1;
 		result = prime * result + memberIndex;
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		result = prime * result
-				+ ((executingInstance == null) ? 0 : executingInstance.hashCode());
+		result = prime
+				* result
+				+ ((executingInstance == null) ? 0 : executingInstance
+						.hashCode());
 		result = prime * result
 				+ ((vertexID == null) ? 0 : vertexID.hashCode());
 		return result;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override

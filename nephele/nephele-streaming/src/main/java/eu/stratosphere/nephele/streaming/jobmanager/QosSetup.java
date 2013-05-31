@@ -15,12 +15,9 @@
 package eu.stratosphere.nephele.streaming.jobmanager;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -33,9 +30,10 @@ import eu.stratosphere.nephele.streaming.JobGraphSequence;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGate;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphFactory;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphTraversal;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphTraversalListener;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
@@ -78,114 +76,36 @@ public class QosSetup {
 		}
 	}
 
-	private void computeReportersForManager(QosManagerRole qosManager) {
+	private void computeReportersForManager(final QosManagerRole qosManager) {
 		JobGraphSequence sequence = qosManager.getQosGraph()
 				.getConstraintByID(qosManager.getConstraintID()).getSequence();
 
-		// depending on the constraint's sequence, the anchor vertex may be part
-		// of the constraint or not.
-		boolean anchorVertexIsConstrained = sequence.isInSequence(qosManager
-				.getAnchorVertex().getJobVertexID());
+		QosGraphTraversalListener listener = new QosGraphTraversalListener() {
 
-		Deque<SequenceElement<JobVertexID>> afterDeque = getSequenceAfterIncludingAnchor(
-				sequence, qosManager.getAnchorVertex().getJobVertexID());
+			@Override
+			public void processQosVertex(QosVertex vertex,
+					SequenceElement<JobVertexID> sequenceElem) {
+				addReporterForQosVertex(qosManager, vertex, sequenceElem);
+			}
 
-		Deque<SequenceElement<JobVertexID>> beforeDeque = getSequenceBeforeAnchor(
-				sequence, qosManager.getAnchorVertex().getJobVertexID());
+			@Override
+			public void processQosEdge(QosEdge edge,
+					SequenceElement<JobVertexID> sequenceElem) {
+				addReportersForQosEdge(qosManager, edge);
+			}
+		};
 
 		for (QosVertex anchorMember : qosManager.getMembersOnInstance()) {
-			if (anchorVertexIsConstrained) {
-				forwardComputeReporters(qosManager, anchorMember, afterDeque);
-			} else if (!afterDeque.isEmpty()) {
-				QosGate outputGate = anchorMember.getOutputGate(afterDeque
-						.getFirst().getOutputGateIndex());
-				for (QosEdge edge : outputGate.getEdges()) {
-					forwardComputeReporters(qosManager, edge, afterDeque);
-				}
-			}
-
-			if (!beforeDeque.isEmpty()) {
-				QosGate inputGate = anchorMember.getInputGate(beforeDeque
-						.getFirst().getInputGateIndex());
-				for (QosEdge edge : inputGate.getEdges()) {
-					backwardComputeReporters(qosManager, edge, beforeDeque);
-				}
-			}
+			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember);
+			traverser.traverseGraphForwardAlongSequence(listener, sequence);
+			traverser.traverseGraphBackwardAlongSequence(listener, sequence,
+					false);
 		}
 	}
-	
-	private void forwardComputeReporters(QosManagerRole qosManager,
-			QosVertex vertex,
-			Deque<SequenceElement<JobVertexID>> sequenceDeque) {
 
-		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeFirst();
-
-		addReporterForQosVertex(qosManager, vertex, currentElem);
-
-		if (!sequenceDeque.isEmpty()) {
-			QosGate outputGate = vertex.getOutputGate(sequenceDeque
-					.getFirst().getOutputGateIndex());
-			for (QosEdge edge : outputGate.getEdges()) {
-				forwardComputeReporters(qosManager, edge, sequenceDeque);
-			}
-		}
-
-		sequenceDeque.addFirst(currentElem);
-	}
-
-	private void forwardComputeReporters(QosManagerRole qosManager,
-			QosEdge edge, Deque<SequenceElement<JobVertexID>> sequenceDeque) {
-
-		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeFirst();
-
-		addReportersForQosEdge(qosManager, edge);
-
-		if (!sequenceDeque.isEmpty()) {
-			forwardComputeReporters(qosManager,
-					edge.getInputGate().getVertex(), sequenceDeque);
-		}
-
-		sequenceDeque.addFirst(currentElem);
-	}
-
-
-	private void backwardComputeReporters(QosManagerRole qosManager,
-			QosVertex currentMember,
-			Deque<SequenceElement<JobVertexID>> sequenceDeque) {
-
-		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeFirst();
-
-		addReporterForQosVertex(qosManager, currentMember, currentElem);
-
-		if (!sequenceDeque.isEmpty()) {
-			QosGate inputGate = currentMember.getInputGate(sequenceDeque
-					.getFirst().getInputGateIndex());
-			for (QosEdge edge : inputGate.getEdges()) {
-				backwardComputeReporters(qosManager, edge, sequenceDeque);
-			}
-		}
-
-		sequenceDeque.addFirst(currentElem);
-	}
-
-	private void backwardComputeReporters(QosManagerRole qosManager,
-			QosEdge edge, Deque<SequenceElement<JobVertexID>> sequenceDeque) {
-
-		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeFirst();
-
-		addReportersForQosEdge(qosManager, edge);
-
-		if (!sequenceDeque.isEmpty()) {
-			backwardComputeReporters(qosManager,
-					edge.getOutputGate().getVertex(), sequenceDeque);
-		}
-
-		sequenceDeque.addFirst(currentElem);
-	}
-	
 	private void addReporterForQosVertex(QosManagerRole qosManager,
 			QosVertex vertex, SequenceElement<JobVertexID> sequenceElem) {
-		
+
 		InstanceConnectionInfo reporterInstance = vertex.getExecutingInstance();
 
 		QosReporterRole reporterRole = new QosReporterRole(vertex.getID(),
@@ -196,7 +116,6 @@ public class QosSetup {
 		getOrCreateInstanceRoles(reporterInstance)
 				.addReporterRole(reporterRole);
 	}
-
 
 	private void addReportersForQosEdge(QosManagerRole qosManager, QosEdge edge) {
 		InstanceConnectionInfo srcReporterInstance = edge.getOutputGate()
@@ -211,69 +130,6 @@ public class QosSetup {
 		getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
 				reporterRole);
 	}
-
-	private LinkedList<SequenceElement<JobVertexID>> getSequenceBeforeAnchor(
-			JobGraphSequence sequence, JobVertexID anchorVertexID) {
-
-		LinkedList<SequenceElement<JobVertexID>> ret = new LinkedList<SequenceElement<JobVertexID>>();
-
-		SequenceElement<JobVertexID> first = sequence.getFirst();
-		boolean noElementsBeforeAnchor = (first.isVertex() && first
-				.getVertexID().equals(anchorVertexID))
-				|| (first.isEdge() && first.getSourceVertexID().equals(
-						anchorVertexID));
-
-		if (noElementsBeforeAnchor) {
-			return ret;
-		}
-
-		ret = new LinkedList<SequenceElement<JobVertexID>>(sequence);
-		Collections.reverse(ret);
-		while (!ret.isEmpty()) {
-			SequenceElement<JobVertexID> current = ret.getFirst();
-
-			if (current.isEdge()
-					&& current.getTargetVertexID().equals(anchorVertexID)) {
-				break;
-			}
-
-			ret.removeFirst();
-		}
-
-		return ret;
-	}
-
-	private LinkedList<SequenceElement<JobVertexID>> getSequenceAfterIncludingAnchor(
-			JobGraphSequence sequence, JobVertexID anchorVertexID) {
-
-		LinkedList<SequenceElement<JobVertexID>> ret = new LinkedList<SequenceElement<JobVertexID>>();
-
-		SequenceElement<JobVertexID> last = sequence.getLast();
-		boolean noElementsAfterIncludingAnchor = last.isEdge()
-				&& last.getTargetVertexID().equals(anchorVertexID);
-
-		if (noElementsAfterIncludingAnchor) {
-			return ret;
-		}
-
-		ret = new LinkedList<SequenceElement<JobVertexID>>(sequence);
-
-		while (!ret.isEmpty()) {
-			SequenceElement<JobVertexID> current = ret.getFirst();
-
-			if ((current.isVertex() && current.getVertexID().equals(
-					anchorVertexID))
-					|| (current.isEdge() && current.getSourceVertexID().equals(
-							anchorVertexID))) {
-				break;
-			}
-
-			ret.removeFirst();
-		}
-
-		return ret;
-	}
-
 
 	private void createQosGraphs() {
 		this.qosGraphs = new HashMap<LatencyConstraintID, QosGraph>();
