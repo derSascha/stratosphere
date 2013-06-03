@@ -99,7 +99,7 @@ public class QosSetup {
 			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember);
 			traverser.traverseGraphForwardAlongSequence(listener, sequence);
 			traverser.traverseGraphBackwardAlongSequence(listener, sequence,
-					false);
+					false, true);
 		}
 	}
 

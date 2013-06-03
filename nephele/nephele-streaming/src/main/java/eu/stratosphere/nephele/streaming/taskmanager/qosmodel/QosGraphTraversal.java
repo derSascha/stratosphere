@@ -15,34 +15,49 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedList;
 
+import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
 import eu.stratosphere.nephele.streaming.JobGraphSequence;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 
 /**
+ * Provides a depth-first way a traversing a QoS graph along a JobGraphSequence.
+ * 
+ * Instances of this class are not thread-safe.
+ * 
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public class QosGraphTraversal {
-	
+
 	private QosVertex startVertex;
 	
+	private HashSet<ExecutionVertexID> visitedVertices;
+
+	/**
+	 * 
+	 * Initializes QosGraphTraversal with the given start-vertex.
+	 * 
+	 * @param startVertex
+	 *            Traversal starts from this vertex.
+	 */
 	public QosGraphTraversal(QosVertex startVertex) {
 		this.startVertex = startVertex;
+		this.visitedVertices = new HashSet<ExecutionVertexID>();
 	}
-	
-	
+
 	/**
 	 * Equal to calling
-	 * {@link #traverseGraphForwardAlongSequence(QosGraphTraversalListener, JobGraphSequence, true)}
+	 * {@link #traverseGraphForwardAlongSequence(QosGraphTraversalListener, JobGraphSequence, true, true)}
 	 * .
 	 */
 	public void traverseGraphForwardAlongSequence(
 			QosGraphTraversalListener listener, JobGraphSequence sequence) {
 
-		traverseGraphForwardAlongSequence(listener, sequence, true);
+		traverseGraphForwardAlongSequence(listener, sequence, true, true);
 	}
 
 	/**
@@ -50,10 +65,10 @@ public class QosGraphTraversal {
 	 * JobGraphSequence. Traversal starts at the start-vertex and for each
 	 * encountered vertex or edge the given listener is called.
 	 * 
-	 * Corner case: Sequences may start/end with edges. If the start-vertex's group
-	 * vertex is not part of the sequence, it must at least be the source/target
-	 * of the first/last edge in the sequence. The listener will not be called
-	 * for the start-vertex then.
+	 * Corner case: Sequences may start/end with edges. If the start-vertex's
+	 * group vertex is not part of the sequence, it must at least be the
+	 * source/target of the first/last edge in the sequence. The listener will
+	 * not be called for the start-vertex then.
 	 * 
 	 * @param listener
 	 *            A callback that is invoked for each vertex or edge encountered
@@ -62,57 +77,75 @@ public class QosGraphTraversal {
 	 *            Determines which path to walk.
 	 * 
 	 * @param includeStartVertex
-	 *            Whether the listener should also be called for the start-vertex. If
-	 *            its group vertex is not in the sequence, this parameter has no effect.
+	 *            Whether the listener should also be called for the
+	 *            start-vertex. If its group vertex is not in the sequence, this
+	 *            parameter has no effect.
+	 * @param visitOnlyOnce
+	 *            Whether each vertex of the QoS graph shall only be visited
+	 *            once (in a DAG there may be multiple paths between two
+	 *            vertices).
 	 */
 	public void traverseGraphForwardAlongSequence(
 			QosGraphTraversalListener listener, JobGraphSequence sequence,
-			boolean includeStartVertex) {
+			boolean includeStartVertex, boolean visitOnlyOnce) {
 
 		Deque<SequenceElement<JobVertexID>> afterDeque = getSequenceAfterIncluding(sequence);
 
 		if (afterDeque.isEmpty()) {
 			return;
 		}
-		
+
 		// do some sanity checking
 		SequenceElement<JobVertexID> firstElem = afterDeque.getFirst();
 		if (!QosGraphUtil.match(firstElem, this.startVertex)
-				&& !QosGraphUtil.isEdgeAndStartsAtVertex(firstElem, this.startVertex)) {
+				&& !QosGraphUtil.isEdgeAndStartsAtVertex(firstElem,
+						this.startVertex)) {
 			throw new RuntimeException(
 					"If the start-vertex is not on the sequence it must at least be the source/target of the first/last edge in the sequence.");
 		}
 
-		if (!includeStartVertex && QosGraphUtil.match(afterDeque.getFirst(), this.startVertex)) {
+		if (!includeStartVertex
+				&& QosGraphUtil.match(afterDeque.getFirst(), this.startVertex)) {
 			afterDeque.removeFirst();
 		}
 
 		if (afterDeque.isEmpty()) {
 			return;
 		} else if (afterDeque.getFirst().isVertex()) {
-			forwardComputeReporters(this.startVertex, afterDeque, listener);
+			forwardComputeReporters(this.startVertex, afterDeque, listener, visitOnlyOnce);
 		} else {
 			QosGate outputGate = this.startVertex.getOutputGate(afterDeque
 					.getFirst().getOutputGateIndex());
 			for (QosEdge edge : outputGate.getEdges()) {
-				forwardComputeReporters(edge, afterDeque, listener);
+				forwardComputeReporters(edge, afterDeque, listener, visitOnlyOnce);
 			}
 		}
+		
+		this.visitedVertices.clear();
 	}
 
 	private void forwardComputeReporters(QosVertex vertex,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque,
-			QosGraphTraversalListener listener) {
+			QosGraphTraversalListener listener, 
+			boolean visitOnlyOnce) {
+		
+		if (visitOnlyOnce && this.visitedVertices.contains(vertex.getID())) {
+			return;
+		}
 
 		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeFirst();
 
 		listener.processQosVertex(vertex, currentElem);
+		
+		if(visitOnlyOnce) {
+			this.visitedVertices.add(vertex.getID());
+		}
 
 		if (!sequenceDeque.isEmpty()) {
 			QosGate outputGate = vertex.getOutputGate(sequenceDeque.getFirst()
 					.getOutputGateIndex());
 			for (QosEdge edge : outputGate.getEdges()) {
-				forwardComputeReporters(edge, sequenceDeque, listener);
+				forwardComputeReporters(edge, sequenceDeque, listener, visitOnlyOnce);
 			}
 		}
 
@@ -121,7 +154,8 @@ public class QosGraphTraversal {
 
 	private void forwardComputeReporters(QosEdge edge,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque,
-			QosGraphTraversalListener listener) {
+			QosGraphTraversalListener listener,
+			boolean visitOnlyOnce) {
 
 		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeFirst();
 
@@ -129,7 +163,7 @@ public class QosGraphTraversal {
 
 		if (!sequenceDeque.isEmpty()) {
 			forwardComputeReporters(edge.getInputGate().getVertex(),
-					sequenceDeque, listener);
+					sequenceDeque, listener, visitOnlyOnce);
 		}
 
 		sequenceDeque.addFirst(currentElem);
@@ -138,12 +172,14 @@ public class QosGraphTraversal {
 	private LinkedList<SequenceElement<JobVertexID>> getSequenceAfterIncluding(
 			JobGraphSequence sequence) {
 
-		boolean notInSequence = QosGraphUtil.isEdgeAndEndsAtVertex(sequence.getLast(), this.startVertex);
+		boolean notInSequence = QosGraphUtil.isEdgeAndEndsAtVertex(
+				sequence.getLast(), this.startVertex);
 		if (notInSequence) {
 			return new LinkedList<SequenceElement<JobVertexID>>();
 		}
 
-		LinkedList<SequenceElement<JobVertexID>> ret = new LinkedList<SequenceElement<JobVertexID>>(sequence);
+		LinkedList<SequenceElement<JobVertexID>> ret = new LinkedList<SequenceElement<JobVertexID>>(
+				sequence);
 		while (!ret.isEmpty()) {
 			SequenceElement<JobVertexID> current = ret.getFirst();
 
@@ -158,9 +194,18 @@ public class QosGraphTraversal {
 
 		return ret;
 	}
+	
+	/**
+	 * Equal to calling
+	 * {@link #traverseGraphBackwardAlongSequence(QosGraphTraversalListener, JobGraphSequence, true, true)}
+	 * .
+	 */
+	public void traverseGraphBackwardAlongSequence(
+			QosGraphTraversalListener listener, JobGraphSequence sequence) {
 
-	
-	
+		traverseGraphBackwardAlongSequence(listener, sequence, true, true);
+	}
+
 	/**
 	 * Depth-first-traverses the QosGraph of the start-vertex in backward
 	 * direction, along the given JobGraphSequence. Traversal starts at the
@@ -182,42 +227,51 @@ public class QosGraphTraversal {
 	 *            Whether the listener should also be called for the
 	 *            start-vertex. If its group vertex is not in the sequence, this
 	 *            parameter has no effect.
+	 * @param visitOnlyOnce
+	 *            Whether each vertex of the QoS graph shall only be visited
+	 *            once (in a DAG there may be multiple paths between two
+	 *            vertices).
 	 */
 	public void traverseGraphBackwardAlongSequence(
 			QosGraphTraversalListener listener, JobGraphSequence sequence,
-			boolean includeStartVertex) {
+			boolean includeStartVertex,
+			boolean visitOnlyOnce) {
 
 		LinkedList<SequenceElement<JobVertexID>> elemsBefore = getSequenceBeforeIncluding(sequence);
 
 		if (elemsBefore.isEmpty()) {
 			return;
 		}
-		
+
 		// do some sanity checking
 		SequenceElement<JobVertexID> lastElem = elemsBefore.getLast();
 		if (!QosGraphUtil.match(lastElem, this.startVertex)
-				&& !QosGraphUtil.isEdgeAndEndsAtVertex(lastElem, this.startVertex)) {
+				&& !QosGraphUtil.isEdgeAndEndsAtVertex(lastElem,
+						this.startVertex)) {
 			throw new RuntimeException(
 					"If the start-vertex is not on the sequence it must at least be the source/target of the first/last edge in the sequence.");
 		}
 
-		if (!includeStartVertex && QosGraphUtil.match(elemsBefore.getLast(), this.startVertex)) {
+		if (!includeStartVertex
+				&& QosGraphUtil.match(elemsBefore.getLast(), this.startVertex)) {
 			elemsBefore.removeLast();
 		}
 
 		if (elemsBefore.isEmpty()) {
 			return;
 		} else if (elemsBefore.getLast().isVertex()) {
-			backwardComputeReporters(this.startVertex, elemsBefore, listener);
+			backwardComputeReporters(this.startVertex, elemsBefore, listener, visitOnlyOnce);
 		} else {
 			QosGate inputGate = this.startVertex.getInputGate(elemsBefore
 					.getLast().getInputGateIndex());
 			for (QosEdge edge : inputGate.getEdges()) {
-				backwardComputeReporters(edge, elemsBefore, listener);
+				backwardComputeReporters(edge, elemsBefore, listener, visitOnlyOnce);
 			}
 		}
+		
+		this.visitedVertices.clear();
 	}
-	
+
 	private LinkedList<SequenceElement<JobVertexID>> getSequenceBeforeIncluding(
 			JobGraphSequence sequence) {
 
@@ -244,20 +298,29 @@ public class QosGraphTraversal {
 
 		return ret;
 	}
-	
+
 	private void backwardComputeReporters(QosVertex vertex,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque,
-			QosGraphTraversalListener listener) {
+			QosGraphTraversalListener listener,
+			boolean visitOnlyOnce) {
+
+		if (visitOnlyOnce && this.visitedVertices.contains(vertex.getID())) {
+			return;
+		}
 
 		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeLast();
 
 		listener.processQosVertex(vertex, currentElem);
+		
+		if(visitOnlyOnce) {
+			this.visitedVertices.add(vertex.getID());
+		}
 
 		if (!sequenceDeque.isEmpty()) {
 			QosGate inputGate = vertex.getInputGate(sequenceDeque.getLast()
 					.getInputGateIndex());
 			for (QosEdge edge : inputGate.getEdges()) {
-				backwardComputeReporters(edge, sequenceDeque, listener);
+				backwardComputeReporters(edge, sequenceDeque, listener, visitOnlyOnce);
 			}
 		}
 
@@ -266,7 +329,8 @@ public class QosGraphTraversal {
 
 	private void backwardComputeReporters(QosEdge edge,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque,
-			QosGraphTraversalListener listener) {
+			QosGraphTraversalListener listener,
+			boolean visitOnlyOnce) {
 
 		SequenceElement<JobVertexID> currentElem = sequenceDeque.removeLast();
 
@@ -274,7 +338,7 @@ public class QosGraphTraversal {
 
 		if (!sequenceDeque.isEmpty()) {
 			backwardComputeReporters(edge.getOutputGate().getVertex(),
-					sequenceDeque, listener);
+					sequenceDeque, listener, visitOnlyOnce);
 		}
 
 		sequenceDeque.addLast(currentElem);
