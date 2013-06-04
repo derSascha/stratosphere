@@ -1,14 +1,11 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.LinkedList;
 
+import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
-import eu.stratosphere.nephele.jobgraph.JobVertexID;
-import eu.stratosphere.nephele.streaming.JobGraphSequence;
-import eu.stratosphere.nephele.streaming.SequenceElement;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGate.GateType;
 
 public class QosVertex {
 
@@ -32,13 +29,14 @@ public class QosVertex {
 	private transient VertexQosData qosData;
 
 	public QosVertex(ExecutionVertexID vertexID, String name,
-			InstanceConnectionInfo executingInstance) {
+			InstanceConnectionInfo executingInstance, int memberIndex) {
+
 		this.vertexID = vertexID;
 		this.name = name;
 		this.executingInstance = executingInstance;
 		this.inputGates = new ArrayList<QosGate>();
 		this.outputGates = new ArrayList<QosGate>();
-		this.memberIndex = -1;
+		this.memberIndex = memberIndex;
 	}
 
 	public ExecutionVertexID getID() {
@@ -58,6 +56,8 @@ public class QosVertex {
 			fillWithNulls(this.inputGates, inputGate.getGateIndex() + 1);
 		}
 
+		inputGate.setVertex(this);
+		inputGate.setGateType(GateType.INPUT_GATE);
 		this.inputGates.set(inputGate.getGateIndex(), inputGate);
 	}
 
@@ -73,7 +73,9 @@ public class QosVertex {
 		if (outputGate.getGateIndex() >= this.outputGates.size()) {
 			fillWithNulls(this.outputGates, outputGate.getGateIndex() + 1);
 		}
-
+		
+		outputGate.setVertex(this);
+		outputGate.setGateType(GateType.OUTPUT_GATE);
 		this.outputGates.set(outputGate.getGateIndex(), outputGate);
 	}
 
@@ -108,7 +110,7 @@ public class QosVertex {
 
 	public QosVertex cloneWithoutGates() {
 		QosVertex clone = new QosVertex(this.vertexID, this.name,
-				this.executingInstance);
+				this.executingInstance, this.memberIndex);
 		return clone;
 	}
 
@@ -180,5 +182,12 @@ public class QosVertex {
 		} else if (!vertexID.equals(other.vertexID))
 			return false;
 		return true;
+	}
+
+	public static QosVertex fromExecutionVertex(ExecutionVertex executionVertex) {
+		return new QosVertex(executionVertex.getID(),
+				executionVertex.getName() + executionVertex.getIndexInVertexGroup(),
+				executionVertex.getAllocatedResource().getInstance().getInstanceConnectionInfo(),
+				executionVertex.getIndexInVertexGroup());
 	}
 }

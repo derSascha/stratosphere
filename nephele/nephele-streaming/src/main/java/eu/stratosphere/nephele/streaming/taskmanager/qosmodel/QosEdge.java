@@ -27,9 +27,13 @@ public class QosEdge {
 	 */
 	private transient EdgeQosData qosData;
 
-	public QosEdge(ChannelID sourceChannelID, ChannelID targetChannelID) {
+	public QosEdge(ChannelID sourceChannelID, ChannelID targetChannelID,
+			int outputGateEdgeIndex, int inputGateEdgeIndex) {
+		
 		this.sourceChannelID = sourceChannelID;
 		this.targetChannelID = targetChannelID;
+		this.outputGateEdgeIndex = outputGateEdgeIndex;
+		this.inputGateEdgeIndex = inputGateEdgeIndex;
 	}
 
 	/**
@@ -49,7 +53,6 @@ public class QosEdge {
 	 */
 	public void setOutputGate(QosGate outputGate) {
 		this.outputGate = outputGate;
-		this.outputGateEdgeIndex = outputGate.getEdges().size();
 		this.outputGate.addEdge(this);
 	}
 
@@ -70,7 +73,6 @@ public class QosEdge {
 	 */
 	public void setInputGate(QosGate inputGate) {
 		this.inputGate = inputGate;
-		this.inputGateEdgeIndex = inputGate.getEdges().size();
 		this.inputGate.addEdge(this);
 	}
 
@@ -125,7 +127,8 @@ public class QosEdge {
 	}
 	
 	public QosEdge cloneWithoutGates() {
-		QosEdge clone = new QosEdge(this.sourceChannelID, this.targetChannelID);
+		QosEdge clone = new QosEdge(this.sourceChannelID, this.targetChannelID,
+				this.outputGateEdgeIndex, this.inputGateEdgeIndex);
 		return clone;
 	}
 }

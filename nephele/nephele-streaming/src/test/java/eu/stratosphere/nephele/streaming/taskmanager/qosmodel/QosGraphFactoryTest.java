@@ -14,6 +14,8 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,11 +37,25 @@ public class QosGraphFactoryTest {
 	@Before
 	public void setup() throws Exception {
 		this.fix = new QosGraphFixture();
+		this.fix.makeJobGraph();
+		this.fix.makeExecutionGraph();
+		this.fix.makeConstraints();
 	}
 	
 	@Test
-	public void testFoo() throws Exception {		
-		fix.makeJobGraph();
-		fix.makeExecutionGraph();
+	public void testCreateConstrainedQosGraphWithConstraint1() throws Exception {		
+		QosGraph graph = QosGraphFactory.createConstrainedQosGraph(this.fix.execGraph, this.fix.constraint1);
+		assertEquals(4, graph.getNumberOfVertices());
+
+		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex1, graph);
+		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex3, graph);
+		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex4, graph);
+		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex5, graph);
+
+		assertEquals(1, graph.getStartVertices().size());
+		assertEquals(this.fix.vertex1, graph.getStartVertices().iterator()
+				.next());
+		assertEquals(1, graph.getEndVertices().size());
+		assertEquals(this.fix.vertex5, graph.getEndVertices().iterator().next());
 	}
 }

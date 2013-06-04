@@ -14,6 +14,8 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -44,6 +46,8 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.jobgraph.JobInputVertex;
 import eu.stratosphere.nephele.jobgraph.JobTaskVertex;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
+import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
+import eu.stratosphere.nephele.streaming.JobGraphSequence;
 import eu.stratosphere.nephele.template.AbstractGenericInputTask;
 import eu.stratosphere.nephele.template.AbstractOutputTask;
 import eu.stratosphere.nephele.template.AbstractTask;
@@ -95,23 +99,85 @@ public class QosGraphFixture {
 
 	public QosGroupEdge edge5C6;
 	
+	public QosGroupVertex vertex10;
+	
+	public QosGroupVertex vertex11;
+	
+	public QosGroupVertex vertex12;
+	
+	public QosGroupVertex vertex13;
+	
+	public QosGroupEdge edge1011; 
+	
+	public QosGroupEdge edge1112;
+	
+	public QosGroupEdge edge1213;
+	
 	public JobGraph jobGraph;
 
-	private JobInputVertex jobVertex1;
+	public JobInputVertex jobVertex1;
 
-	private JobTaskVertex jobVertex2;
+	public JobTaskVertex jobVertex2;
 
-	private JobTaskVertex jobVertex3;
+	public JobTaskVertex jobVertex3;
 
-	private JobTaskVertex jobVertex4;
+	public JobTaskVertex jobVertex4;
 
-	private JobGenericOutputVertex jobVertex5;
+	public JobGenericOutputVertex jobVertex5;
 	
 	public ExecutionGraph execGraph;
+	
+	/**
+	 * Covers e13,v3,e34,v4,e45
+	 */
+	public JobGraphLatencyConstraint constraint1;
+
+	/**
+	 * Covers e12,v2,e24,v4
+	 */
+	public JobGraphLatencyConstraint constraint2;
+	
+	/**
+	 * Covers v2,e24,v4,e45
+	 */
+	public JobGraphLatencyConstraint constraint3;
+	
+	/**
+	 * Covers v2,e24,v4
+	 */
+	public JobGraphLatencyConstraint constraint4;
 	
 	public QosGraphFixture() throws Exception {
 		connectVertices1To5();
 		connectVertices0To6();
+		connectvertices10To13();
+	}
+
+	private void connectvertices10To13() {
+		this.vertex10 = new QosGroupVertex(new JobVertexID(), "vertex10");
+		this.generateMembers(this.vertex10, 3);
+
+		this.vertex11 = new QosGroupVertex(new JobVertexID(), "vertex11");
+		this.generateMembers(this.vertex11, 3);
+
+		this.vertex12 = new QosGroupVertex(new JobVertexID(), "vertex12");
+		this.generateMembers(this.vertex12, 3);
+		
+		this.vertex13 = new QosGroupVertex(new JobVertexID(), "vertex13");
+		this.generateMembers(this.vertex13, 3);
+
+		
+		this.edge1011 = new QosGroupEdge(DistributionPattern.BIPARTITE,
+				this.vertex10, this.vertex11, 0, 0);
+		this.generateMemberWiring(this.edge1011);
+		
+		this.edge1112 = new QosGroupEdge(DistributionPattern.POINTWISE,
+				this.vertex11, this.vertex12, 0, 0);
+		this.generateMemberWiring(this.edge1112);
+		
+		this.edge1213 = new QosGroupEdge(DistributionPattern.BIPARTITE,
+				this.vertex12, this.vertex13, 0, 0);
+		this.generateMemberWiring(this.edge1213);
 	}
 
 	public void makeExecutionGraph() throws Exception {
@@ -132,31 +198,78 @@ public class QosGraphFixture {
 		InstanceManager mockInstanceManager = mock(InstanceManager.class);
 		InstanceType instType = new InstanceType();
 		when(mockInstanceManager.getDefaultInstanceType()).thenReturn(instType);
-		this.execGraph = new ExecutionGraph(jobGraph, mockInstanceManager);
+		this.execGraph = new ExecutionGraph(this.jobGraph, mockInstanceManager);
 	}
 	
-	
+	public void makeConstraints() {
+		/**
+		 * Covers e13,v3,e34,v4,e45
+		 */
+		JobGraphSequence sequence1 = new JobGraphSequence();
+		sequence1.addEdge(this.jobVertex1.getID(), 1, this.jobVertex3.getID(), 0);
+		sequence1.addVertex(this.jobVertex3.getID(), 0, 0);
+		sequence1.addEdge(this.jobVertex3.getID(), 0, this.jobVertex4.getID(), 0);
+		sequence1.addVertex(this.jobVertex4.getID(), 0, 0);
+		sequence1.addEdge(this.jobVertex4.getID(), 0, this.jobVertex5.getID(), 0);
+		this.constraint1 = new JobGraphLatencyConstraint(sequence1, 2000);
+		
+		/**
+		 * Covers e12,v2,e24,v4
+		 */
+		JobGraphSequence sequence2 = new JobGraphSequence();
+		sequence2.addEdge(this.jobVertex1.getID(), 0, this.jobVertex2.getID(), 0);
+		sequence2.addVertex(this.jobVertex2.getID(), 0, 0);
+		sequence2.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(), 1);
+		sequence2.addVertex(this.jobVertex4.getID(), 1, 0);
+		this.constraint2 = new JobGraphLatencyConstraint(sequence2, 2000);
+
+		
+		/**
+		 * Covers v2,e24,v4,e45
+		 */
+		JobGraphSequence sequence3 = new JobGraphSequence();
+		sequence3.addVertex(this.jobVertex2.getID(), 0, 0);
+		sequence3.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(), 1);
+		sequence3.addVertex(this.jobVertex4.getID(), 1, 0);
+		sequence3.addEdge(this.jobVertex4.getID(), 0, this.jobVertex5.getID(), 0);
+		this.constraint3 = new JobGraphLatencyConstraint(sequence3, 2000);
+
+		
+		/**
+		 * Covers v2,e24,v4
+		 */
+		JobGraphSequence sequence4 = new JobGraphSequence();
+		sequence4.addVertex(this.jobVertex2.getID(), 0, 0);
+		sequence4.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(), 1);
+		sequence4.addVertex(this.jobVertex4.getID(), 1, 0);
+		this.constraint4 = new JobGraphLatencyConstraint(sequence4, 2000);
+	}
 
 	public void makeJobGraph() throws Exception {
 		// makes a job graph that contains vertices 1 - 5
-		jobGraph = new JobGraph();		
+		this.jobGraph = new JobGraph();		
 				
-		jobVertex1 = new JobInputVertex("vertex1", jobGraph);
-		jobVertex1.setInputClass(DummyInputTask.class);
-		jobVertex2 = new JobTaskVertex("vertex2", jobGraph);
-		jobVertex2.setTaskClass(DummyTask23.class);
-		jobVertex3 = new JobTaskVertex("vertex3", jobGraph);
-		jobVertex3.setTaskClass(DummyTask23.class);
-		jobVertex4 = new JobTaskVertex("vertex4", jobGraph);
-		jobVertex4.setTaskClass(DummyTask4.class);
-		jobVertex5 = new JobGenericOutputVertex("vertex5", jobGraph);
-		jobVertex5.setOutputClass(DummyOutputTask.class);
+		this.jobVertex1 = new JobInputVertex("vertex1", this.jobGraph);
+		this.jobVertex1.setInputClass(DummyInputTask.class);
+		this.jobVertex1.setNumberOfSubtasks(2);
+		this.jobVertex2 = new JobTaskVertex("vertex2", this.jobGraph);
+		this.jobVertex2.setTaskClass(DummyTask23.class);
+		this.jobVertex2.setNumberOfSubtasks(2);
+		this.jobVertex3 = new JobTaskVertex("vertex3", this.jobGraph);
+		this.jobVertex3.setTaskClass(DummyTask23.class);
+		this.jobVertex3.setNumberOfSubtasks(3);
+		this.jobVertex4 = new JobTaskVertex("vertex4", this.jobGraph);
+		this.jobVertex4.setTaskClass(DummyTask4.class);
+		this.jobVertex4.setNumberOfSubtasks(1);
+		this.jobVertex5 = new JobGenericOutputVertex("vertex5", this.jobGraph);
+		this.jobVertex5.setOutputClass(DummyOutputTask.class);
+		this.jobVertex5.setNumberOfSubtasks(5);
 
-		jobVertex1.connectTo(jobVertex2, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.BIPARTITE);
-		jobVertex1.connectTo(jobVertex3, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.BIPARTITE);
-		jobVertex2.connectTo(jobVertex4, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.POINTWISE);
-		jobVertex3.connectTo(jobVertex4, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.POINTWISE);
-		jobVertex4.connectTo(jobVertex5, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.BIPARTITE);
+		this.jobVertex1.connectTo(this.jobVertex2, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.BIPARTITE);
+		this.jobVertex1.connectTo(this.jobVertex3, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.BIPARTITE);
+		this.jobVertex2.connectTo(this.jobVertex4, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.POINTWISE);
+		this.jobVertex3.connectTo(this.jobVertex4, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.POINTWISE);
+		this.jobVertex4.connectTo(this.jobVertex5, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION, DistributionPattern.BIPARTITE);
 		
 //		File jarFile = File.createTempFile("bogus-test", ".jar");
 //		JarFileCreator jfc = new JarFileCreator(jarFile);
@@ -240,8 +353,8 @@ public class QosGraphFixture {
 		for (int i = 0; i < memberCount; i++) {
 			QosVertex member = new QosVertex(new ExecutionVertexID(),
 					vertex.getName() + "_" + i, new InstanceConnectionInfo(
-							InetAddress.getLoopbackAddress(), 1, 1));
-			vertex.addGroupMember(member);
+							InetAddress.getLoopbackAddress(), 1, 1), i);
+			vertex.setGroupMember(member);
 		}
 	}
 
@@ -251,8 +364,7 @@ public class QosGraphFixture {
 
 		for (int i = 0; i < sourceMembers; i++) {
 			QosVertex sourceMember = groupEdge.getSourceVertex().getMember(i);
-			QosGate outputGate = new QosGate(sourceMember,
-					groupEdge.getOutputGateIndex());
+			QosGate outputGate = new QosGate(groupEdge.getOutputGateIndex());
 			sourceMember.setOutputGate(outputGate);
 
 			for (int j = 0; j < targetMembers; j++) {
@@ -266,12 +378,13 @@ public class QosGraphFixture {
 					QosGate inputGate = targetMember.getInputGate(groupEdge
 							.getInputGateIndex());
 					if (inputGate == null) {
-						inputGate = new QosGate(targetMember,
-								groupEdge.getOutputGateIndex());
+						inputGate = new QosGate(groupEdge.getOutputGateIndex());
 						targetMember.setInputGate(inputGate);
 					}
 
-					QosEdge edge = new QosEdge(new ChannelID(), new ChannelID());
+					QosEdge edge = new QosEdge(new ChannelID(),
+							new ChannelID(), outputGate.getNumberOfEdges(),
+							inputGate.getNumberOfEdges());
 					edge.setInputGate(inputGate);
 					edge.setOutputGate(outputGate);
 				}
@@ -287,6 +400,84 @@ public class QosGraphFixture {
 		@Override
 		public void read(DataInput in) throws IOException {
 		}		
+	}
+	
+	
+	public void assertContainsIdentical(QosGroupVertex vertex, QosGraph graph) {
+		QosGroupVertex contained = graph.getGroupVertexByID(vertex
+				.getJobVertexID());
+		assertTrue(vertex == contained);
+	}
+
+	public void assertQosGraphEqualToFixture1To5(QosGraph graph) {
+		assertEquals(5, graph.getNumberOfVertices());
+
+		this.assertContainsEqualButNotIdentical(this.vertex1, graph);
+		this.assertContainsEqualButNotIdentical(this.vertex2, graph);
+		this.assertContainsEqualButNotIdentical(this.vertex3, graph);
+		this.assertContainsEqualButNotIdentical(this.vertex4, graph);
+		this.assertContainsEqualButNotIdentical(this.vertex5, graph);
+
+		assertEquals(1, graph.getStartVertices().size());
+		assertEquals(this.vertex1, graph.getStartVertices().iterator()
+				.next());
+		assertEquals(1, graph.getEndVertices().size());
+		assertEquals(this.vertex5, graph.getEndVertices().iterator().next());
+	}
+	
+	public void assertQosGraphIdenticalToFixture1To5(QosGraph graph) {
+		assertEquals(5, graph.getNumberOfVertices());
+		assertTrue(this.vertex1 == graph
+				.getGroupVertexByID(this.vertex1.getJobVertexID()));
+		assertTrue(this.vertex2 == graph
+				.getGroupVertexByID(this.vertex2.getJobVertexID()));
+		assertTrue(this.vertex3 == graph
+				.getGroupVertexByID(this.vertex3.getJobVertexID()));
+		assertTrue(this.vertex4 == graph
+				.getGroupVertexByID(this.vertex4.getJobVertexID()));
+		assertTrue(this.vertex5 == graph
+				.getGroupVertexByID(this.vertex5.getJobVertexID()));
+
+		assertEquals(1, graph.getStartVertices().size());
+		assertTrue(this.vertex1 == graph.getStartVertices().iterator()
+				.next());
+		assertEquals(1, graph.getEndVertices().size());
+		assertTrue(this.vertex5 == graph.getEndVertices().iterator().next());
+	}
+
+	public void assertContainsEqualButNotIdentical(QosGroupVertex vertex,
+			QosGraph graph) {
+		this.assertContainsEqualButNotIdentical(vertex, graph, true);
+	}
+
+	public void assertContainsEqualButNotIdentical(QosGroupVertex vertex,
+			QosGraph graph, boolean checkMembers) {
+
+		QosGroupVertex contained = graph.getGroupVertexByID(vertex
+				.getJobVertexID());
+		assertEquals(vertex, contained);
+		assertTrue(vertex != contained);
+		
+//		for(int i=0; i< vertex.getNumberOfOutputGates(); i++) {
+//			QosGroupEdge forwardEdge = vertex.getForwardEdge(i);
+//			assertEquals(contained.getForwardEdge(i).getTargetVertex(), forwardEdge.getTargetVertex());
+//			assertEquals(i, forwardEdge.getOutputGateIndex());
+//		}
+//		
+//		for(int i=0; i< vertex.getNumberOfInputGates(); i++) {
+//			QosGroupEdge backwardEdge = vertex.getBackwardEdge(i);
+//			assertEquals(contained.getBackwardEdge(i).getSourceVertex(), backwardEdge.getSourceVertex());
+//			assertEquals(i, backwardEdge.getInputGateIndex());
+//		}		
+		
+		if (checkMembers) {
+			assertEquals(contained.getNumberOfMembers(),
+					vertex.getNumberOfMembers());
+			for (int i = 0; i < contained.getNumberOfMembers(); i++) {
+				assertEquals(vertex.getMember(i), contained.getMember(i));
+				assertTrue(vertex.getMember(i) != contained.getMember(i));
+			}
+		}
 	}
 	
 	public static class DummyInputTask extends AbstractGenericInputTask {
@@ -350,5 +541,6 @@ public class QosGraphFixture {
 		}		
 	}
 
+	
 
 }

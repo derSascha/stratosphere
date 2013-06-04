@@ -16,42 +16,94 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import java.util.ArrayList;
 
+import eu.stratosphere.nephele.streaming.util.SparseDelegateIterable;
 
 /**
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public class QosGate {
-	
+
 	private int gateIndex;
-	
+
+	/**
+	 * Sparse list of edges, which means this list may contain null entries.
+	 */
 	private ArrayList<QosEdge> edges;
-	
+
 	private QosVertex vertex;
-	
+
+	public enum GateType {
+		INPUT_GATE, OUTPUT_GATE;
+	}
+
+	private GateType isOutputGate;
+
+	private int noOfEdges;
+
 	/**
 	 * Initializes QosGate.
-	 *
+	 * 
 	 */
-	public QosGate(QosVertex vertex, int gateIndex) {
-		this.vertex = vertex;
+	public QosGate(int gateIndex) {
 		this.gateIndex = gateIndex;
 		this.edges = new ArrayList<QosEdge>();
+		this.noOfEdges = 0;
 	}
 
 	public int getGateIndex() {
 		return this.gateIndex;
 	}
 
-	public void addEdge(QosEdge edge) {
-		this.edges.add(edge);
+	public void setVertex(QosVertex vertex) {
+		this.vertex = vertex;
 	}
-	
-	public ArrayList<QosEdge> getEdges() {
-		return this.edges;
+
+	public void setGateType(GateType gateType) {
+		this.isOutputGate = gateType;
+	}
+
+	public void addEdge(QosEdge edge) {
+		int edgeIndex = (this.isOutputGate == GateType.OUTPUT_GATE) ? edge
+				.getOutputGateEdgeIndex() : edge.getInputGateEdgeIndex();
+
+		if (edgeIndex >= this.edges.size()) {
+			fillWithNulls(this.edges, edgeIndex + 1);
+		}
+
+		if (this.edges.get(edgeIndex) == null) {
+			this.noOfEdges++;
+		}
+		this.edges.set(edgeIndex, edge);
+	}
+
+	private <T> void fillWithNulls(ArrayList<T> list, int targetSize) {
+		int toAdd = targetSize - list.size();
+
+		for (int i = 0; i < toAdd; i++) {
+			list.add(null);
+		}
+	}
+
+	public SparseDelegateIterable<QosEdge> getEdges() {
+		return new SparseDelegateIterable<QosEdge>(this.edges.iterator());
+	}
+
+	public QosEdge getEdge(int edgeIndex) {
+		QosEdge toReturn = null;
+
+		if (this.edges.size() > edgeIndex) {
+			toReturn = this.edges.get(edgeIndex);
+		}
+
+		return toReturn;
+	}
+
+	public int getNumberOfEdges() {
+		return this.noOfEdges;
 	}
 
 	public QosVertex getVertex() {
 		return this.vertex;
-	}	
+	}
 }
