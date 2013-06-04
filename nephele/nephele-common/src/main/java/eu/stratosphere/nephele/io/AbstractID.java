@@ -48,6 +48,11 @@ public abstract class AbstractID implements IOReadableWritable {
 	 * The lower part of the actual ID.
 	 */
 	private long lowerPart;
+	
+	/**
+	 * A precomputed hash value.
+	 */
+	private int precomputedHash;
 
 	/**
 	 * Constructs a new ID with a specific bytes value.
@@ -60,6 +65,7 @@ public abstract class AbstractID implements IOReadableWritable {
 
 		this.lowerPart = byteArrayToLong(bytes, 0);
 		this.upperPart = byteArrayToLong(bytes, SIZE_OF_LONG);
+		precomputeHash();
 	}
 
 	/**
@@ -69,6 +75,11 @@ public abstract class AbstractID implements IOReadableWritable {
 
 		this.lowerPart = (long) (Math.random() * Long.MAX_VALUE);
 		this.upperPart = (long) (Math.random() * Long.MAX_VALUE);
+		precomputeHash();
+	}
+	
+	private void precomputeHash() {
+		this.precomputedHash = (int) (this.lowerPart ^ (this.upperPart >>> 32));
 	}
 
 	/**
@@ -148,8 +159,7 @@ public abstract class AbstractID implements IOReadableWritable {
 	 */
 	@Override
 	public int hashCode() {
-
-		return (int) (this.lowerPart ^ (this.upperPart >>> 32));
+		return this.precomputedHash;
 	}
 
 	/**
@@ -160,6 +170,7 @@ public abstract class AbstractID implements IOReadableWritable {
 
 		this.lowerPart = in.readLong();
 		this.upperPart = in.readLong();
+		this.precomputeHash();
 	}
 
 	/**
