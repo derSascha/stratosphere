@@ -19,11 +19,21 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+import eu.stratosphere.nephele.executiongraph.ExecutionSignature;
+import eu.stratosphere.nephele.instance.AbstractInstance;
+import eu.stratosphere.nephele.instance.AllocatedResource;
 
 /**
  * @author Bjoern Lohrmann
  * 
  */
+@PrepareForTest({ ExecutionSignature.class, AbstractInstance.class,
+		AllocatedResource.class })
+@RunWith(PowerMockRunner.class)
 public class QosGraphTest {
 
 	private QosGraphFixture fix;
@@ -36,21 +46,21 @@ public class QosGraphTest {
 	@Test
 	public void testConstructorWithStartVertex() {
 		QosGraph graph = new QosGraph(this.fix.vertex1);
-		this.fix.assertQosGraphIdenticalToFixture1To5(graph);
+		QosGraphTestUtil.assertQosGraphIdenticalToFixture1To5(graph, this.fix);
 	}
 
 	@Test
 	public void testMergeForwardWithEmptyGraph() {
 		QosGraph graph = new QosGraph();
 		graph.mergeForwardReachableGroupVertices(this.fix.vertex1);
-		this.fix.assertQosGraphEqualToFixture1To5(graph);
+		QosGraphTestUtil.assertQosGraphEqualToFixture1To5(graph, this.fix);
 	}
 
 	@Test
 	public void testMergeForwardWithNonemptyGraph() {
 		QosGraph graph = new QosGraph(this.fix.vertex1);
 		graph.mergeForwardReachableGroupVertices(this.fix.vertex0);
-		this.assertMergedFixtureGraphs(graph);
+		assertMergedFixtureGraphs(graph);
 	}
 
 	/**
@@ -58,13 +68,15 @@ public class QosGraphTest {
 	 */
 	private void assertMergedFixtureGraphs(QosGraph graph) {
 		assertEquals(7, graph.getNumberOfVertices());
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex0, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex1, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex2, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex3, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex4, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex5, graph);
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex6, graph);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex0,
+				graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex1, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex2, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex3, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex4, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex5, graph);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex6,
+				graph);
 
 		assertEquals(1,
 				graph.getGroupVertexByID(this.fix.vertex1.getJobVertexID())
@@ -90,7 +102,7 @@ public class QosGraphTest {
 	public void testMergeBackwardEmptyGraph() {
 		QosGraph graph = new QosGraph();
 		graph.mergeBackwardReachableGroupVertices(this.fix.vertex5);
-		this.fix.assertQosGraphEqualToFixture1To5(graph);
+		QosGraphTestUtil.assertQosGraphEqualToFixture1To5(graph, this.fix);
 	}
 
 	@Test
@@ -99,13 +111,15 @@ public class QosGraphTest {
 		graph.mergeBackwardReachableGroupVertices(this.fix.vertex6);
 
 		assertEquals(7, graph.getNumberOfVertices());
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex0, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex1, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex2, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex3, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex4, graph);
-		this.fix.assertContainsIdentical(this.fix.vertex5, graph);
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex6, graph);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex0,
+				graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex1, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex2, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex3, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex4, graph);
+		QosGraphTestUtil.assertContainsIdentical(this.fix.vertex5, graph);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex6,
+				graph);
 
 		assertEquals(1,
 				graph.getGroupVertexByID(this.fix.vertex0.getJobVertexID())
@@ -134,14 +148,14 @@ public class QosGraphTest {
 	public void testMergeIntoEmptyGraph() {
 		QosGraph graph = new QosGraph();
 		graph.merge(new QosGraph(this.fix.vertex1));
-		this.fix.assertQosGraphEqualToFixture1To5(graph);
+		QosGraphTestUtil.assertQosGraphEqualToFixture1To5(graph, this.fix);
 	}
 
 	@Test
 	public void testMergeEmptyIntoNonEmptyGraph() {
 		QosGraph graph = new QosGraph(this.fix.vertex1);
 		graph.merge(new QosGraph());
-		this.fix.assertQosGraphIdenticalToFixture1To5(graph);
+		QosGraphTestUtil.assertQosGraphIdenticalToFixture1To5(graph, this.fix);
 	}
 
 	@Test
@@ -158,16 +172,21 @@ public class QosGraphTest {
 		QosGraph clone = orig.cloneWithoutMembers();
 		assertEquals(4, clone.getNumberOfVertices());
 
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex10, clone, false);
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex11, clone, false);
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex12, clone, false);
-		this.fix.assertContainsEqualButNotIdentical(this.fix.vertex13, clone, false);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex10,
+				clone, false);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex11,
+				clone, false);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex12,
+				clone, false);
+		QosGraphTestUtil.assertContainsEqualButNotIdentical(this.fix.vertex13,
+				clone, false);
 
 		assertEquals(1, clone.getStartVertices().size());
 		assertEquals(this.fix.vertex10, clone.getStartVertices().iterator()
 				.next());
 		assertEquals(1, clone.getEndVertices().size());
-		assertEquals(this.fix.vertex13, clone.getEndVertices().iterator().next());
+		assertEquals(this.fix.vertex13, clone.getEndVertices().iterator()
+				.next());
 	}
 
 }

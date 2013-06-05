@@ -376,7 +376,7 @@ public class QosGraph {
 	public QosGraph cloneWithoutMembers() {
 		QosGraph clone = new QosGraph();
 		for(QosGroupVertex startVertex : this.startVertices) {
-			clone.mergeForwardReachableGroupVertices(startVertex);
+			clone.mergeForwardReachableGroupVertices(startVertex, false);
 		}
 		
 		clone.constraints = (HashMap<LatencyConstraintID, JobGraphLatencyConstraint>) this.constraints.clone();

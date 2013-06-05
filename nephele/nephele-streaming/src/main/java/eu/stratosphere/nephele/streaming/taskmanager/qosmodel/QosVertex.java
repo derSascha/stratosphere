@@ -140,7 +140,6 @@ public class QosVertex {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + memberIndex;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime
 				* result
 				+ ((executingInstance == null) ? 0 : executingInstance
@@ -165,11 +164,6 @@ public class QosVertex {
 			return false;
 		QosVertex other = (QosVertex) obj;
 		if (memberIndex != other.memberIndex)
-			return false;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
 			return false;
 		if (executingInstance == null) {
 			if (other.executingInstance != null)

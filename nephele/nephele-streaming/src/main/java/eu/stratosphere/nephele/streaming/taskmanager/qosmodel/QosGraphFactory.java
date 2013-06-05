@@ -184,7 +184,7 @@ public class QosGraphFactory {
 		}
 				
 		JobGraphSequence sequence = qosGraph.getConstraintByID(constraintID).getSequence();
-		final QosGraph clone = qosGraph.cloneWithoutMembers();
+		final QosGraph toReturn = qosGraph.cloneWithoutMembers();
 		QosGraphTraversalListener traversalListener = new QosGraphTraversalListener() {
 			@Override
 			public void processQosVertex(QosVertex vertex,
@@ -195,7 +195,7 @@ public class QosGraphFactory {
 			@Override
 			public void processQosEdge(QosEdge edge,
 					SequenceElement<JobVertexID> sequenceElem) {
-				addMembersAndMemberWiring(edge, clone);
+				addMembersAndMemberWiring(edge, toReturn);
 			}
 		};
 		
@@ -204,10 +204,10 @@ public class QosGraphFactory {
 		for (QosVertex anchor : anchors) {
 			traverser.setStartVertex(anchor);
 			traverser.traverseGraphForwardAlongSequence(sequence);
-			traverser.traverseGraphBackwardAlongSequence(sequence);
+			traverser.traverseGraphBackwardAlongSequence(sequence, false, true);
 		}
 		
-		return new QosGraph();
+		return toReturn;
 	}
 	
 	private static void addMembersAndMemberWiring(QosEdge templateEdge, QosGraph clone) {
