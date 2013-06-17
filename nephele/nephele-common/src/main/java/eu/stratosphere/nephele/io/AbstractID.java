@@ -129,6 +129,7 @@ public abstract class AbstractID implements IOReadableWritable {
 	public void setID(final AbstractID src) {
 		this.lowerPart = src.lowerPart;
 		this.upperPart = src.upperPart;
+		this.precomputedHash = src.precomputedHash;
 	}
 
 	/**
