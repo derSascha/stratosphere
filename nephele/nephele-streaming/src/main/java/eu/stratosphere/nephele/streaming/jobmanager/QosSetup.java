@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
+import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
@@ -29,6 +30,8 @@ import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
 import eu.stratosphere.nephele.streaming.JobGraphSequence;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
 import eu.stratosphere.nephele.streaming.SequenceElement;
+import eu.stratosphere.nephele.streaming.StreamingPluginLoader;
+import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphFactory;
@@ -96,10 +99,10 @@ public class QosSetup {
 		};
 
 		for (QosVertex anchorMember : qosManager.getMembersOnInstance()) {
-			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember, listener);
+			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember,
+					listener);
 			traverser.traverseGraphForwardAlongSequence(sequence);
-			traverser.traverseGraphBackwardAlongSequence(sequence,
-					false, true);
+			traverser.traverseGraphBackwardAlongSequence(sequence, false, true);
 		}
 	}
 
@@ -108,7 +111,7 @@ public class QosSetup {
 
 		InstanceConnectionInfo reporterInstance = vertex.getExecutingInstance();
 
-		QosReporterRole reporterRole = new QosReporterRole(vertex.getID(),
+		QosReporterRole reporterRole = new QosReporterRole(vertex,
 				sequenceElem.getInputGateIndex(),
 				sequenceElem.getOutputGateIndex(),
 				qosManager.getManagerInstance());
@@ -123,8 +126,8 @@ public class QosSetup {
 		InstanceConnectionInfo targetReporterInstance = edge.getInputGate()
 				.getVertex().getExecutingInstance();
 
-		QosReporterRole reporterRole = new QosReporterRole(
-				edge.getSourceChannelID(), qosManager.getManagerInstance());
+		QosReporterRole reporterRole = new QosReporterRole(edge,
+				qosManager.getManagerInstance());
 		getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
 				reporterRole);
 		getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
@@ -348,5 +351,43 @@ public class QosSetup {
 			}
 		}
 		return anchorCandidates;
+	}
+
+	public void attachRolesToExecutionGraph() {
+		for (InstanceQosRoles instanceQosRoles : this.qosRoles.values()) {
+			DeployInstanceQosRolesAction rolesDeployment = instanceQosRoles
+					.toDeploymentAction(this.executionGraph.getJobID());
+
+			if (!rolesDeployment.getVertexQosReporters().isEmpty()) {
+				this.executionGraph.getVertexByID(
+						rolesDeployment.getVertexQosReporters().get(0)
+								.getVertexID()).setPluginData(
+						StreamingPluginLoader.STREAMING_PLUGIN_ID,
+						rolesDeployment);
+			} else {
+				ExecutionVertex sourceVertex = this.executionGraph
+						.getVertexByChannelID(rolesDeployment
+								.getEdgeQosReporters().get(0)
+								.getSourceChannelID());
+
+				if (instanceQosRoles.getConnectionInfo().equals(
+						sourceVertex.getAllocatedResource().getInstance()
+								.getInstanceConnectionInfo())) {
+
+					sourceVertex.setPluginData(
+							StreamingPluginLoader.STREAMING_PLUGIN_ID,
+							rolesDeployment);
+				} else {
+					ExecutionVertex targetVertex = this.executionGraph
+							.getVertexByChannelID(rolesDeployment
+									.getEdgeQosReporters().get(0)
+									.getTargetChannelID());
+
+					targetVertex.setPluginData(
+							StreamingPluginLoader.STREAMING_PLUGIN_ID,
+							rolesDeployment);
+				}
+			}
+		}
 	}
 }

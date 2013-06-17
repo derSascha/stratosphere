@@ -73,7 +73,7 @@ public class QosVertex {
 		if (outputGate.getGateIndex() >= this.outputGates.size()) {
 			fillWithNulls(this.outputGates, outputGate.getGateIndex() + 1);
 		}
-		
+
 		outputGate.setVertex(this);
 		outputGate.setGateType(GateType.OUTPUT_GATE);
 		this.outputGates.set(outputGate.getGateIndex(), outputGate);
@@ -139,11 +139,6 @@ public class QosVertex {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + memberIndex;
-		result = prime
-				* result
-				+ ((executingInstance == null) ? 0 : executingInstance
-						.hashCode());
 		result = prime * result
 				+ ((vertexID == null) ? 0 : vertexID.hashCode());
 		return result;
@@ -163,13 +158,6 @@ public class QosVertex {
 		if (getClass() != obj.getClass())
 			return false;
 		QosVertex other = (QosVertex) obj;
-		if (memberIndex != other.memberIndex)
-			return false;
-		if (executingInstance == null) {
-			if (other.executingInstance != null)
-				return false;
-		} else if (!executingInstance.equals(other.executingInstance))
-			return false;
 		if (vertexID == null) {
 			if (other.vertexID != null)
 				return false;
@@ -179,9 +167,10 @@ public class QosVertex {
 	}
 
 	public static QosVertex fromExecutionVertex(ExecutionVertex executionVertex) {
-		return new QosVertex(executionVertex.getID(),
-				executionVertex.getName() + executionVertex.getIndexInVertexGroup(),
-				executionVertex.getAllocatedResource().getInstance().getInstanceConnectionInfo(),
+		return new QosVertex(executionVertex.getID(), executionVertex.getName()
+				+ executionVertex.getIndexInVertexGroup(), executionVertex
+				.getAllocatedResource().getInstance()
+				.getInstanceConnectionInfo(),
 				executionVertex.getIndexInVertexGroup());
 	}
 }

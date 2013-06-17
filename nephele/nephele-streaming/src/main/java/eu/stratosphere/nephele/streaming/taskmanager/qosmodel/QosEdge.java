@@ -131,4 +131,37 @@ public class QosEdge {
 				this.outputGateEdgeIndex, this.inputGateEdgeIndex);
 		return clone;
 	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((sourceChannelID == null) ? 0 : sourceChannelID.hashCode());
+		return result;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		QosEdge other = (QosEdge) obj;
+		if (sourceChannelID == null) {
+			if (other.sourceChannelID != null)
+				return false;
+		} else if (!sourceChannelID.equals(other.sourceChannelID))
+			return false;
+		return true;
+	}
+	
 }

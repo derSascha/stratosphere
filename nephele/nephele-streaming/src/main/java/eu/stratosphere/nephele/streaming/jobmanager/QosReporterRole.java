@@ -14,9 +14,12 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.jobmanager;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import java.util.Set;
+import java.util.TreeSet;
+
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
-import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
  * @author Bjoern Lohrmann
@@ -25,47 +28,74 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 public class QosReporterRole {
 
 	public enum ReportingAction {
-		REPORT_TASK_STATS, REPORT_CHANNEL_STATS	
+		REPORT_TASK_STATS, REPORT_CHANNEL_STATS
 	};
 
-	private InstanceConnectionInfo targetQosManager;
+	private TreeSet<InstanceConnectionInfo> targetQosManagers = new TreeSet<InstanceConnectionInfo>();
 
 	private ReportingAction action;
 
-	private ExecutionVertexID executionVertexID;
+	private QosVertex vertex;
 
 	private int inputGateIndex;
 
 	private int outputGateIndex;
 
-	private ChannelID channelID;
+	private QosEdge edge;
+	
+	public class ReporterRoleID {
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see java.lang.Object#hashCode()
+		 */
+		@Override
+		public int hashCode() {
+			return QosReporterRole.this.hashCode();
+		}
 
-	public QosReporterRole(ExecutionVertexID executionVertexID,
-			int inputGateIndex, int outputGateIndex,
-			InstanceConnectionInfo targetQosManager) {
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see java.lang.Object#equals(java.lang.Object)
+		 */
+		@Override
+		public boolean equals(Object obj) {
+			return QosReporterRole.this.equals(obj);
+		}
+	}
+
+	public QosReporterRole(QosVertex vertex, int inputGateIndex,
+			int outputGateIndex, InstanceConnectionInfo targetQosManager) {
 
 		this.action = ReportingAction.REPORT_TASK_STATS;
-		this.targetQosManager = targetQosManager;
-		this.executionVertexID = executionVertexID;
+		this.vertex = vertex;
+		this.targetQosManagers.add(targetQosManager);
 		this.inputGateIndex = inputGateIndex;
 		this.outputGateIndex = outputGateIndex;
 	}
 
-	public QosReporterRole(ChannelID channelID,
-			InstanceConnectionInfo targetQosManager) {
-		
+	public QosReporterRole(QosEdge edge, InstanceConnectionInfo targetQosManager) {
+
 		this.action = ReportingAction.REPORT_CHANNEL_STATS;
-		this.targetQosManager = targetQosManager;
-		this.channelID = channelID;
+		this.edge = edge;
+		this.targetQosManagers.add(targetQosManager);
+	}
+
+	public void mergeInto(QosReporterRole otherRole) {
+		if (!this.equals(otherRole)) {
+			throw new RuntimeException("Cannot merge unequal QosReporter roles");
+		}
+		this.targetQosManagers.addAll(otherRole.targetQosManagers);
 	}
 
 	/**
-	 * Returns the targetQosManager.
+	 * Returns the targetQosManagers.
 	 * 
-	 * @return the targetQosManager
+	 * @return the targetQosManagers
 	 */
-	public InstanceConnectionInfo getTargetQosManager() {
-		return this.targetQosManager;
+	public Set<InstanceConnectionInfo> getTargetQosManager() {
+		return this.targetQosManagers;
 	}
 
 	/**
@@ -78,12 +108,12 @@ public class QosReporterRole {
 	}
 
 	/**
-	 * Returns the executionVertexID.
+	 * Returns the vertex.
 	 * 
-	 * @return the executionVertexID
+	 * @return the vertex
 	 */
-	public ExecutionVertexID getExecutionVertexID() {
-		return this.executionVertexID;
+	public QosVertex getVertex() {
+		return this.vertex;
 	}
 
 	/**
@@ -105,12 +135,16 @@ public class QosReporterRole {
 	}
 
 	/**
-	 * Returns the channelID.
+	 * Returns the edge.
 	 * 
-	 * @return the channelID
+	 * @return the edge
 	 */
-	public ChannelID getChannelID() {
-		return this.channelID;
+	public QosEdge getEdge() {
+		return this.edge;
+	}
+	
+	public ReporterRoleID getReporterRoleID() {
+		return new ReporterRoleID();
 	}
 
 	/*
@@ -122,17 +156,10 @@ public class QosReporterRole {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result
-				+ ((channelID == null) ? 0 : channelID.hashCode());
-		result = prime
-				* result
-				+ ((executionVertexID == null) ? 0 : executionVertexID
-						.hashCode());
+		result = prime * result + ((edge == null) ? 0 : edge.hashCode());
 		result = prime * result + inputGateIndex;
 		result = prime * result + outputGateIndex;
-		result = prime
-				* result
-				+ ((targetQosManager == null) ? 0 : targetQosManager.hashCode());
+		result = prime * result + ((vertex == null) ? 0 : vertex.hashCode());
 		return result;
 	}
 
@@ -150,24 +177,19 @@ public class QosReporterRole {
 		if (getClass() != obj.getClass())
 			return false;
 		QosReporterRole other = (QosReporterRole) obj;
-		if (channelID == null) {
-			if (other.channelID != null)
+		if (edge == null) {
+			if (other.edge != null)
 				return false;
-		} else if (!channelID.equals(other.channelID))
-			return false;
-		if (executionVertexID == null) {
-			if (other.executionVertexID != null)
-				return false;
-		} else if (!executionVertexID.equals(other.executionVertexID))
+		} else if (!edge.equals(other.edge))
 			return false;
 		if (inputGateIndex != other.inputGateIndex)
 			return false;
 		if (outputGateIndex != other.outputGateIndex)
 			return false;
-		if (targetQosManager == null) {
-			if (other.targetQosManager != null)
+		if (vertex == null) {
+			if (other.vertex != null)
 				return false;
-		} else if (!targetQosManager.equals(other.targetQosManager))
+		} else if (!vertex.equals(other.vertex))
 			return false;
 		return true;
 	}

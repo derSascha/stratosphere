@@ -16,10 +16,19 @@ package eu.stratosphere.nephele.streaming.jobmanager;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
+import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReporterRoleID;
+import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReportingAction;
+import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
+import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterDeploymentDescriptor;
+import eu.stratosphere.nephele.streaming.message.action.QosManagerDeploymentDescriptor;
+import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterDeploymentDescriptor;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
  * @author Bjoern Lohrmann
@@ -31,24 +40,14 @@ public class InstanceQosRoles {
 
 	private HashMap<LatencyConstraintID, QosManagerRole> managerRoles;
 
-	private HashSet<QosReporterRole> reporterRoles;
+	private HashMap<ReporterRoleID, QosReporterRole> reporterRoles;
 
-	/**
-	 * Initializes QosManagerDescriptor.
-	 * 
-	 * @param connectionInfo
-	 */
 	public InstanceQosRoles(InstanceConnectionInfo connectionInfo) {
 		this.connectionInfo = connectionInfo;
 		this.managerRoles = new HashMap<LatencyConstraintID, QosManagerRole>();
-		this.reporterRoles = new HashSet<QosReporterRole>();
+		this.reporterRoles = new HashMap<ReporterRoleID, QosReporterRole>();
 	}
 
-	/**
-	 * Returns the connectionInfo.
-	 * 
-	 * @return the connectionInfo
-	 */
 	public InstanceConnectionInfo getConnectionInfo() {
 		return this.connectionInfo;
 	}
@@ -63,13 +62,74 @@ public class InstanceQosRoles {
 	}
 
 	public void addReporterRole(QosReporterRole reporterRole) {
-		// it is safe to "just add" here, because the reporter roles hash set
-		// checks for equality and equality is defined over all of the role's
-		// member variables
-		this.reporterRoles.add(reporterRole);
+		ReporterRoleID reporterRoleID = reporterRole.getReporterRoleID();
+		if (this.reporterRoles.containsKey(reporterRoleID)) {
+			this.reporterRoles.get(reporterRoleID).mergeInto(reporterRole);
+		} else {
+			this.reporterRoles.put(reporterRoleID, reporterRole);
+		}
 	}
 
 	public Collection<QosManagerRole> getManagerRoles() {
 		return this.managerRoles.values();
+	}
+
+	public DeployInstanceQosRolesAction toDeploymentAction(JobID jobID) {
+		DeployInstanceQosRolesAction deploymentAction = new DeployInstanceQosRolesAction(
+				jobID);
+
+		QosGraph shallowQosGraph = null;
+		for (QosManagerRole managerRole : this.managerRoles.values()) {
+			if (shallowQosGraph == null) {
+				shallowQosGraph = managerRole.getQosGraph()
+						.cloneWithoutMembers();
+			} else {
+				shallowQosGraph.merge(managerRole.getQosGraph()
+						.cloneWithoutMembers());
+			}
+		}
+		deploymentAction.setQosManager(new QosManagerDeploymentDescriptor(
+				shallowQosGraph));
+		for (QosReporterRole reporterRole : this.reporterRoles.values()) {
+
+			if (reporterRole.getAction() == ReportingAction.REPORT_CHANNEL_STATS) {
+				deploymentAction
+						.addEdgeQosReporter(toEdgeQosReporterDeploymentDescriptor(reporterRole));
+			} else {
+				deploymentAction
+						.addVertexQosReporter(toVertexQosReporterDeploymentDescriptor(reporterRole));
+			}
+		}
+
+		return deploymentAction;
+	}
+
+	private VertexQosReporterDeploymentDescriptor toVertexQosReporterDeploymentDescriptor(
+			QosReporterRole reporterRole) {
+		QosVertex vertex = reporterRole.getVertex();
+		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
+				.getTargetQosManager().toArray();
+
+		VertexQosReporterDeploymentDescriptor vertexReporter = new VertexQosReporterDeploymentDescriptor(
+				vertex.getGroupVertex().getJobVertexID(),
+				vertex.getID(), managers,
+				reporterRole.getInputGateIndex(),
+				reporterRole.getInputGateIndex(),
+				vertex.getMemberIndex(), vertex.getName());
+		return vertexReporter;
+	}
+
+	private EdgeQosReporterDeploymentDescriptor toEdgeQosReporterDeploymentDescriptor(
+			QosReporterRole reporterRole) {
+		QosEdge edge = reporterRole.getEdge();
+		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
+				.getTargetQosManager().toArray();
+		EdgeQosReporterDeploymentDescriptor edgeReporter = new EdgeQosReporterDeploymentDescriptor(
+				edge.getSourceChannelID(), edge.getTargetChannelID(),
+				managers, edge.getOutputGate().getGateIndex(), edge
+						.getInputGate().getGateIndex(),
+				edge.getOutputGateEdgeIndex(),
+				edge.getInputGateEdgeIndex());
+		return edgeReporter;
 	}
 }

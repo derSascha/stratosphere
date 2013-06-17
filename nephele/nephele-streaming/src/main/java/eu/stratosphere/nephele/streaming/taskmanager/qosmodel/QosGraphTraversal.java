@@ -24,7 +24,9 @@ import eu.stratosphere.nephele.streaming.JobGraphSequence;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 
 /**
- * Provides a depth-first way a traversing a QoS graph along a JobGraphSequence.
+ * Provides a depth-first way of traversing the member elements (
+ * {@link QosVertex} and {@link QosEdge}) of a QoS graph along a
+ * JobGraphSequence.
  * 
  * Instances of this class are not thread-safe.
  * 
