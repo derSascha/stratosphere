@@ -14,13 +14,10 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
-import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
-import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
+import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
-import eu.stratosphere.nephele.streaming.message.qosreport.VertexLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 import eu.stratosphere.nephele.util.StringUtils;
@@ -37,9 +34,7 @@ public class QosManagerThread extends Thread {
 
 	private BufferSizeManager bufferSizeManager;
 
-	private ProfilingModel profilingModel;
-
-	private QosGraph qosGraph;
+	private QosModel qosModel;
 
 	private JobID jobID;
 	
@@ -49,11 +44,11 @@ public class QosManagerThread extends Thread {
 			StreamMessagingThread messagingThread) {
 		this.jobID = jobID;
 		this.messagingThread = messagingThread;
-		this.qosGraph = new QosGraph();
+		this.qosModel = new QosModel(jobID);
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
-		// this.profilingModel = new ProfilingModel(this.profilingSequence);
-		this.bufferSizeManager = new BufferSizeManager(this.jobID, 300,
-				this.profilingModel, this.messagingThread);
+
+//		this.bufferSizeManager = new BufferSizeManager(this.jobID, 300,
+//				this.profilingModel, this.messagingThread);
 
 		try {
 			this.logger = new ProfilingLogger(
@@ -72,7 +67,6 @@ public class QosManagerThread extends Thread {
 		int taskLats = 0;
 		int outChannelStats = 0;
 
-		this.triggerChainingDelayed(45000);
 		try {
 			while (!interrupted()) {
 				AbstractStreamMessage streamingData = this.streamingDataQueue
@@ -82,31 +76,15 @@ public class QosManagerThread extends Thread {
 
 				long now = System.currentTimeMillis();
 				if (streamingData instanceof QosReport) {
-					QosReport profilingReport = (QosReport) streamingData;
-
-					for (EdgeLatency channelLatency : profilingReport
-							.getEdgeLatencies()) {
-						this.profilingModel.refreshChannelLatency(now,
-								channelLatency);
-						channelLats++;
-					}
-
-					for (EdgeStatistics channelStat : profilingReport
-							.getEdgeStatistics()) {
-						this.profilingModel.refreshOutputChannelStatistics(now,
-								channelStat);
-						outChannelStats++;
-					}
-
-					for (VertexLatency taskLatency : profilingReport
-							.getVertexLatencies()) {
-						this.profilingModel
-								.refreshTaskLatency(now, taskLatency);
-						taskLats++;
-					}
+					this.qosModel.processQosReport((QosReport) streamingData);
 				} else if (streamingData instanceof StreamChainAnnounce) {
-					this.profilingModel
-							.announceStreamingChain((StreamChainAnnounce) streamingData);
+					// FIXME
+//					this.profilingModel
+//							.announceStreamingChain((StreamChainAnnounce) streamingData);
+				} else if (streamingData instanceof DeployInstanceQosRolesAction) {
+					this.qosModel
+							.mergeShallowQosGraph(((DeployInstanceQosRolesAction) streamingData)
+									.getQosManager().getShallowQosGraph());
 				}
 
 				if (this.bufferSizeManager.isAdjustmentNecessary(now)) {
@@ -219,10 +197,10 @@ public class QosManagerThread extends Thread {
 
 	private void cleanUp() {
 		this.streamingDataQueue.clear();
-		this.profilingSequence = null;
+		this.qosModel = null;
 		this.logger = null;
-		this.profilingSequence = null;
-		this.profilingModel = null;
+		this.bufferSizeManager = null;
+		// FIXME is this complete?
 	}
 
 	public void shutdown() {

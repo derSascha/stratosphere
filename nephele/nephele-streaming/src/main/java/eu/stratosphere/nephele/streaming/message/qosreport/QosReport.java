@@ -315,4 +315,9 @@ public class QosReport extends AbstractStreamMessage {
 				&& this.vertexReporterAnnouncements == null
 				&& this.edgeReporterAnnouncements == null;
 	}
+
+	public boolean hasAnnouncements() {
+		return this.vertexReporterAnnouncements != null
+				|| this.edgeReporterAnnouncements != null;
+	}
 }

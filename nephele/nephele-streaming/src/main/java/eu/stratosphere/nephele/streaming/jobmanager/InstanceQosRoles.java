@@ -109,13 +109,16 @@ public class InstanceQosRoles {
 		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
 				.getTargetQosManager().toArray();
 
+		int inputGateIndex = reporterRole.getInputGateIndex();
+		int outputGateIndex = reporterRole.getOutputGateIndex();
+		
 		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
 				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
 				managers,
-				reporterRole.getInputGateIndex(),
-				vertex.getInputGate(reporterRole.getInputGateIndex()).getGateID(),
-				reporterRole.getOutputGateIndex(),
-				vertex.getOutputGate(reporterRole.getOutputGateIndex()).getGateID(),
+				inputGateIndex,
+				(inputGateIndex != -1) ? vertex.getInputGate(inputGateIndex).getGateID() : null,
+				outputGateIndex,
+				(inputGateIndex != -1) ? vertex.getOutputGate(outputGateIndex).getGateID() : null,
 				vertex.getMemberIndex(),
 				vertex.getName());
 		
@@ -132,9 +135,8 @@ public class InstanceQosRoles {
 		
 		EdgeQosReporterConfig edgeReporter = new EdgeQosReporterConfig(
 				edge.getSourceChannelID(), edge.getTargetChannelID(),
-				managers, edge.getOutputGate().getGateIndex(),
+				managers, 
 				edge.getOutputGate().getGateID(),
-				edge.getInputGate().getGateIndex(),
 				edge.getInputGate().getGateID(),
 				edge.getOutputGateEdgeIndex(),
 				edge.getInputGateEdgeIndex());

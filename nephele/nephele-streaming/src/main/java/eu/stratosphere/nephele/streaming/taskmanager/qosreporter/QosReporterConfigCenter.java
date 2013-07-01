@@ -130,8 +130,7 @@ public class QosReporterConfigCenter {
 		return new EdgeQosReporterConfig(oldReporter.getSourceChannelID(),
 				oldReporter.getTargetChannelID(),
 				(InstanceConnectionInfo[]) qosManagers.toArray(),
-				oldReporter.getOutputGateIndex(),
-				oldReporter.getOutputGateID(), oldReporter.getInputGateIndex(),
+				oldReporter.getOutputGateID(),
 				oldReporter.getInputGateID(),
 				oldReporter.getOutputGateEdgeIndex(),
 				oldReporter.getInputGateEdgeIndex());

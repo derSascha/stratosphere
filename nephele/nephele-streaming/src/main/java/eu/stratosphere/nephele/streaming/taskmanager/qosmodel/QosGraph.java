@@ -154,7 +154,8 @@ public class QosGraph implements IOReadableWritable {
 
 			QosGate inputGate = toMember.getInputGate(inputGateIndex);
 			if (inputGate == null) {
-				inputGate = templateEdge.getInputGate().cloneWithoutEdgesAndVertex();
+				inputGate = templateEdge.getInputGate()
+						.cloneWithoutEdgesAndVertex();
 				toMember.setInputGate(inputGate);
 			}
 
@@ -470,7 +471,7 @@ public class QosGraph implements IOReadableWritable {
 				groupVertex.getJobVertexID().write(out);
 				for (QosGroupEdge groupEdge : groupVertex.getForwardEdges()) {
 					out.writeUTF(groupEdge.getDistributionPattern().name());
-					
+
 					DistributionPattern.values();
 					out.writeInt(groupEdge.getInputGateIndex());
 					out.writeInt(groupEdge.getOutputGateIndex());
@@ -523,22 +524,36 @@ public class QosGraph implements IOReadableWritable {
 		int noOfVertices = this.vertexByID.size();
 		for (int i = 0; i < noOfVertices; i++) {
 			int noOfForwardEdges = in.readInt();
-			if(noOfForwardEdges > 0) {
+			if (noOfForwardEdges > 0) {
 				JobVertexID sourceVertexID = new JobVertexID();
 				sourceVertexID.read(in);
-				QosGroupVertex sourceVertex = this.vertexByID.get(sourceVertexID);
+				QosGroupVertex sourceVertex = this.vertexByID
+						.get(sourceVertexID);
 				for (int j = 0; j < noOfForwardEdges; j++) {
-					DistributionPattern distPattern = DistributionPattern.valueOf(in.readUTF());
+					DistributionPattern distPattern = DistributionPattern
+							.valueOf(in.readUTF());
 					int inputGateIndex = in.readInt();
 					int outputGateIndex = in.readInt();
 					JobVertexID targetVertexID = new JobVertexID();
 					targetVertexID.read(in);
-					QosGroupVertex targetVertex = this.vertexByID.get(targetVertexID);
-					new QosGroupEdge(distPattern,
-							sourceVertex, targetVertex, outputGateIndex,
-							inputGateIndex);
+					QosGroupVertex targetVertex = this.vertexByID
+							.get(targetVertexID);
+					new QosGroupEdge(distPattern, sourceVertex, targetVertex,
+							outputGateIndex, inputGateIndex);
 				}
 			}
 		}
+	}
+
+	/**
+	 * Determines whether this Qos graph is shallow. A graph is shallow, if any
+	 * of group vertices does not have any members.
+	 * 
+	 * 
+	 * @return whether this Qos graph is shallow or not.
+	 */
+	public boolean isShallow() {
+		// FIXME: implement
+		throw new RuntimeException("not yet implemented");
 	}
 }

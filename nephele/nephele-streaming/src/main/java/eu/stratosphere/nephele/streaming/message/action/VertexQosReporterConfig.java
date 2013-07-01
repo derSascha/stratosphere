@@ -23,7 +23,9 @@ import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGate;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
  * @author Bjoern Lohrmann
@@ -159,6 +161,18 @@ public class VertexQosReporterConfig implements
 	 */
 	public String getName() {
 		return this.name;
+	}
+	
+	public QosVertex toQosVertex() {
+		return new QosVertex(this.vertexID, this.name, null, this.memberIndex);
+	}
+	
+	public QosGate toInputGate() {
+		return new QosGate(this.inputGateID, this.inputGateIndex);
+	}
+	
+	public QosGate toOutputGate() {
+		return new QosGate(this.outputGateID, this.outputGateIndex);
 	}
 
 	/*

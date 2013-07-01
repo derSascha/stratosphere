@@ -22,6 +22,7 @@ import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
@@ -36,11 +37,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 
 	private InstanceConnectionInfo[] qosManagers;
 
-	private int outputGateIndex;
-
 	private GateID outputGateID;
-
-	private int inputGateIndex;
 
 	private GateID inputGateID;
 
@@ -65,15 +62,13 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	 */
 	public EdgeQosReporterConfig(ChannelID sourceChannelID,
 			ChannelID targetChannelID, InstanceConnectionInfo[] qosManagers,
-			int outputGateIndex, GateID outputGateID, int inputGateIndex,
+			GateID outputGateID,
 			GateID inputGateID, int outputGateEdgeIndex, int inputGateEdgeIndex) {
 
 		this.sourceChannelID = sourceChannelID;
 		this.targetChannelID = targetChannelID;
 		this.qosManagers = qosManagers;
-		this.outputGateIndex = outputGateIndex;
 		this.outputGateID = outputGateID;
-		this.inputGateIndex = inputGateIndex;
 		this.inputGateID = inputGateID;
 		this.outputGateEdgeIndex = outputGateEdgeIndex;
 		this.inputGateEdgeIndex = inputGateEdgeIndex;
@@ -105,26 +100,6 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	public InstanceConnectionInfo[] getQosManagers() {
 		return this.qosManagers;
 	}
-
-	/**
-	 * Returns the outputGateIndex.
-	 * 
-	 * @return the outputGateIndex
-	 */
-	public int getOutputGateIndex() {
-		return this.outputGateIndex;
-	}
-
-	/**
-	 * Returns the inputGateIndex.
-	 * 
-	 * @return the inputGateIndex
-	 */
-	public int getInputGateIndex() {
-		return this.inputGateIndex;
-	}
-	
-	
 
 	/**
 	 * Returns the outputGateID.
@@ -161,6 +136,11 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	public int getInputGateEdgeIndex() {
 		return this.inputGateEdgeIndex;
 	}
+	
+	public QosEdge toQosEdge() {
+		return new QosEdge(this.sourceChannelID, this.targetChannelID,
+				this.outputGateEdgeIndex, this.inputGateEdgeIndex);
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -176,9 +156,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 		for (InstanceConnectionInfo qosManager : this.qosManagers) {
 			qosManager.write(out);
 		}
-		out.writeInt(this.outputGateIndex);
 		this.outputGateID.write(out);
-		out.writeInt(this.inputGateIndex);
 		this.inputGateID.write(out);
 		out.writeInt(this.outputGateEdgeIndex);
 		out.writeInt(this.inputGateEdgeIndex);
@@ -201,10 +179,8 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 			this.qosManagers[i] = new InstanceConnectionInfo();
 			this.qosManagers[i].read(in);
 		}
-		this.outputGateIndex = in.readInt();
 		this.outputGateID = new GateID();
 		this.outputGateID.read(in);
-		this.inputGateIndex = in.readInt();
 		this.inputGateID = new GateID();
 		this.inputGateID.read(in);
 		this.outputGateEdgeIndex = in.readInt();
