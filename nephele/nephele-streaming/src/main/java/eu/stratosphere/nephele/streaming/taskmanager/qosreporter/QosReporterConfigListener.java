@@ -14,52 +14,18 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.qosreporter;
 
+import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
+import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
+
 /**
  * @author Bjoern Lohrmann
- * 
  */
-public class QosReporterConfiguration {
+public interface QosReporterConfigListener {
 
-	private long aggregationInterval;
+	public void newVertexQosReporter(
+			VertexQosReporterConfig vertexReporter);
 
-	private int taggingInterval;
-
-	/**
-	 * Returns the aggregationInterval.
-	 * 
-	 * @return the aggregationInterval
-	 */
-	public long getAggregationInterval() {
-		return this.aggregationInterval;
-	}
-
-	/**
-	 * Sets the aggregationInterval to the specified value.
-	 * 
-	 * @param aggregationInterval
-	 *            the aggregationInterval to set
-	 */
-	public void setAggregationInterval(long aggregationInterval) {
-		this.aggregationInterval = aggregationInterval;
-	}
-
-	/**
-	 * Returns the taggingInterval.
-	 * 
-	 * @return the taggingInterval
-	 */
-	public int getTaggingInterval() {
-		return this.taggingInterval;
-	}
-
-	/**
-	 * Sets the taggingInterval to the specified value.
-	 * 
-	 * @param taggingInterval
-	 *            the taggingInterval to set
-	 */
-	public void setTaggingInterval(int taggingInterval) {
-		this.taggingInterval = taggingInterval;
-	}
+	public void newEdgeQosReporter(
+			EdgeQosReporterConfig edgeReporter);
 
 }

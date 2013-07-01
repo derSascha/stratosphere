@@ -14,10 +14,15 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener;
 
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.InputGateReporterManager;
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.OutputGateReporterManager;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.StreamTaskQosCoordinator;
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.TimestampTag;
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.VertexLatencyReportManager;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
+import eu.stratosphere.nephele.types.Record;
 
 /**
  * @author Bjoern Lohrmann
@@ -25,88 +30,173 @@ import eu.stratosphere.nephele.types.AbstractTaggableRecord;
  */
 public class QosReportingListenerHelper {
 
-	public static void installInputGateListenerWithVertexProfiling(StreamInputGate<?> inputGate,
-			final StreamTaskQosCoordinator taskQosCoordinator,
-			final int inputGateIndex) {
+	public static void listenToVertexLatencyOnInputGate(
+			StreamInputGate<? extends Record> inputGate,
+			final VertexLatencyReportManager vertexLatencyManager) {
 
-		inputGate.setQosReportingListener(new InputGateQosReportingListener() {
-			@Override
-			public void recordReceived(int inputChannelIndex, AbstractTaggableRecord record) {		
-				
-				taskQosCoordinator.recordReceived(
-							inputGateIndex,
-							inputChannelIndex,
-							record);
-				
-				taskQosCoordinator.taskReadsRecord();
-			}
-		});
-	}
-	
-	public static void installInputGateListenerWithoutVertexProfiling(StreamInputGate<?> inputGate,
-			final StreamTaskQosCoordinator taskQosCoordinator,
-			final int inputGateIndex) {
+		final int gateIndex = inputGate.getIndex();
 
-		inputGate.setQosReportingListener(new InputGateQosReportingListener() {
+		InputGateQosReportingListener listener = new InputGateQosReportingListener() {
 			@Override
-			public void recordReceived(int inputChannelIndex, AbstractTaggableRecord record) {		
-				taskQosCoordinator.recordReceived(
-							inputGateIndex,
-							inputChannelIndex,
-							record);
+			public void recordReceived(int inputChannelIndex,
+					AbstractTaggableRecord record) {
+				vertexLatencyManager.recordReceived(gateIndex);
 			}
-		});
+		};
+		InputGateQosReportingListener oldListener = inputGate
+				.getQosReportingListener();
+		if (oldListener != null) {
+			inputGate.setQosReportingListener(createChainedListener(
+					oldListener, listener));
+		} else {
+			inputGate.setQosReportingListener(listener);
+		}
 	}
 
-	
-	public static void installOutputGateListenerWithVertexProfiling(StreamOutputGate<?> outputGate,
-			final StreamTaskQosCoordinator taskQosCoordinator,
-			final int outputGateIndex) {
-		
+	public static void listenToVertexLatencyOnOutputGate(
+			StreamOutputGate<? extends Record> outputGate,
+			final VertexLatencyReportManager vertexLatencyManager) {
 
-		outputGate.setQosReportingCallback(new OutputGateQosReportingListener() {
+		final int gateIndex = outputGate.getIndex();
+
+		OutputGateQosReportingListener listener = new OutputGateQosReportingListener() {
 			@Override
 			public void recordEmitted(int outputChannelIndex,
 					AbstractTaggableRecord record) {
-
-				taskQosCoordinator.taskEmitsRecord();			
-				taskQosCoordinator.recordEmitted(outputGateIndex, outputChannelIndex, record);
+				vertexLatencyManager.recordEmitted(gateIndex);
 			}
 
 			@Override
-			public void outputBufferSent(int outputChannelIndex) {
-				taskQosCoordinator.outputBufferSent(outputGateIndex, outputChannelIndex);
+			public void outputBufferSent(int outputChannelIndex,
+					long currentAmountTransmitted) {
+				// do nothing
+			}
+
+			@Override
+			public void handlePendingQosActions() throws InterruptedException {
+				// do nothing
+			}
+		};
+
+		OutputGateQosReportingListener oldListener = outputGate
+				.getQosReportingListener();
+
+		if (oldListener != null) {
+			outputGate.setQosReportingListener(createChainedListener(listener,
+					oldListener));
+		} else {
+			outputGate.setQosReportingListener(listener);
+		}
+	}
+
+	public static void listenToChannelLatenciesOnInputGate(
+			StreamInputGate<? extends Record> inputGate,
+			final InputGateReporterManager reporter) {
+
+		InputGateQosReportingListener listener = new InputGateQosReportingListener() {
+			@Override
+			public void recordReceived(int inputChannelIndexinRuntimeGate,
+					AbstractTaggableRecord record) {
+
+				TimestampTag timestampTag = (TimestampTag) record.getTag();
+
+				if (timestampTag != null) {
+					reporter.reportLatencyIfNecessary(
+							inputChannelIndexinRuntimeGate, timestampTag);
+				}
+			}
+		};
+
+		InputGateQosReportingListener oldListener = inputGate
+				.getQosReportingListener();
+
+		if (oldListener != null) {
+			inputGate.setQosReportingListener(createChainedListener(listener,
+					oldListener));
+		} else {
+			inputGate.setQosReportingListener(listener);
+		}
+	}
+
+	public static void listenToOutputChannelStatisticsOnOutputGate(
+			StreamOutputGate<? extends Record> outputGate,
+			final OutputGateReporterManager gateReporterManager,
+			final StreamTaskQosCoordinator taskQosCoordinator) {
+
+		OutputGateQosReportingListener listener = new OutputGateQosReportingListener() {
+
+			@Override
+			public void outputBufferSent(int runtimeGateChannelIndex,
+					long currentAmountTransmitted) {
+				gateReporterManager.outputBufferSent(runtimeGateChannelIndex,
+						currentAmountTransmitted);
+			}
+
+			@Override
+			public void recordEmitted(int runtimeGateChannelIndex,
+					AbstractTaggableRecord record) {
+				gateReporterManager.recordEmitted(runtimeGateChannelIndex, record);
 			}
 
 			@Override
 			public void handlePendingQosActions() throws InterruptedException {
 				taskQosCoordinator.executeQueuedQosActions();
 			}
-		});
-	}
-	
-	public static void installOutputGateListenerWithoutVertexProfiling(StreamOutputGate<?> outputGate,
-			final StreamTaskQosCoordinator taskQosCoordinator,
-			final int outputGateIndex) {
-		
+		};
 
-		outputGate.setQosReportingCallback(new OutputGateQosReportingListener() {
+		OutputGateQosReportingListener oldListener = outputGate
+				.getQosReportingListener();
+
+		if (oldListener != null) {
+			outputGate.setQosReportingListener(createChainedListener(
+					oldListener, listener));
+		} else {
+			outputGate.setQosReportingListener(listener);
+		}
+	}
+
+	private static InputGateQosReportingListener createChainedListener(
+			final InputGateQosReportingListener first,
+			final InputGateQosReportingListener second) {
+
+		return new InputGateQosReportingListener() {
+
 			@Override
-			public void recordEmitted(int outputChannelIndex,
+			public void recordReceived(int inputChannel,
 					AbstractTaggableRecord record) {
-			
-				taskQosCoordinator.recordEmitted(outputGateIndex, outputChannelIndex, record);
+				first.recordReceived(inputChannel, record);
+				second.recordReceived(inputChannel, record);
+			}
+		};
+	}
+
+	private static OutputGateQosReportingListener createChainedListener(
+			final OutputGateQosReportingListener first,
+			final OutputGateQosReportingListener second) {
+
+		return new OutputGateQosReportingListener() {
+
+			@Override
+			public void outputBufferSent(int channelIndex,
+					long currentAmountTransmitted) {
+				first.outputBufferSent(channelIndex, currentAmountTransmitted);
+				second.outputBufferSent(channelIndex, currentAmountTransmitted);
 			}
 
 			@Override
-			public void outputBufferSent(int outputChannelIndex) {
-				taskQosCoordinator.outputBufferSent(outputGateIndex, outputChannelIndex);
+			public void recordEmitted(int outputChannel,
+					AbstractTaggableRecord record) {
+
+				first.recordEmitted(outputChannel, record);
+				second.recordEmitted(outputChannel, record);
 			}
 
 			@Override
 			public void handlePendingQosActions() throws InterruptedException {
-				taskQosCoordinator.executeQueuedQosActions();
+				first.handlePendingQosActions();
+				second.handlePendingQosActions();
 			}
-		});
+		};
 	}
+
 }

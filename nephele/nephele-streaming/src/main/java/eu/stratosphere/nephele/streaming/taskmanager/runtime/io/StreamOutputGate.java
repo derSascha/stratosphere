@@ -16,9 +16,16 @@
 package eu.stratosphere.nephele.streaming.taskmanager.runtime.io;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import eu.stratosphere.nephele.io.OutputGate;
+import eu.stratosphere.nephele.io.channels.AbstractOutputChannel;
+import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.io.channels.bytebuffered.FileOutputChannel;
+import eu.stratosphere.nephele.io.channels.bytebuffered.InMemoryOutputChannel;
+import eu.stratosphere.nephele.io.channels.bytebuffered.NetworkOutputChannel;
 import eu.stratosphere.nephele.io.compression.CompressionException;
+import eu.stratosphere.nephele.io.compression.CompressionLevel;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractOutputGateWrapper;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.OutputGateQosReportingListener;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChain;
@@ -34,15 +41,22 @@ public final class StreamOutputGate<T extends Record> extends
 
 	private StreamChain streamChain = null;
 
-	private OutputGateQosReportingListener qosCallback;
+	private volatile OutputGateQosReportingListener qosCallback;
+
+	private HashMap<ChannelID, AbstractOutputChannel<T>> outputChannels;
 
 	public StreamOutputGate(final OutputGate<T> wrappedOutputGate) {
 		super(wrappedOutputGate);
+		this.outputChannels = new HashMap<ChannelID, AbstractOutputChannel<T>>();
 	}
 
-	public void setQosReportingCallback(
+	public void setQosReportingListener(
 			OutputGateQosReportingListener qosCallback) {
 		this.qosCallback = qosCallback;
+	}
+
+	public OutputGateQosReportingListener getQosReportingListener() {
+		return this.qosCallback;
 	}
 
 	/**
@@ -85,7 +99,9 @@ public final class StreamOutputGate<T extends Record> extends
 	@Override
 	public void outputBufferSent(final int channelIndex) {
 		if (this.qosCallback != null) {
-			this.qosCallback.outputBufferSent(channelIndex);
+			this.qosCallback.outputBufferSent(channelIndex, this
+					.getOutputChannel(channelIndex)
+					.getAmountOfDataTransmitted());
 		}
 		this.getWrappedOutputGate().outputBufferSent(channelIndex);
 	}
@@ -98,4 +114,71 @@ public final class StreamOutputGate<T extends Record> extends
 	public void initializeCompressors() throws CompressionException {
 		this.getWrappedOutputGate().initializeCompressors();
 	}
+
+	public AbstractOutputChannel<? extends Record> getOutputChannel(
+			ChannelID channelID) {
+		return this.outputChannels.get(channelID);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public NetworkOutputChannel<T> createNetworkOutputChannel(
+			final OutputGate<T> inputGate, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+
+		NetworkOutputChannel<T> channel = this.getWrappedOutputGate()
+				.createNetworkOutputChannel(inputGate, channelID,
+						connectedChannelID, compressionLevel);
+
+		this.outputChannels.put(channelID, channel);
+
+		return channel;
+
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public FileOutputChannel<T> createFileOutputChannel(
+			final OutputGate<T> inputGate, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+
+		FileOutputChannel<T> channel = this.getWrappedOutputGate()
+				.createFileOutputChannel(inputGate, channelID,
+						connectedChannelID, compressionLevel);
+		this.outputChannels.put(channelID, channel);
+		return channel;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public InMemoryOutputChannel<T> createInMemoryOutputChannel(
+			final OutputGate<T> inputGate, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+
+		InMemoryOutputChannel<T> channel = this.getWrappedOutputGate()
+				.createInMemoryOutputChannel(inputGate, channelID,
+						connectedChannelID, compressionLevel);
+
+		this.outputChannels.put(channelID, channel);
+		return channel;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void removeAllOutputChannels() {
+		this.outputChannels.clear();
+		this.getWrappedOutputGate().removeAllOutputChannels();
+	}
+
 }

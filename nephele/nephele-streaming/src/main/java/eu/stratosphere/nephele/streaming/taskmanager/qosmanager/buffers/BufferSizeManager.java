@@ -256,7 +256,7 @@ public class BufferSizeManager {
 				bufferSize);
 
 		if (this.profilingModel.getProfilingSequence().getQosManager()
-				.equals(edge.getSourceVertex().getExecutingInstance())) {
+				.equals(edge.getSourceVertex().getInstanceConnectionInfo())) {
 			try {
 				StreamTaskManagerPlugin.getInstance().sendData(bsla);
 			} catch (IOException e) {
@@ -264,7 +264,7 @@ public class BufferSizeManager {
 			}
 		} else {
 			this.messagingThread.sendToTaskManagerAsynchronously(edge
-					.getSourceVertex().getExecutingInstance(), bsla);
+					.getSourceVertex().getInstanceConnectionInfo(), bsla);
 		}
 	}
 }

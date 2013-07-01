@@ -19,37 +19,41 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
  * @author Bjoern Lohrmann
  * 
  */
-public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
+public class EdgeQosReporterConfig implements IOReadableWritable {
 
 	private ChannelID sourceChannelID;
 
 	private ChannelID targetChannelID;
 
 	private InstanceConnectionInfo[] qosManagers;
-	
+
 	private int outputGateIndex;
-	
+
+	private GateID outputGateID;
+
 	private int inputGateIndex;
+
+	private GateID inputGateID;
 
 	private int outputGateEdgeIndex;
 
 	private int inputGateEdgeIndex;
-	
-	
-	public EdgeQosReporterDeploymentDescriptor() {
+
+	public EdgeQosReporterConfig() {
 	}
-	
 
 	/**
-	 * Initializes EdgeQosReporterDeploymentDescriptor.
-	 *
+	 * Initializes EdgeQosReporterConfig.
+	 * 
 	 * @param sourceChannelID
 	 * @param targetChannelID
 	 * @param qosManagers
@@ -59,21 +63,21 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 	 * @param outputGateEdgeIndex
 	 * @param inputGateEdgeIndex
 	 */
-	public EdgeQosReporterDeploymentDescriptor(ChannelID sourceChannelID,
+	public EdgeQosReporterConfig(ChannelID sourceChannelID,
 			ChannelID targetChannelID, InstanceConnectionInfo[] qosManagers,
-			int outputGateIndex, int inputGateIndex,
-			int outputGateEdgeIndex, int inputGateEdgeIndex) {
-		
+			int outputGateIndex, GateID outputGateID, int inputGateIndex,
+			GateID inputGateID, int outputGateEdgeIndex, int inputGateEdgeIndex) {
+
 		this.sourceChannelID = sourceChannelID;
 		this.targetChannelID = targetChannelID;
 		this.qosManagers = qosManagers;
 		this.outputGateIndex = outputGateIndex;
+		this.outputGateID = outputGateID;
 		this.inputGateIndex = inputGateIndex;
+		this.inputGateID = inputGateID;
 		this.outputGateEdgeIndex = outputGateEdgeIndex;
 		this.inputGateEdgeIndex = inputGateEdgeIndex;
 	}
-	
-	
 
 	/**
 	 * Returns the sourceChannelID.
@@ -84,7 +88,6 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 		return this.sourceChannelID;
 	}
 
-
 	/**
 	 * Returns the targetChannelID.
 	 * 
@@ -93,7 +96,6 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 	public ChannelID getTargetChannelID() {
 		return this.targetChannelID;
 	}
-
 
 	/**
 	 * Returns the qosManagers.
@@ -104,7 +106,6 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 		return this.qosManagers;
 	}
 
-
 	/**
 	 * Returns the outputGateIndex.
 	 * 
@@ -114,7 +115,6 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 		return this.outputGateIndex;
 	}
 
-
 	/**
 	 * Returns the inputGateIndex.
 	 * 
@@ -123,7 +123,26 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 	public int getInputGateIndex() {
 		return this.inputGateIndex;
 	}
+	
+	
 
+	/**
+	 * Returns the outputGateID.
+	 * 
+	 * @return the outputGateID
+	 */
+	public GateID getOutputGateID() {
+		return this.outputGateID;
+	}
+
+	/**
+	 * Returns the inputGateID.
+	 * 
+	 * @return the inputGateID
+	 */
+	public GateID getInputGateID() {
+		return this.inputGateID;
+	}
 
 	/**
 	 * Returns the outputGateEdgeIndex.
@@ -134,7 +153,6 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 		return this.outputGateEdgeIndex;
 	}
 
-
 	/**
 	 * Returns the inputGateEdgeIndex.
 	 * 
@@ -143,7 +161,6 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 	public int getInputGateEdgeIndex() {
 		return this.inputGateEdgeIndex;
 	}
-
 
 	/*
 	 * (non-Javadoc)
@@ -160,7 +177,9 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 			qosManager.write(out);
 		}
 		out.writeInt(this.outputGateIndex);
+		this.outputGateID.write(out);
 		out.writeInt(this.inputGateIndex);
+		this.inputGateID.write(out);
 		out.writeInt(this.outputGateEdgeIndex);
 		out.writeInt(this.inputGateEdgeIndex);
 	}
@@ -183,8 +202,16 @@ public class EdgeQosReporterDeploymentDescriptor implements IOReadableWritable {
 			this.qosManagers[i].read(in);
 		}
 		this.outputGateIndex = in.readInt();
+		this.outputGateID = new GateID();
+		this.outputGateID.read(in);
 		this.inputGateIndex = in.readInt();
+		this.inputGateID = new GateID();
+		this.inputGateID.read(in);
 		this.outputGateEdgeIndex = in.readInt();
 		this.inputGateEdgeIndex = in.readInt();
+	}
+
+	public QosReporterID getReporterID() {
+		return QosReporterID.forEdge(this.sourceChannelID);
 	}
 }

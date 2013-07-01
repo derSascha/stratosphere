@@ -73,13 +73,13 @@ public class StreamProfilingReportTest {
 
 	@Test
 	public void testAddChannelLatency() {
-		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
+		QosReport report = new QosReport(this.jobID);
 		report.addChannelLatency(this.channel12Latency);
 		report.addChannelLatency(this.channel13Latency);
 		this.checkChannelLatencies(report);
 	}
 
-	private void checkChannelLatencies(StreamProfilingReport report) {
+	private void checkChannelLatencies(QosReport report) {
 		assertEquals(report.getChannelLatencies().size(), 2);
 
 		Iterator<ChannelLatency> iter = report.getChannelLatencies().iterator();
@@ -95,13 +95,13 @@ public class StreamProfilingReportTest {
 
 	@Test
 	public void testAddOutputChannelStatistics() {
-		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
+		QosReport report = new QosReport(this.jobID);
 		report.addOutputChannelStatistics(this.channel12Throughput);
 		report.addOutputChannelStatistics(this.channel13Throughput);
 		this.checkOutputChannelStatistics(report);
 	}
 
-	private void checkOutputChannelStatistics(StreamProfilingReport report) {
+	private void checkOutputChannelStatistics(QosReport report) {
 		assertEquals(report.getOutputChannelStatistics().size(), 2);
 		Iterator<OutputChannelStatistics> iter = report.getOutputChannelStatistics()
 				.iterator();
@@ -117,14 +117,14 @@ public class StreamProfilingReportTest {
 
 	@Test
 	public void testAddTaskLatency() {
-		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
+		QosReport report = new QosReport(this.jobID);
 		report.addTaskLatency(this.taskLatency1);
 		report.addTaskLatency(this.taskLatency2);
 		report.addTaskLatency(this.taskLatency3);
 		this.checkTaskLatencies(report);
 	}
 
-	private void checkTaskLatencies(StreamProfilingReport report) {
+	private void checkTaskLatencies(QosReport report) {
 		assertEquals(report.getTaskLatencies().size(), 3);
 		Iterator<TaskLatency> iter = report.getTaskLatencies().iterator();
 		TaskLatency first = iter.next();
@@ -147,7 +147,7 @@ public class StreamProfilingReportTest {
 
 	@Test
 	public void testReadWrite() throws IOException {
-		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
+		QosReport report = new QosReport(this.jobID);
 		report.addOutputChannelStatistics(this.channel13Throughput);
 		report.addTaskLatency(this.taskLatency3);
 		report.addTaskLatency(this.taskLatency1);
@@ -162,7 +162,7 @@ public class StreamProfilingReportTest {
 
 		DataInput in = new DataInputStream(new ByteArrayInputStream(
 				byteArrayOutStream.toByteArray()));
-		report = new StreamProfilingReport();
+		report = new QosReport();
 		report.read(in);
 		this.checkChannelLatencies(report);
 		this.checkOutputChannelStatistics(report);
@@ -171,7 +171,7 @@ public class StreamProfilingReportTest {
 
 	@Test
 	public void testReadWriteWhenEmpty() throws IOException {
-		StreamProfilingReport report = new StreamProfilingReport(this.jobID);
+		QosReport report = new QosReport(this.jobID);
 
 		ByteArrayOutputStream byteArrayOutStream = new ByteArrayOutputStream();
 		DataOutput out = new DataOutputStream(byteArrayOutStream);
@@ -183,7 +183,7 @@ public class StreamProfilingReportTest {
 		assertEquals(expectedLength, serializedData.length);
 		DataInput in = new DataInputStream(new ByteArrayInputStream(
 				serializedData));
-		report = new StreamProfilingReport();
+		report = new QosReport();
 		report.read(in);
 		assertTrue(report.getChannelLatencies().isEmpty());
 		assertTrue(report.getOutputChannelStatistics().isEmpty());

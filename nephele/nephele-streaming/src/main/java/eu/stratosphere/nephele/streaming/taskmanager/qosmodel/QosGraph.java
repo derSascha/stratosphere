@@ -129,13 +129,13 @@ public class QosGraph implements IOReadableWritable {
 			QosVertex templateMember = templateGroupEdge.getSourceVertex()
 					.getMember(i);
 
-			QosGate outputGate = fromMember.getOutputGate(outputGateIndex);
-			if (outputGate == null) {
-				outputGate = new QosGate(outputGateIndex);
-				fromMember.setOutputGate(outputGate);
-			}
 			QosGate templateOutputGate = templateMember
 					.getOutputGate(outputGateIndex);
+			QosGate outputGate = fromMember.getOutputGate(outputGateIndex);
+			if (outputGate == null) {
+				outputGate = templateOutputGate.cloneWithoutEdgesAndVertex();
+				fromMember.setOutputGate(outputGate);
+			}
 
 			addEdgesToOutputGate(outputGate, templateOutputGate, to,
 					inputGateIndex);
@@ -154,7 +154,7 @@ public class QosGraph implements IOReadableWritable {
 
 			QosGate inputGate = toMember.getInputGate(inputGateIndex);
 			if (inputGate == null) {
-				inputGate = new QosGate(inputGateIndex);
+				inputGate = templateEdge.getInputGate().cloneWithoutEdgesAndVertex();
 				toMember.setInputGate(inputGate);
 			}
 

@@ -19,7 +19,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
  * This class stores information about the latency of a specific channel.
@@ -29,9 +29,9 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 public final class ChannelLatency extends AbstractStreamProfilingRecord {
 
 	/**
-	 * The {@link ChannelID} representing the source end of the channel.
+	 * The {@link QosReporterID} of the reporter that sends the channel.
 	 */
-	private ChannelID sourceChannelID;
+	private QosReporterID.Edge reporterID;
 
 	private int counter;
 
@@ -48,15 +48,10 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 * @param channelLatency
 	 *            the channel latency in milliseconds
 	 */
-	public ChannelLatency(final ChannelID sourceChannelID,
-			final double channelLatency) {
+	public ChannelLatency(QosReporterID.Edge reporterID,
+			double channelLatency) {
 
-		if (sourceChannelID == null) {
-			throw new IllegalArgumentException(
-					"sourceChannelID must not be null");
-		}
-
-		this.sourceChannelID = sourceChannelID;
+		this.reporterID = reporterID;
 		this.channelLatency = channelLatency;
 		this.counter = 1;
 	}
@@ -77,7 +72,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		this.sourceChannelID.write(out);
+		this.reporterID.write(out);
 		out.writeDouble(this.getChannelLatency());
 	}
 
@@ -86,19 +81,19 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		this.sourceChannelID = new ChannelID();
-		this.sourceChannelID.read(in);
+		this.reporterID = new QosReporterID.Edge();
+		this.reporterID.read(in);
 		this.channelLatency = in.readDouble();
 		this.counter = 1;
 	}
-
+	
 	/**
-	 * Returns the {@link ChannelID} representing the source end of the channel.
+	 * Returns the reporterID.
 	 * 
-	 * @return the {@link ChannelID} representing the source end of the channel.
+	 * @return the reporterID
 	 */
-	public ChannelID getSourceChannelID() {
-		return this.sourceChannelID;
+	public QosReporterID.Edge getReporterID() {
+		return this.reporterID;
 	}
 
 	/**
@@ -118,7 +113,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	public String toString() {
 
 		final StringBuilder str = new StringBuilder();
-		str.append(this.sourceChannelID.toString());
+		str.append(this.reporterID.toString());
 		str.append(": ");
 		str.append(this.channelLatency);
 
@@ -130,8 +125,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 		boolean isEqual = false;
 		if (otherObj instanceof ChannelLatency) {
 			ChannelLatency other = (ChannelLatency) otherObj;
-			isEqual = other.getSourceChannelID().equals(
-					this.getSourceChannelID())
+			isEqual = other.reporterID.equals(this.reporterID)
 					&& other.getChannelLatency() == this.getChannelLatency();
 		}
 
@@ -148,7 +142,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 		final int prime = 31;
 		long temp = Double.doubleToLongBits(this.channelLatency);
 		int result = prime + (int) (temp ^ temp >>> 32);
-		result = prime * result + this.sourceChannelID.hashCode();
+		result = prime * result + this.reporterID.hashCode();
 		return result;
 	}
 }

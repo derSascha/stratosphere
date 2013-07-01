@@ -22,7 +22,7 @@ import eu.stratosphere.nephele.types.AbstractTaggableRecord;
  */
 public interface OutputGateQosReportingListener {
 
-	public void outputBufferSent(int channelIndex);
+	public void outputBufferSent(int channelIndex, long currentAmountTransmitted);
 
 	public void recordEmitted(int outputChannel, AbstractTaggableRecord record);
 

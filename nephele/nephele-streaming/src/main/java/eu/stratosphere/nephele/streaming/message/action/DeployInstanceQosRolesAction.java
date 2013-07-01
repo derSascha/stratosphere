@@ -19,6 +19,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.LinkedList;
 
+import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 
@@ -27,43 +28,50 @@ import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
  * 
  */
 public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
+	
+	private InstanceConnectionInfo instanceConnectionInfo;
 
-	private QosManagerDeploymentDescriptor qosManager = new QosManagerDeploymentDescriptor();
+	private QosManagerConfig qosManager = new QosManagerConfig();
 
-	private LinkedList<EdgeQosReporterDeploymentDescriptor> edgeQosReporters = new LinkedList<EdgeQosReporterDeploymentDescriptor>();
+	private LinkedList<EdgeQosReporterConfig> edgeQosReporters = new LinkedList<EdgeQosReporterConfig>();
 
-	private LinkedList<VertexQosReporterDeploymentDescriptor> vertexQosReporters = new LinkedList<VertexQosReporterDeploymentDescriptor>();
+	private LinkedList<VertexQosReporterConfig> vertexQosReporters = new LinkedList<VertexQosReporterConfig>();
 
 	public DeployInstanceQosRolesAction() {
 	}
 
-	public DeployInstanceQosRolesAction(JobID jobID) {
+	public DeployInstanceQosRolesAction(JobID jobID, InstanceConnectionInfo instanceConnectionInfo) {
 		super(jobID);
+		this.instanceConnectionInfo = instanceConnectionInfo;
 	}
 
-	public void setQosManager(QosManagerDeploymentDescriptor qosManager) {
+	public InstanceConnectionInfo getInstanceConnectionInfo() {
+		return this.instanceConnectionInfo;
+	}
+
+	public void setQosManager(QosManagerConfig qosManager) {
 		this.qosManager = qosManager;
 	}
 
 	public void addEdgeQosReporter(
-			EdgeQosReporterDeploymentDescriptor edgeQosReporter) {
+			EdgeQosReporterConfig edgeQosReporter) {
 		this.edgeQosReporters.add(edgeQosReporter);
 	}
 
 	public void addVertexQosReporter(
-			VertexQosReporterDeploymentDescriptor vertexQosReporter) {
+			VertexQosReporterConfig vertexQosReporter) {
 		this.vertexQosReporters.add(vertexQosReporter);
 	}
 
-	public QosManagerDeploymentDescriptor getQosManager() {
+	public QosManagerConfig getQosManager() {
 		return this.qosManager;
 	}
 
-	public LinkedList<EdgeQosReporterDeploymentDescriptor> getEdgeQosReporters() {
+	public LinkedList<EdgeQosReporterConfig> getEdgeQosReporters() {
 		return this.edgeQosReporters;
 	}
 
-	public LinkedList<VertexQosReporterDeploymentDescriptor> getVertexQosReporters() {
+	public LinkedList<VertexQosReporterConfig> getVertexQosReporters() {
 		return this.vertexQosReporters;
 	}
 
@@ -73,16 +81,17 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		super.write(out);
+		this.instanceConnectionInfo.write(out);
 		out.writeBoolean(this.qosManager != null);
 		if (this.qosManager != null) {
 			this.qosManager.write(out);
 		}
 		out.writeInt(this.edgeQosReporters.size());
-		for (EdgeQosReporterDeploymentDescriptor edgeQosReporter : this.edgeQosReporters) {
+		for (EdgeQosReporterConfig edgeQosReporter : this.edgeQosReporters) {
 			edgeQosReporter.write(out);
 		}
 		out.writeInt(this.vertexQosReporters.size());
-		for (VertexQosReporterDeploymentDescriptor vertexQosReporter : this.vertexQosReporters) {
+		for (VertexQosReporterConfig vertexQosReporter : this.vertexQosReporters) {
 			vertexQosReporter.write(out);
 		}
 	}
@@ -93,21 +102,23 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 	@Override
 	public void read(final DataInput in) throws IOException {
 		super.read(in);
+		this.instanceConnectionInfo = new InstanceConnectionInfo();
+		this.instanceConnectionInfo.read(in);
 		if (in.readBoolean()) {
-			this.qosManager = new QosManagerDeploymentDescriptor();
+			this.qosManager = new QosManagerConfig();
 			this.qosManager.read(in);
 		}
 
 		int noOfEdgeQosReporters = in.readInt();
 		for (int i = 0; i < noOfEdgeQosReporters; i++) {
-			EdgeQosReporterDeploymentDescriptor edgeQosReporter = new EdgeQosReporterDeploymentDescriptor();
+			EdgeQosReporterConfig edgeQosReporter = new EdgeQosReporterConfig();
 			edgeQosReporter.read(in);
 			this.edgeQosReporters.add(edgeQosReporter);
 		}
 
 		int noOfVertexQosReporters = in.readInt();
 		for (int i = 0; i < noOfVertexQosReporters; i++) {
-			VertexQosReporterDeploymentDescriptor vertexQosReporter = new VertexQosReporterDeploymentDescriptor();
+			VertexQosReporterConfig vertexQosReporter = new VertexQosReporterConfig();
 			vertexQosReporter.read(in);
 			this.vertexQosReporters.add(vertexQosReporter);
 		}

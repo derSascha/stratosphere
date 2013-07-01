@@ -134,6 +134,28 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 		this.mapper = mapper;
 	}
 
+	public StreamInputGate<? extends Record> getInputGate(GateID gateID) {
+		for (int i = 0; i < getNumberOfInputGates(); i++) {
+			StreamInputGate<? extends Record> inputGate = getInputGate(i);
+			if (inputGate.getGateID().equals(gateID)) {
+				return inputGate;
+			}
+		}
+
+		return null;
+	}
+
+	public StreamOutputGate<? extends Record> getOutputGate(GateID gateID) {
+		for (int i = 0; i < getNumberOfOutputGates(); i++) {
+			StreamOutputGate<? extends Record> outputGate = getOutputGate(i);
+			if (outputGate.getGateID().equals(gateID)) {
+				return outputGate;
+			}
+		}
+
+		return null;
+	}
+	
 	public StreamInputGate<? extends Record> getInputGate(int gateIndex) {
 		return (StreamInputGate<? extends Record>) ((RuntimeEnvironment) this
 				.getWrappedEnvironment()).getInputGate(gateIndex);

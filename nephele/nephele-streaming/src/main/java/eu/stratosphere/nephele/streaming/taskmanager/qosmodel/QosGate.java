@@ -16,6 +16,7 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import java.util.ArrayList;
 
+import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.streaming.util.SparseDelegateIterable;
 
 /**
@@ -23,6 +24,8 @@ import eu.stratosphere.nephele.streaming.util.SparseDelegateIterable;
  * 
  */
 public class QosGate {
+	
+	private GateID gateID;
 
 	private int gateIndex;
 
@@ -45,10 +48,15 @@ public class QosGate {
 	 * Initializes QosGate.
 	 * 
 	 */
-	public QosGate(int gateIndex) {
+	public QosGate(GateID gateID, int gateIndex) {
+		this.gateID = gateID;
 		this.gateIndex = gateIndex;
 		this.edges = new ArrayList<QosEdge>();
 		this.noOfEdges = 0;
+	}
+
+	public GateID getGateID() {
+		return this.gateID;
 	}
 
 	public int getGateIndex() {
@@ -105,5 +113,9 @@ public class QosGate {
 
 	public QosVertex getVertex() {
 		return this.vertex;
+	}
+	
+	public QosGate cloneWithoutEdgesAndVertex() {
+		return new QosGate(this.gateID, this.gateIndex);
 	}
 }

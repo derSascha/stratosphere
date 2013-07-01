@@ -16,11 +16,18 @@
 package eu.stratosphere.nephele.streaming.taskmanager.runtime.io;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
+import eu.stratosphere.nephele.io.channels.AbstractInputChannel;
+import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.io.channels.bytebuffered.FileInputChannel;
+import eu.stratosphere.nephele.io.channels.bytebuffered.InMemoryInputChannel;
+import eu.stratosphere.nephele.io.channels.bytebuffered.NetworkInputChannel;
 import eu.stratosphere.nephele.io.compression.CompressionException;
+import eu.stratosphere.nephele.io.compression.CompressionLevel;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractInputGateWrapper;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.InputGateQosReportingListener;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
@@ -31,6 +38,8 @@ public final class StreamInputGate<T extends Record> extends
 
 	private final InputChannelChooser channelChooser;
 
+	private HashMap<ChannelID, AbstractInputChannel<T>> inputChannels;
+
 	/**
 	 * The thread which executes the task connected to the input gate.
 	 */
@@ -38,16 +47,21 @@ public final class StreamInputGate<T extends Record> extends
 
 	private AtomicBoolean taskThreadHalted = new AtomicBoolean(false);
 
-	private InputGateQosReportingListener qosCallback;
+	private volatile InputGateQosReportingListener qosCallback;
 
 	public StreamInputGate(final InputGate<T> wrappedInputGate) {
 		super(wrappedInputGate);
 		this.channelChooser = new InputChannelChooser();
+		this.inputChannels = new HashMap<ChannelID, AbstractInputChannel<T>>();
 	}
 
 	public void setQosReportingListener(
 			InputGateQosReportingListener qosCallback) {
 		this.qosCallback = qosCallback;
+	}
+
+	public InputGateQosReportingListener getQosReportingListener() {
+		return this.qosCallback;
 	}
 
 	/**
@@ -199,5 +213,71 @@ public final class StreamInputGate<T extends Record> extends
 				this.taskThreadHalted.wait();
 			}
 		}
+	}
+
+	public AbstractInputChannel<? extends Record> getInputChannel(
+			ChannelID channelID) {
+		return this.inputChannels.get(channelID);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public NetworkInputChannel<T> createNetworkInputChannel(
+			final InputGate<T> inputGate, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+
+		NetworkInputChannel<T> channel = this.getWrappedInputGate()
+				.createNetworkInputChannel(inputGate, channelID,
+						connectedChannelID, compressionLevel);
+
+		this.inputChannels.put(channelID, channel);
+
+		return channel;
+
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public FileInputChannel<T> createFileInputChannel(
+			final InputGate<T> inputGate, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+
+		FileInputChannel<T> channel = this.getWrappedInputGate()
+				.createFileInputChannel(inputGate, channelID,
+						connectedChannelID, compressionLevel);
+		this.inputChannels.put(channelID, channel);
+		return channel;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public InMemoryInputChannel<T> createInMemoryInputChannel(
+			final InputGate<T> inputGate, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+
+		InMemoryInputChannel<T> channel = this.getWrappedInputGate()
+				.createInMemoryInputChannel(inputGate, channelID,
+						connectedChannelID, compressionLevel);
+
+		this.inputChannels.put(channelID, channel);
+		return channel;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void removeAllInputChannels() {
+		this.inputChannels.clear();
+		this.getWrappedInputGate().removeAllInputChannels();
 	}
 }

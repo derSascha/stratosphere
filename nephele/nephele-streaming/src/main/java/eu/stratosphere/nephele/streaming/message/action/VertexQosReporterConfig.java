@@ -20,53 +20,58 @@ import java.io.IOException;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
  * @author Bjoern Lohrmann
  * 
  */
-public class VertexQosReporterDeploymentDescriptor implements
+public class VertexQosReporterConfig implements
 		IOReadableWritable {
 
 	private JobVertexID groupVertexID;
-
+	
 	private ExecutionVertexID vertexID;
 
 	private InstanceConnectionInfo[] qosManagers;
 
 	private int inputGateIndex;
+	
+	private GateID inputGateID;
 
 	private int outputGateIndex;
+	
+	private GateID outputGateID;
 
 	private int memberIndex;
 
 	private String name;
 	
-	public VertexQosReporterDeploymentDescriptor() {
+	public VertexQosReporterConfig() {
 	}
 
 	/**
-	 * Initializes VertexQosReporterDeploymentDescriptor.
+	 * Initializes VertexQosReporterConfig.
 	 *
-	 * @param groupVertexID
-	 * @param vertexID
-	 * @param qosManagers
-	 * @param inputGateIndex
-	 * @param outputGateIndex
-	 * @param memberIndex
-	 * @param name
 	 */
-	public VertexQosReporterDeploymentDescriptor(JobVertexID groupVertexID,
+	public VertexQosReporterConfig(JobVertexID groupVertexID,
 			ExecutionVertexID vertexID, InstanceConnectionInfo[] qosManagers,
-			int inputGateIndex, int outputGateIndex, int memberIndex,
+			int inputGateIndex, GateID inputGateID,
+			int outputGateIndex,
+			GateID outputGateID,
+			int memberIndex,
 			String name) {
+		
 		this.groupVertexID = groupVertexID;
 		this.vertexID = vertexID;
 		this.qosManagers = qosManagers;
 		this.inputGateIndex = inputGateIndex;
+		this.inputGateID = inputGateID;
 		this.outputGateIndex = outputGateIndex;
+		this.outputGateID = outputGateID;
 		this.memberIndex = memberIndex;
 		this.name = name;
 	}
@@ -117,6 +122,26 @@ public class VertexQosReporterDeploymentDescriptor implements
 	public int getOutputGateIndex() {
 		return this.outputGateIndex;
 	}
+	
+	
+
+	/**
+	 * Returns the inputGateID.
+	 * 
+	 * @return the inputGateID
+	 */
+	public GateID getInputGateID() {
+		return this.inputGateID;
+	}
+
+	/**
+	 * Returns the outputGateID.
+	 * 
+	 * @return the outputGateID
+	 */
+	public GateID getOutputGateID() {
+		return this.outputGateID;
+	}
 
 	/**
 	 * Returns the memberIndex.
@@ -151,7 +176,9 @@ public class VertexQosReporterDeploymentDescriptor implements
 			qosManager.write(out);
 		}
 		out.writeInt(this.inputGateIndex);
+		this.inputGateID.write(out);
 		out.writeInt(this.outputGateIndex);
+		this.outputGateID.write(out);
 		out.writeInt(this.memberIndex);
 		out.writeUTF(this.name);
 	}
@@ -174,9 +201,17 @@ public class VertexQosReporterDeploymentDescriptor implements
 			this.qosManagers[i].read(in);
 		}
 		this.inputGateIndex = in.readInt();
+		this.inputGateID = new GateID();
+		this.inputGateID.read(in);
 		this.outputGateIndex = in.readInt();
+		this.outputGateID = new GateID();
+		this.outputGateID.read(in);
 		this.memberIndex = in.readInt();
 		this.name = in.readUTF();
 	}
 
+	public QosReporterID getReporterID() {
+		return QosReporterID.forVertex(this.vertexID, this.inputGateID,
+				this.outputGateID);
+	}
 }

@@ -19,7 +19,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
  * This class holds statistical information about a specific output channel,
@@ -31,9 +31,9 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 public final class OutputChannelStatistics extends AbstractStreamProfilingRecord {
 
 	/**
-	 * The ID of the output channel.
+	 * The ID of reporter.
 	 */
-	private ChannelID sourceChannelID;
+	private QosReporterID.Edge reporterID;
 
 	/**
 	 * The throughput in MBit/s.
@@ -71,8 +71,8 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	/**
 	 * Constructs a new channel throughput object.
 	 * 
-	 * @param sourceChannelID
-	 *            the ID of the output channel
+	 * @param reporterID
+	 *            the ID of the QOs reporter
 	 * @param throughput
 	 *            throughput of the output channel in MBit/s
 	 * @param outputBufferLifetime
@@ -82,37 +82,12 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	 * @param recordsPerSecond
 	 *        number of records that are emitted on this channel each second 
 	 */
-	public OutputChannelStatistics(ChannelID sourceChannelID, double throughput,
+	public OutputChannelStatistics(QosReporterID.Edge reporterID, double throughput,
 			double outputBufferLifetime, 
 			double recordsPerBuffer,
 			double recordsPerSecond) {
 		
-		if (sourceChannelID == null) {
-			throw new IllegalArgumentException(
-					"Argument sourceChannelID must not be null");
-		}
-
-		if (throughput < 0.0) {
-			throw new IllegalArgumentException(
-					"Argument throughput must be positive");
-		}
-		
-		if (outputBufferLifetime < 0.0) {
-			throw new IllegalArgumentException(
-					"Argument outputBufferLifetime must be positive");
-		}
-
-		if (recordsPerBuffer < 0.0) {
-			throw new IllegalArgumentException(
-					"Argument recordsPerBuffer must be positive");
-		}
-		
-		if (recordsPerSecond < 0.0) {
-			throw new IllegalArgumentException(
-					"Argument recordsPerSecond must be positive");
-		}
-
-		this.sourceChannelID = sourceChannelID;
+		this.reporterID = reporterID;
 		this.throughput = throughput;
 		this.outputBufferLifetime = outputBufferLifetime;
 		this.recordsPerBuffer = recordsPerBuffer;
@@ -121,14 +96,6 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 
 	}
 
-	/**
-	 * The ID of the output channel.
-	 * 
-	 * @return the ID of the output channel.
-	 */
-	public ChannelID getSourceChannelID() {
-		return this.sourceChannelID;
-	}
 	
 	/**
 	 * Returns the throughput of the output channel in MBit/s.
@@ -168,7 +135,14 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 		return this.recordsPerSecond / this.counter;
 	}
 
-
+	/**
+	 * Returns the reporterID.
+	 * 
+	 * @return the reporterID
+	 */
+	public QosReporterID.Edge getReporterID() {
+		return this.reporterID;
+	}
 
 	public void add(OutputChannelStatistics channelThroughput) {
 		this.throughput += channelThroughput.throughput;
@@ -183,7 +157,7 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	 */
 	@Override
 	public void write(final DataOutput out) throws IOException {
-		this.sourceChannelID.write(out);
+		this.reporterID.write(out);
 		out.writeDouble(this.getThroughput());
 		out.writeDouble(this.getOutputBufferLifetime());
 		out.writeDouble(this.getRecordsPerBuffer());
@@ -195,8 +169,8 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	 */
 	@Override
 	public void read(final DataInput in) throws IOException {
-		this.sourceChannelID = new ChannelID();
-		this.sourceChannelID.read(in);
+		this.reporterID = new QosReporterID.Edge();
+		this.reporterID.read(in);
 		this.throughput = in.readDouble();
 		this.outputBufferLifetime = in.readDouble();
 		this.recordsPerBuffer = in.readDouble();
@@ -209,7 +183,7 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 		boolean isEqual = false;
 		if (otherObj instanceof OutputChannelStatistics) {
 			OutputChannelStatistics other = (OutputChannelStatistics) otherObj;
-			isEqual = other.getSourceChannelID().equals(this.getSourceChannelID())
+			isEqual = other.reporterID.equals(this.reporterID)
 					&& other.getThroughput() == this.getThroughput()
 					&& other.getOutputBufferLifetime() == this.getOutputBufferLifetime()
 					&& other.getRecordsPerBuffer() == this.getRecordsPerBuffer()
@@ -224,6 +198,6 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	 */
 	@Override
 	public int hashCode() {
-		return this.sourceChannelID.hashCode();
+		return this.reporterID.hashCode();
 	}
 }

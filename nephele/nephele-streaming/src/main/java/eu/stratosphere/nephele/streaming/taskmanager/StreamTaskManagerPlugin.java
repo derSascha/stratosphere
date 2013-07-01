@@ -145,12 +145,22 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 
 		RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) environment;
 		if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
-			StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv.getInvokable().getEnvironment();
-			
+			StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv
+					.getInvokable().getEnvironment();
+
 			// unfortunately, Nephele's runtime environment does not know
-			// its ExecutionVertexID. 
+			// its ExecutionVertexID.
 			streamEnv.setVertexID(vertexID);
 			this.getOrCreateJobEnvironment(environment.getJobID()).registerTask(vertexID, streamEnv);
+		}
+
+		// process attached plugin data, such as Qos manager/reporter configs
+		if (pluginData != null) {
+			try {
+				this.sendData(pluginData);
+			} catch (IOException e) {
+				LOG.error("Error when consuming attached plugin data", e);
+			}
 		}
 	}
 

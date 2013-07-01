@@ -114,7 +114,7 @@ public class QosGraphFactory {
 	}
 
 	/**
-	 * Duplicates the execution edgs and gates of the given execution group edge
+	 * Duplicates the execution edges and gates of the given execution group edge
 	 * and links them to the given QoS group edge.
 	 * 
 	 */
@@ -132,7 +132,7 @@ public class QosGraphFactory {
 
 			QosVertex sourceVertex = qosGroupEdge.getSourceVertex()
 					.getMember(i);
-			QosGate qosOutputGate = new QosGate(qosGroupEdge.getOutputGateIndex());
+			QosGate qosOutputGate = new QosGate(execOutputGate.getGateID(), qosGroupEdge.getOutputGateIndex());
 			sourceVertex.setOutputGate(qosOutputGate);
 
 			for (int j = 0; j < execOutputGate.getNumberOfEdges(); j++) {
@@ -148,7 +148,8 @@ public class QosGraphFactory {
 								executionEdge.getInputGate().getVertex()
 										.getIndexInVertexGroup());
 
-				QosGate qosInputGate = new QosGate(qosGroupEdge.getInputGateIndex());
+				QosGate qosInputGate = new QosGate(executionEdge.getInputGate().getGateID(), 
+						qosGroupEdge.getInputGateIndex());
 				targetVertex.setInputGate(qosInputGate);
 
 				qosEdge.setOutputGate(qosOutputGate);
@@ -227,7 +228,7 @@ public class QosGraphFactory {
 		QosGate outputGate = sourceVertex.getOutputGate(templateOutputGate
 				.getGateIndex());
 		if (outputGate == null) {
-			outputGate = new QosGate(templateOutputGate.getGateIndex());
+			outputGate = templateOutputGate.cloneWithoutEdgesAndVertex();
 			sourceVertex.setOutputGate(outputGate);
 		}
 
@@ -247,7 +248,7 @@ public class QosGraphFactory {
 		QosGate inputGate = targetVertex.getInputGate(templateInputGate
 				.getGateIndex());
 		if (inputGate == null) {
-			inputGate = new QosGate(templateInputGate.getGateIndex());
+			inputGate = templateInputGate.cloneWithoutEdgesAndVertex();
 			targetVertex.setInputGate(inputGate);
 		}
 		

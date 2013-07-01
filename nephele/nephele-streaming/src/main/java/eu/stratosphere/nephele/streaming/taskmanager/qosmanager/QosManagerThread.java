@@ -16,19 +16,18 @@ import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
 import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
-import eu.stratosphere.nephele.streaming.message.profiling.StreamProfilingReport;
+import eu.stratosphere.nephele.streaming.message.profiling.QosReport;
 import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 import eu.stratosphere.nephele.util.StringUtils;
 
 public class QosManagerThread extends Thread {
 
-	private static final Log LOG = LogFactory
-			.getLog(QosManagerThread.class);
+	private static final Log LOG = LogFactory.getLog(QosManagerThread.class);
 
 	private final LinkedBlockingQueue<AbstractStreamMessage> streamingDataQueue;
 
@@ -38,20 +37,21 @@ public class QosManagerThread extends Thread {
 
 	private BufferSizeManager bufferSizeManager;
 
-	private ProfilingSequence profilingSequence;
-
 	private ProfilingModel profilingModel;
 
+	private QosGraph qosGraph;
+
 	private JobID jobID;
+	
+	private boolean terminated;
 
 	public QosManagerThread(JobID jobID,
-			StreamMessagingThread messagingThread,
-			ProfilingSequence profilingSequence) {
+			StreamMessagingThread messagingThread) {
 		this.jobID = jobID;
 		this.messagingThread = messagingThread;
+		this.qosGraph = new QosGraph();
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
-		this.profilingSequence = profilingSequence;
-		this.profilingModel = new ProfilingModel(this.profilingSequence);
+		// this.profilingModel = new ProfilingModel(this.profilingSequence);
 		this.bufferSizeManager = new BufferSizeManager(this.jobID, 300,
 				this.profilingModel, this.messagingThread);
 
@@ -81,8 +81,8 @@ public class QosManagerThread extends Thread {
 				totalNoOfMessages++;
 
 				long now = System.currentTimeMillis();
-				if (streamingData instanceof StreamProfilingReport) {
-					StreamProfilingReport profilingReport = (StreamProfilingReport) streamingData;
+				if (streamingData instanceof QosReport) {
+					QosReport profilingReport = (QosReport) streamingData;
 
 					for (ChannelLatency channelLatency : profilingReport
 							.getChannelLatencies()) {
@@ -100,7 +100,8 @@ public class QosManagerThread extends Thread {
 
 					for (TaskLatency taskLatency : profilingReport
 							.getTaskLatencies()) {
-						this.profilingModel.refreshTaskLatency(now, taskLatency);
+						this.profilingModel
+								.refreshTaskLatency(now, taskLatency);
 						taskLats++;
 					}
 				} else if (streamingData instanceof StreamChainAnnounce) {
@@ -191,8 +192,8 @@ public class QosManagerThread extends Thread {
 				for (LinkedList<ExecutionVertexID> chain : chainList) {
 					QosManagerThread.this
 							.handOffStreamingData(new StreamChainAnnounce(
-									QosManagerThread.this.jobID,
-									chain.getFirst(), chain.getLast()));
+									QosManagerThread.this.jobID, chain
+											.getFirst(), chain.getLast()));
 				}
 
 				for (LinkedList<ExecutionVertexID> chain : chainList) {

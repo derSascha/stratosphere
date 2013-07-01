@@ -23,11 +23,10 @@ import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
-import eu.stratosphere.nephele.streaming.message.action.ActAsQosManagerAction;
-import eu.stratosphere.nephele.streaming.message.action.ActAsQosReporterAction;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
+import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
-import eu.stratosphere.nephele.streaming.message.profiling.StreamProfilingReport;
+import eu.stratosphere.nephele.streaming.message.profiling.QosReport;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosManagerThread;
@@ -49,7 +48,7 @@ public class StreamJobEnvironment {
 
 	private JobID jobID;
 
-	private QosReporterThread qosReporter;
+	private QosReportForwarderThread qosReportForwarder;
 
 	private QosManagerThread qosManager;
 
@@ -59,63 +58,39 @@ public class StreamJobEnvironment {
 
 	private StreamMessagingThread messagingThread;
 
+	private boolean environmentIsShutDown;
+
 	public StreamJobEnvironment(JobID jobID,
 			StreamMessagingThread messagingThread) {
 
 		this.jobID = jobID;
 		this.messagingThread = messagingThread;
+		this.environmentIsShutDown = false;
 
-		QosReporterConfiguration reporterConfig = new QosReporterConfiguration();
+		QosReporterConfigCenter reporterConfig = new QosReporterConfigCenter();
 		reporterConfig.setAggregationInterval(StreamTaskManagerPlugin
 				.getDefaultAggregationInterval());
 		reporterConfig.setTaggingInterval(StreamTaskManagerPlugin
 				.getDefaultTaggingInterval());
-		this.qosReporter = new QosReporterThread(jobID, messagingThread,
+
+		this.qosReportForwarder = new QosReportForwarderThread(jobID, messagingThread,
 				reporterConfig);
 
 		this.chainCoordinator = new StreamChainCoordinator();
 		this.taskQosCoordinators = new HashMap<ExecutionVertexID, StreamTaskQosCoordinator>();
 	}
 
-	/**
-	 * Returns the jobID.
-	 * 
-	 * @return the jobID
-	 */
 	public JobID getJobID() {
 		return this.jobID;
 	}
 
-	/**
-	 * Returns the qosReporter.
-	 * 
-	 * @return the qosReporter
-	 */
-	public QosReporterThread getQosReporter() {
-		return this.qosReporter;
-	}
-
-	/**
-	 * Returns the qosManager.
-	 * 
-	 * @return the qosManager
-	 */
-	public QosManagerThread getQosManager() {
-		return this.qosManager;
-	}
-
-	/**
-	 * Returns the chainCoordinator.
-	 * 
-	 * @return the chainCoordinator
-	 */
-	public StreamChainCoordinator getChainCoordinator() {
-		return this.chainCoordinator;
-	}
-
 	public void registerTask(ExecutionVertexID vertexID,
 			StreamTaskEnvironment taskEnvironment) {
-		
+
+		if (this.environmentIsShutDown) {
+			return;
+		}
+
 		updateReportingConfiguration(taskEnvironment);
 
 		synchronized (this.taskQosCoordinators) {
@@ -124,16 +99,13 @@ public class StreamJobEnvironment {
 						"Task %s is already registered",
 						taskEnvironment.getTaskName()));
 			}
-			
+
 			this.taskQosCoordinators.put(vertexID,
 					new StreamTaskQosCoordinator(vertexID, taskEnvironment,
-							this.qosReporter, this.chainCoordinator));
+							this.qosReportForwarder, this.chainCoordinator));
 		}
 	}
 
-	/**
-	 * @param taskEnvironment
-	 */
 	private void updateReportingConfiguration(Environment taskEnvironment) {
 		long aggregationInterval = taskEnvironment
 				.getJobConfiguration()
@@ -143,101 +115,103 @@ public class StreamJobEnvironment {
 				StreamTaskManagerPlugin.TAGGING_INTERVAL_KEY,
 				StreamTaskManagerPlugin.getDefaultTaggingInterval());
 
-		this.qosReporter.getConfiguration().setAggregationInterval(
+		this.qosReportForwarder.getConfigCenter().setAggregationInterval(
 				aggregationInterval);
-		this.qosReporter.getConfiguration().setTaggingInterval(taggingInterval);
+		this.qosReportForwarder.getConfigCenter().setTaggingInterval(taggingInterval);
 	}
 
 	public StreamTaskQosCoordinator getTaskQosCoordinator(
 			ExecutionVertexID vertexID) {
-
 		return this.taskQosCoordinators.get(vertexID);
 	}
 
 	public void shutdown() {
+		this.environmentIsShutDown = true;
 		if (this.qosManager != null) {
 			this.qosManager.shutdown();
 		}
 		this.qosManager = null;
 
-		this.qosReporter.shutdown();
-		this.qosReporter = null;
+		this.qosReportForwarder.shutdown();
+		this.qosReportForwarder = null;
 	}
 
-	/**
-	 * @param streamMsg
-	 */
 	public void handleStreamMessage(AbstractStreamMessage streamMsg) {
-		if (streamMsg instanceof StreamProfilingReport) {
-			this.handleStreamProfilingReport((StreamProfilingReport) streamMsg);
+		if (this.environmentIsShutDown) {
+			return;
+		}
+
+		if (streamMsg instanceof QosReport) {
+			this.handleQosReport((QosReport) streamMsg);
 		} else if (streamMsg instanceof LimitBufferSizeAction) {
 			this.handleLimitBufferSizeAction((LimitBufferSizeAction) streamMsg);
 		} else if (streamMsg instanceof ConstructStreamChainAction) {
 			this.handleConstructStreamChainAction((ConstructStreamChainAction) streamMsg);
-		} else if (streamMsg instanceof ActAsQosManagerAction) {
-			this.handleActAsQosManagerAction((ActAsQosManagerAction) streamMsg);
-		} else if (streamMsg instanceof ActAsQosReporterAction) {
-			this.handleActAsQosReporterAction((ActAsQosReporterAction) streamMsg);
+		} else if (streamMsg instanceof DeployInstanceQosRolesAction) {
+			this.handleDeployInstanceQosRolesAction((DeployInstanceQosRolesAction) streamMsg);
 		} else {
 			LOG.error("Received message is of unknown type "
 					+ streamMsg.getClass());
 		}
 	}
 
-	private void handleStreamProfilingReport(StreamProfilingReport data) {
-		if (this.qosManager != null) {
-			this.qosManager.handOffStreamingData(data);
-		} else {
-			LOG.error("Received StreamProfilingReport but could not find QoS manager for job "
-					+ data.getJobID());
+	private void handleDeployInstanceQosRolesAction(
+			DeployInstanceQosRolesAction deployRolesAction) {
+
+		if (deployRolesAction.getQosManager() != null) {
+			processQosManagerConfig(deployRolesAction);
 		}
+		
+		this.qosReportForwarder.configureReporting(deployRolesAction);
 	}
 
-	private void handleActAsQosReporterAction(
-			ActAsQosReporterAction reporterAction) {
-		this.qosReporter.registerQosReporter(reporterAction);
+	private void handleQosReport(QosReport data) {
+		ensureQosManagerIsRunning();
+		this.qosManager.handOffStreamingData(data);
 	}
 
-	private void handleActAsQosManagerAction(ActAsQosManagerAction action) {
+	private void processQosManagerConfig(
+			DeployInstanceQosRolesAction deployRolesAction) {
 
-		if (this.qosManager != null) {
-			LOG.error("This task manager is already QoS manager for the given job "
-					+ this.jobID.toString());
-			return;
+		ensureQosManagerIsRunning();
+		this.qosManager.handOffStreamingData(deployRolesAction);
+	}
+
+	private synchronized void ensureQosManagerIsRunning() {
+		if (this.qosManager == null) {
+			this.qosManager = new QosManagerThread(this.jobID,
+					this.messagingThread);
+			this.qosManager.start();
 		}
-
-		this.qosManager = new QosManagerThread(this.jobID,
-				this.messagingThread, action.getProfilingSequence());
-		this.qosManager.start();
 	}
 
 	private void handleLimitBufferSizeAction(LimitBufferSizeAction action) {
-		
-		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators.get(action.getVertexID());
-		
-		if(qosCoordinator != null) {
+
+		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
+				.get(action.getVertexID());
+
+		if (qosCoordinator != null) {
 			qosCoordinator.queueQosAction(action);
 		} else {
-			LOG.error("Cannot find QoS coordinator for vertex with ID "+ action.getVertexID());			
+			LOG.error("Cannot find QoS coordinator for vertex with ID "
+					+ action.getVertexID());
 		}
 	}
 
 	private void handleConstructStreamChainAction(
 			ConstructStreamChainAction action) {
-		
-		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators.get(action.getVertexID());
-		
-		if(qosCoordinator != null) {
+
+		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
+				.get(action.getVertexID());
+
+		if (qosCoordinator != null) {
 			qosCoordinator.queueQosAction(action);
 		} else {
-			LOG.error("Cannot find QoS coordinator for vertex with ID "+ action.getVertexID());			
+			LOG.error("Cannot find QoS coordinator for vertex with ID "
+					+ action.getVertexID());
 		}
 	}
 
-	/**
-	 * @param vertexID
-	 * @param environment
-	 */
 	public void unregisterTask(ExecutionVertexID vertexID,
 			Environment environment) {
 

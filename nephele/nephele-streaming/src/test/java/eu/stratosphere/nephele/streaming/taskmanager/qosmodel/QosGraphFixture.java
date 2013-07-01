@@ -42,6 +42,7 @@ import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.instance.InstanceManager;
 import eu.stratosphere.nephele.instance.InstanceType;
 import eu.stratosphere.nephele.io.DistributionPattern;
+import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.RecordReader;
 import eu.stratosphere.nephele.io.RecordWriter;
 import eu.stratosphere.nephele.io.channels.ChannelID;
@@ -500,7 +501,7 @@ public class QosGraphFixture {
 
 		for (int i = 0; i < sourceMembers; i++) {
 			QosVertex sourceMember = groupEdge.getSourceVertex().getMember(i);
-			QosGate outputGate = new QosGate(groupEdge.getOutputGateIndex());
+			QosGate outputGate = new QosGate(new GateID(), groupEdge.getOutputGateIndex());
 			sourceMember.setOutputGate(outputGate);
 
 			for (int j = 0; j < targetMembers; j++) {
@@ -514,7 +515,7 @@ public class QosGraphFixture {
 					QosGate inputGate = targetMember.getInputGate(groupEdge
 							.getInputGateIndex());
 					if (inputGate == null) {
-						inputGate = new QosGate(groupEdge.getOutputGateIndex());
+						inputGate = new QosGate(new GateID(), groupEdge.getOutputGateIndex());
 						targetMember.setInputGate(inputGate);
 					}
 

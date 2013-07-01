@@ -23,9 +23,9 @@ import eu.stratosphere.nephele.streaming.LatencyConstraintID;
 import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReporterRoleID;
 import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReportingAction;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
-import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterDeploymentDescriptor;
-import eu.stratosphere.nephele.streaming.message.action.QosManagerDeploymentDescriptor;
-import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterDeploymentDescriptor;
+import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
+import eu.stratosphere.nephele.streaming.message.action.QosManagerConfig;
+import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
@@ -76,7 +76,7 @@ public class InstanceQosRoles {
 
 	public DeployInstanceQosRolesAction toDeploymentAction(JobID jobID) {
 		DeployInstanceQosRolesAction deploymentAction = new DeployInstanceQosRolesAction(
-				jobID);
+				jobID, this.connectionInfo);
 
 		QosGraph shallowQosGraph = null;
 		for (QosManagerRole managerRole : this.managerRoles.values()) {
@@ -88,48 +88,57 @@ public class InstanceQosRoles {
 						.cloneWithoutMembers());
 			}
 		}
-		deploymentAction.setQosManager(new QosManagerDeploymentDescriptor(
+		deploymentAction.setQosManager(new QosManagerConfig(
 				shallowQosGraph));
 		for (QosReporterRole reporterRole : this.reporterRoles.values()) {
 
 			if (reporterRole.getAction() == ReportingAction.REPORT_CHANNEL_STATS) {
-				deploymentAction
-						.addEdgeQosReporter(toEdgeQosReporterDeploymentDescriptor(reporterRole));
+				deploymentAction.addEdgeQosReporter(toEdgeQosReporterConfig(reporterRole));
 			} else {
-				deploymentAction
-						.addVertexQosReporter(toVertexQosReporterDeploymentDescriptor(reporterRole));
+				deploymentAction.addVertexQosReporter(toVertexQosReporterConfig(reporterRole));
 			}
 		}
 
 		return deploymentAction;
 	}
 
-	private VertexQosReporterDeploymentDescriptor toVertexQosReporterDeploymentDescriptor(
+	private VertexQosReporterConfig toVertexQosReporterConfig(
 			QosReporterRole reporterRole) {
+		
 		QosVertex vertex = reporterRole.getVertex();
 		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
 				.getTargetQosManager().toArray();
 
-		VertexQosReporterDeploymentDescriptor vertexReporter = new VertexQosReporterDeploymentDescriptor(
-				vertex.getGroupVertex().getJobVertexID(),
-				vertex.getID(), managers,
+		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
+				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
+				managers,
 				reporterRole.getInputGateIndex(),
-				reporterRole.getInputGateIndex(),
-				vertex.getMemberIndex(), vertex.getName());
+				vertex.getInputGate(reporterRole.getInputGateIndex()).getGateID(),
+				reporterRole.getOutputGateIndex(),
+				vertex.getOutputGate(reporterRole.getOutputGateIndex()).getGateID(),
+				vertex.getMemberIndex(),
+				vertex.getName());
+		
 		return vertexReporter;
 	}
 
-	private EdgeQosReporterDeploymentDescriptor toEdgeQosReporterDeploymentDescriptor(
+	private EdgeQosReporterConfig toEdgeQosReporterConfig(
 			QosReporterRole reporterRole) {
+		
 		QosEdge edge = reporterRole.getEdge();
+		
 		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
 				.getTargetQosManager().toArray();
-		EdgeQosReporterDeploymentDescriptor edgeReporter = new EdgeQosReporterDeploymentDescriptor(
+		
+		EdgeQosReporterConfig edgeReporter = new EdgeQosReporterConfig(
 				edge.getSourceChannelID(), edge.getTargetChannelID(),
-				managers, edge.getOutputGate().getGateIndex(), edge
-						.getInputGate().getGateIndex(),
+				managers, edge.getOutputGate().getGateIndex(),
+				edge.getOutputGate().getGateID(),
+				edge.getInputGate().getGateIndex(),
+				edge.getInputGate().getGateID(),
 				edge.getOutputGateEdgeIndex(),
 				edge.getInputGateEdgeIndex());
+		
 		return edgeReporter;
 	}
 }

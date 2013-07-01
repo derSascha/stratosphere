@@ -25,14 +25,14 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
  * @author Bjoern Lohrmann
  * 
  */
-public class QosManagerDeploymentDescriptor implements IOReadableWritable {
+public class QosManagerConfig implements IOReadableWritable {
 
 	private QosGraph shallowQosGraph;
 
-	public QosManagerDeploymentDescriptor() {
+	public QosManagerConfig() {
 	}
 
-	public QosManagerDeploymentDescriptor(QosGraph shallowQosGraph) {
+	public QosManagerConfig(QosGraph shallowQosGraph) {
 		this.shallowQosGraph = shallowQosGraph;
 	}
 
