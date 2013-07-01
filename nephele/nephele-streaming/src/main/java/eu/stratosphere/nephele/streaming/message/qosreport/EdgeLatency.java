@@ -13,7 +13,7 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.message.profiling;
+package eu.stratosphere.nephele.streaming.message.qosreport;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -26,7 +26,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
  * 
  * @author warneke, Bjoern Lohrmann
  */
-public final class ChannelLatency extends AbstractStreamProfilingRecord {
+public final class EdgeLatency extends AbstractQosReportRecord {
 
 	/**
 	 * The {@link QosReporterID} of the reporter that sends the channel.
@@ -38,7 +38,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	/**
 	 * The channel latency in milliseconds
 	 */
-	private double channelLatency;
+	private double edgeLatency;
 
 	/**
 	 * Constructs a new path latency object.
@@ -48,23 +48,23 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 * @param channelLatency
 	 *            the channel latency in milliseconds
 	 */
-	public ChannelLatency(QosReporterID.Edge reporterID,
-			double channelLatency) {
+	public EdgeLatency(QosReporterID.Edge reporterID,
+			double edgeLatency) {
 
 		this.reporterID = reporterID;
-		this.channelLatency = channelLatency;
+		this.edgeLatency = edgeLatency;
 		this.counter = 1;
 	}
 
 	/**
 	 * Default constructor for the deserialization of the object.
 	 */
-	public ChannelLatency() {
+	public EdgeLatency() {
 	}
 
-	public void add(ChannelLatency other) {
+	public void add(EdgeLatency other) {
 		this.counter++;
-		this.channelLatency += other.getChannelLatency();
+		this.edgeLatency += other.getEdgeLatency();
 	}
 
 	/**
@@ -73,7 +73,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.reporterID.write(out);
-		out.writeDouble(this.getChannelLatency());
+		out.writeDouble(this.getEdgeLatency());
 	}
 
 	/**
@@ -83,7 +83,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	public void read(final DataInput in) throws IOException {
 		this.reporterID = new QosReporterID.Edge();
 		this.reporterID.read(in);
-		this.channelLatency = in.readDouble();
+		this.edgeLatency = in.readDouble();
 		this.counter = 1;
 	}
 	
@@ -101,9 +101,9 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	 * 
 	 * @return the channel latency in milliseconds
 	 */
-	public double getChannelLatency() {
+	public double getEdgeLatency() {
 
-		return this.channelLatency / this.counter;
+		return this.edgeLatency / this.counter;
 	}
 
 	/**
@@ -115,7 +115,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 		final StringBuilder str = new StringBuilder();
 		str.append(this.reporterID.toString());
 		str.append(": ");
-		str.append(this.channelLatency);
+		str.append(this.edgeLatency);
 
 		return str.toString();
 	}
@@ -123,10 +123,10 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public boolean equals(Object otherObj) {
 		boolean isEqual = false;
-		if (otherObj instanceof ChannelLatency) {
-			ChannelLatency other = (ChannelLatency) otherObj;
+		if (otherObj instanceof EdgeLatency) {
+			EdgeLatency other = (EdgeLatency) otherObj;
 			isEqual = other.reporterID.equals(this.reporterID)
-					&& other.getChannelLatency() == this.getChannelLatency();
+					&& other.getEdgeLatency() == this.getEdgeLatency();
 		}
 
 		return isEqual;
@@ -140,7 +140,7 @@ public final class ChannelLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public int hashCode() {
 		final int prime = 31;
-		long temp = Double.doubleToLongBits(this.channelLatency);
+		long temp = Double.doubleToLongBits(this.edgeLatency);
 		int result = prime + (int) (temp ^ temp >>> 32);
 		result = prime * result + this.reporterID.hashCode();
 		return result;

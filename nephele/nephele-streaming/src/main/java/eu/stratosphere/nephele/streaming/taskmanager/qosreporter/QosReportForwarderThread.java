@@ -17,11 +17,11 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
-import eu.stratosphere.nephele.streaming.message.profiling.AbstractStreamProfilingRecord;
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
-import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
-import eu.stratosphere.nephele.streaming.message.profiling.QosReport;
-import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.AbstractQosReportRecord;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
+import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
+import eu.stratosphere.nephele.streaming.message.qosreport.VertexLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
@@ -66,7 +66,7 @@ public class QosReportForwarderThread extends Thread {
 
 	private final ConcurrentHashMap<QosReporterID, Boolean> reporterActivityMap;
 
-	private final LinkedBlockingQueue<AbstractStreamProfilingRecord> pendingProfilingRecords;
+	private final LinkedBlockingQueue<AbstractQosReportRecord> pendingProfilingRecords;
 
 	private volatile boolean started;
 
@@ -154,7 +154,7 @@ public class QosReportForwarderThread extends Thread {
 		this.reportByQosManager = new ConcurrentHashMap<InstanceConnectionInfo, AggregatedReport>();
 		this.reportsByReporter = new ConcurrentHashMap<QosReporterID, Set<AggregatedReport>>();
 		this.reporterActivityMap = new ConcurrentHashMap<QosReporterID, Boolean>();
-		this.pendingProfilingRecords = new LinkedBlockingQueue<AbstractStreamProfilingRecord>();
+		this.pendingProfilingRecords = new LinkedBlockingQueue<AbstractQosReportRecord>();
 		this.started = false;
 	}
 
@@ -233,17 +233,17 @@ public class QosReportForwarderThread extends Thread {
 		this.pendingProfilingRecords.clear();
 	}
 
-	private ArrayList<AbstractStreamProfilingRecord> tmpRecords = new ArrayList<AbstractStreamProfilingRecord>();
+	private ArrayList<AbstractQosReportRecord> tmpRecords = new ArrayList<AbstractQosReportRecord>();
 
 	private void processPendingQosData() {
 		this.pendingProfilingRecords.drainTo(this.tmpRecords);
-		for (AbstractStreamProfilingRecord profilingRecord : this.tmpRecords) {
-			if (profilingRecord instanceof ChannelLatency) {
-				this.processChannelLatency((ChannelLatency) profilingRecord);
-			} else if (profilingRecord instanceof OutputChannelStatistics) {
-				this.processOutputChannelStatistics((OutputChannelStatistics) profilingRecord);
-			} else if (profilingRecord instanceof TaskLatency) {
-				this.processTaskLatency((TaskLatency) profilingRecord);
+		for (AbstractQosReportRecord profilingRecord : this.tmpRecords) {
+			if (profilingRecord instanceof EdgeLatency) {
+				this.processChannelLatency((EdgeLatency) profilingRecord);
+			} else if (profilingRecord instanceof EdgeStatistics) {
+				this.processOutputChannelStatistics((EdgeStatistics) profilingRecord);
+			} else if (profilingRecord instanceof VertexLatency) {
+				this.processTaskLatency((VertexLatency) profilingRecord);
 			}
 		}
 		this.tmpRecords.clear();
@@ -257,7 +257,7 @@ public class QosReportForwarderThread extends Thread {
 		return toReturn;
 	}
 
-	private void processTaskLatency(TaskLatency taskLatency) {
+	private void processTaskLatency(VertexLatency taskLatency) {
 
 		QosReporterID.Vertex reporterID = taskLatency.getReporterID();
 
@@ -267,7 +267,7 @@ public class QosReportForwarderThread extends Thread {
 
 		Set<AggregatedReport> reports = getReports(reporterID);
 		for (AggregatedReport report : reports) {
-			report.getReport().addTaskLatency(taskLatency);
+			report.getReport().addVertexLatency(taskLatency);
 		}
 	}
 
@@ -287,7 +287,7 @@ public class QosReportForwarderThread extends Thread {
 	}
 
 	private void processOutputChannelStatistics(
-			OutputChannelStatistics channelStats) {
+			EdgeStatistics channelStats) {
 
 		QosReporterID.Edge reporterID = channelStats.getReporterID();
 
@@ -297,7 +297,7 @@ public class QosReportForwarderThread extends Thread {
 
 		Set<AggregatedReport> reports = getReports(reporterID);
 		for (AggregatedReport report : reports) {
-			report.getReport().addOutputChannelStatistics(channelStats);
+			report.getReport().addEdgeStatistics(channelStats);
 		}
 	}
 
@@ -316,11 +316,11 @@ public class QosReportForwarderThread extends Thread {
 		}
 	}
 
-	private void processChannelLatency(ChannelLatency channelLatency) {
+	private void processChannelLatency(EdgeLatency channelLatency) {
 		Set<AggregatedReport> reports = getReports(channelLatency
 				.getReporterID());
 		for (AggregatedReport report : reports) {
-			report.getReport().addChannelLatency(channelLatency);
+			report.getReport().addEdgeLatency(channelLatency);
 		}
 	}
 
@@ -430,7 +430,7 @@ public class QosReportForwarderThread extends Thread {
 		return newReport;
 	}
 
-	public void addToNextReport(AbstractStreamProfilingRecord profilingRecord) {
+	public void addToNextReport(AbstractQosReportRecord profilingRecord) {
 		this.pendingProfilingRecords.add(profilingRecord);
 	}
 

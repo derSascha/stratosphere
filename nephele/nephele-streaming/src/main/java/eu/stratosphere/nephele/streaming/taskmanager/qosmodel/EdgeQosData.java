@@ -1,6 +1,6 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
-import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeHistory;
 
 public class EdgeQosData {
@@ -87,7 +87,7 @@ public class EdgeQosData {
 	}
 
 	public void addOutputChannelStatisticsMeasurement(long timestamp,
-			OutputChannelStatistics stats) {
+			EdgeStatistics stats) {
 		
 		QosValue throughput = new QosValue(stats.getThroughput(),
 				timestamp);

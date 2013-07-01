@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 
@@ -157,7 +157,7 @@ public class OutputGateReporterManager {
 			double recordsPerSecond = this.recordsEmittedSinceLastReport
 					/ secsPassed;
 
-			OutputChannelStatistics channelStatsMessage = new OutputChannelStatistics(
+			EdgeStatistics channelStatsMessage = new EdgeStatistics(
 					this.reporterID, mbitPerSec, outputBufferLifetime,
 					recordsPerBuffer, recordsPerSecond);
 

@@ -26,7 +26,7 @@ import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
-import eu.stratosphere.nephele.streaming.message.profiling.QosReport;
+import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosManagerThread;

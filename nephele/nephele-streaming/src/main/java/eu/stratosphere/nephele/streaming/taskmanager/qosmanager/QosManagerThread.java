@@ -14,10 +14,10 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
-import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
-import eu.stratosphere.nephele.streaming.message.profiling.QosReport;
-import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
+import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
+import eu.stratosphere.nephele.streaming.message.qosreport.VertexLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
@@ -84,22 +84,22 @@ public class QosManagerThread extends Thread {
 				if (streamingData instanceof QosReport) {
 					QosReport profilingReport = (QosReport) streamingData;
 
-					for (ChannelLatency channelLatency : profilingReport
-							.getChannelLatencies()) {
+					for (EdgeLatency channelLatency : profilingReport
+							.getEdgeLatencies()) {
 						this.profilingModel.refreshChannelLatency(now,
 								channelLatency);
 						channelLats++;
 					}
 
-					for (OutputChannelStatistics channelStat : profilingReport
-							.getOutputChannelStatistics()) {
+					for (EdgeStatistics channelStat : profilingReport
+							.getEdgeStatistics()) {
 						this.profilingModel.refreshOutputChannelStatistics(now,
 								channelStat);
 						outChannelStats++;
 					}
 
-					for (TaskLatency taskLatency : profilingReport
-							.getTaskLatencies()) {
+					for (VertexLatency taskLatency : profilingReport
+							.getVertexLatencies()) {
 						this.profilingModel
 								.refreshTaskLatency(now, taskLatency);
 						taskLats++;

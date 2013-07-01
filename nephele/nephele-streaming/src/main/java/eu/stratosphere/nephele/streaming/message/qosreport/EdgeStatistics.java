@@ -13,7 +13,7 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.message.profiling;
+package eu.stratosphere.nephele.streaming.message.qosreport;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -28,7 +28,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
  * 
  * @author Bjoern Lohrmann
  */
-public final class OutputChannelStatistics extends AbstractStreamProfilingRecord {
+public final class EdgeStatistics extends AbstractQosReportRecord {
 
 	/**
 	 * The ID of reporter.
@@ -64,7 +64,7 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	/**
 	 * Default constructor for deserialization.
 	 */
-	public OutputChannelStatistics() {
+	public EdgeStatistics() {
 	}
 
 	/**
@@ -82,7 +82,7 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	 * @param recordsPerSecond
 	 *        number of records that are emitted on this channel each second 
 	 */
-	public OutputChannelStatistics(QosReporterID.Edge reporterID, double throughput,
+	public EdgeStatistics(QosReporterID.Edge reporterID, double throughput,
 			double outputBufferLifetime, 
 			double recordsPerBuffer,
 			double recordsPerSecond) {
@@ -144,7 +144,7 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 		return this.reporterID;
 	}
 
-	public void add(OutputChannelStatistics channelThroughput) {
+	public void add(EdgeStatistics channelThroughput) {
 		this.throughput += channelThroughput.throughput;
 		this.outputBufferLifetime += channelThroughput.outputBufferLifetime;
 		this.recordsPerBuffer += channelThroughput.recordsPerBuffer;
@@ -181,8 +181,8 @@ public final class OutputChannelStatistics extends AbstractStreamProfilingRecord
 	@Override
 	public boolean equals(Object otherObj) {
 		boolean isEqual = false;
-		if (otherObj instanceof OutputChannelStatistics) {
-			OutputChannelStatistics other = (OutputChannelStatistics) otherObj;
+		if (otherObj instanceof EdgeStatistics) {
+			EdgeStatistics other = (EdgeStatistics) otherObj;
 			isEqual = other.reporterID.equals(this.reporterID)
 					&& other.getThroughput() == this.getThroughput()
 					&& other.getOutputBufferLifetime() == this.getOutputBufferLifetime()

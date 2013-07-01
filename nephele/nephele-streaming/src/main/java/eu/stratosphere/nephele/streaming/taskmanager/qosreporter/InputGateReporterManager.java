@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 public class InputGateReporterManager {
@@ -42,7 +42,7 @@ public class InputGateReporterManager {
 		}
 
 		private void sendReport() {
-			ChannelLatency channelLatency = new ChannelLatency(this.reporterID,
+			EdgeLatency channelLatency = new EdgeLatency(this.reporterID,
 					this.accumulatedLatency / this.tagsReceived);
 			InputGateReporterManager.this.reportForwarder
 					.addToNextReport(channelLatency);

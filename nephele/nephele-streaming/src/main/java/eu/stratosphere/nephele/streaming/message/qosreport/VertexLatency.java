@@ -13,7 +13,7 @@
  *
  **********************************************************************************************************************/
 
-package eu.stratosphere.nephele.streaming.message.profiling;
+package eu.stratosphere.nephele.streaming.message.qosreport;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -22,13 +22,13 @@ import java.io.IOException;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 
-public final class TaskLatency extends AbstractStreamProfilingRecord {
+public final class VertexLatency extends AbstractQosReportRecord {
 
 	private QosReporterID.Vertex reporterID;
 	
 	private int counter;
 
-	private double taskLatency;
+	private double vertexLatency;
 
 	/**
 	 * Constructs a new task latency object.
@@ -40,19 +40,19 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	 * @param taskLatency
 	 *            the task latency in milliseconds
 	 */
-	public TaskLatency(final QosReporterID.Vertex reporterID,
-			final double taskLatency) {
+	public VertexLatency(final QosReporterID.Vertex reporterID,
+			final double vertexLatency) {
 
 
 		this.reporterID = reporterID;
-		this.taskLatency = taskLatency;
+		this.vertexLatency = vertexLatency;
 		this.counter = 1;
 	}
 
 	/**
 	 * Default constructor for the deserialization of the object.
 	 */
-	public TaskLatency() {
+	public VertexLatency() {
 	}
 
 	public QosReporterID.Vertex getReporterID() {
@@ -64,22 +64,22 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	 * 
 	 * @return the task latency in milliseconds
 	 */
-	public double getTaskLatency() {
-		return this.taskLatency / this.counter;
+	public double getVertexLatency() {
+		return this.vertexLatency / this.counter;
 	}
 
-	public void add(TaskLatency taskLatency) {
+	public void add(VertexLatency taskLatency) {
 		this.counter++;
-		this.taskLatency += taskLatency.getTaskLatency();
+		this.vertexLatency += taskLatency.getVertexLatency();
 	}
 
 	@Override
 	public boolean equals(Object otherObj) {
 		boolean isEqual = false;
-		if (otherObj instanceof TaskLatency) {
-			TaskLatency other = (TaskLatency) otherObj;
+		if (otherObj instanceof VertexLatency) {
+			VertexLatency other = (VertexLatency) otherObj;
 			isEqual = other.getReporterID().equals(this.getReporterID())
-					&& other.getTaskLatency() == this.getTaskLatency();
+					&& other.getVertexLatency() == this.getVertexLatency();
 		}
 
 		return isEqual;
@@ -93,7 +93,7 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public int hashCode() {
 		final int prime = 31;
-		long temp = Double.doubleToLongBits(this.taskLatency);
+		long temp = Double.doubleToLongBits(this.vertexLatency);
 		int result = prime + (int) (temp ^ temp >>> 32);
 		result = prime * result + this.reporterID.hashCode();
 		return result;
@@ -105,7 +105,7 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		this.reporterID.write(out);
-		out.writeDouble(this.getTaskLatency());
+		out.writeDouble(this.getVertexLatency());
 	}
 
 	/**
@@ -115,6 +115,6 @@ public final class TaskLatency extends AbstractStreamProfilingRecord {
 	public void read(final DataInput in) throws IOException {
 		this.reporterID = new QosReporterID.Vertex();
 		this.reporterID.read(in);
-		this.taskLatency = in.readDouble();
+		this.vertexLatency = in.readDouble();
 	}
 }

@@ -1,4 +1,4 @@
-package eu.stratosphere.nephele.streaming.message.profiling;
+package eu.stratosphere.nephele.streaming.message.qosreport;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -17,9 +17,8 @@ import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
- * Holds a profiling data report meant to be shipped to a
- * {@link eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosManagerThread}
- * . Instead of sending each {@link AbstractStreamProfilingRecord} individually,
+ * Holds a Qos report data to be shipped to a specific Qos manager.
+ * Instead of sending each {@link AbstractQosReportRecord} individually,
  * they are sent in batch. Most internal fields of this class are initialized in
  * a lazy fashion, thus (empty) instances of this class have a small memory
  * footprint.
@@ -28,18 +27,18 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
  */
 public class QosReport extends AbstractStreamMessage {
 
-	private HashMap<QosReporterID.Edge, ChannelLatency> channelLatencies;
+	private HashMap<QosReporterID.Edge, EdgeLatency> edgeLatencies;
 
-	private HashMap<QosReporterID.Edge, OutputChannelStatistics> outputChannelStats;
+	private HashMap<QosReporterID.Edge, EdgeStatistics> edgeStatistics;
 
-	private HashMap<QosReporterID.Vertex, TaskLatency> taskLatencies;
+	private HashMap<QosReporterID.Vertex, VertexLatency> vertexLatencies;
 
 	private LinkedList<VertexQosReporterConfig> vertexReporterAnnouncements;
 
 	private LinkedList<EdgeQosReporterConfig> edgeReporterAnnouncements;
 
 	/**
-	 * Creates and initializes StreamProfilingReport object to be used for
+	 * Creates and initializes QosReport object to be used for
 	 * sending/serialization.
 	 * 
 	 * @param jobID
@@ -49,43 +48,43 @@ public class QosReport extends AbstractStreamMessage {
 	}
 
 	/**
-	 * Creates and initializes StreamProfilingReport object to be used for
+	 * Creates and initializes QosReport object to be used for
 	 * receiving/deserialization.
 	 */
 	public QosReport() {
 		super();
 	}
 
-	private HashMap<QosReporterID.Edge, ChannelLatency> getOrCreateChannelLatencyMap() {
-		if (this.channelLatencies == null) {
-			this.channelLatencies = new HashMap<QosReporterID.Edge, ChannelLatency>();
+	private HashMap<QosReporterID.Edge, EdgeLatency> getOrCreateEdgeLatencyMap() {
+		if (this.edgeLatencies == null) {
+			this.edgeLatencies = new HashMap<QosReporterID.Edge, EdgeLatency>();
 		}
-		return this.channelLatencies;
+		return this.edgeLatencies;
 	}
 
-	private HashMap<QosReporterID.Edge, OutputChannelStatistics> getOrCreateOutputChannelStatsMap() {
-		if (this.outputChannelStats == null) {
-			this.outputChannelStats = new HashMap<QosReporterID.Edge, OutputChannelStatistics>();
+	private HashMap<QosReporterID.Edge, EdgeStatistics> getOrCreateEdgeStatisticsMap() {
+		if (this.edgeStatistics == null) {
+			this.edgeStatistics = new HashMap<QosReporterID.Edge, EdgeStatistics>();
 		}
-		return this.outputChannelStats;
+		return this.edgeStatistics;
 	}
 
-	private HashMap<QosReporterID.Vertex, TaskLatency> getOrCreateTaskLatencyMap() {
-		if (this.taskLatencies == null) {
-			this.taskLatencies = new HashMap<QosReporterID.Vertex, TaskLatency>();
+	private HashMap<QosReporterID.Vertex, VertexLatency> getOrCreateVertexLatencyMap() {
+		if (this.vertexLatencies == null) {
+			this.vertexLatencies = new HashMap<QosReporterID.Vertex, VertexLatency>();
 		}
-		return this.taskLatencies;
+		return this.vertexLatencies;
 	}
 
-	public void addChannelLatency(ChannelLatency channelLatency) {
-		QosReporterID.Edge reporterID = channelLatency.getReporterID();
+	public void addEdgeLatency(EdgeLatency edgeLatency) {
+		QosReporterID.Edge reporterID = edgeLatency.getReporterID();
 
-		ChannelLatency existing = this.getOrCreateChannelLatencyMap().get(
+		EdgeLatency existing = this.getOrCreateEdgeLatencyMap().get(
 				reporterID);
 		if (existing == null) {
-			this.getOrCreateChannelLatencyMap().put(reporterID, channelLatency);
+			this.getOrCreateEdgeLatencyMap().put(reporterID, edgeLatency);
 		} else {
-			existing.add(channelLatency);
+			existing.add(edgeLatency);
 		}
 	}
 
@@ -117,49 +116,49 @@ public class QosReport extends AbstractStreamMessage {
 		return this.edgeReporterAnnouncements;
 	}
 
-	public Collection<ChannelLatency> getChannelLatencies() {
-		if (this.channelLatencies == null) {
+	public Collection<EdgeLatency> getEdgeLatencies() {
+		if (this.edgeLatencies == null) {
 			return Collections.emptyList();
 		}
-		return this.channelLatencies.values();
+		return this.edgeLatencies.values();
 	}
 
-	public void addOutputChannelStatistics(OutputChannelStatistics channelStats) {
+	public void addEdgeStatistics(EdgeStatistics edgeStats) {
 
-		QosReporterID.Edge reporterID = channelStats.getReporterID();
+		QosReporterID.Edge reporterID = edgeStats.getReporterID();
 
-		OutputChannelStatistics existing = this
-				.getOrCreateOutputChannelStatsMap().get(channelStats);
+		EdgeStatistics existing = this
+				.getOrCreateEdgeStatisticsMap().get(edgeStats);
 		if (existing == null) {
-			this.getOrCreateOutputChannelStatsMap().put(reporterID,
-					channelStats);
+			this.getOrCreateEdgeStatisticsMap().put(reporterID,
+					edgeStats);
 		} else {
-			existing.add(channelStats);
+			existing.add(edgeStats);
 		}
 	}
 
-	public Collection<OutputChannelStatistics> getOutputChannelStatistics() {
-		if (this.outputChannelStats == null) {
+	public Collection<EdgeStatistics> getEdgeStatistics() {
+		if (this.edgeStatistics == null) {
 			return Collections.emptyList();
 		}
-		return this.outputChannelStats.values();
+		return this.edgeStatistics.values();
 	}
 
-	public void addTaskLatency(TaskLatency taskLatency) {
-		QosReporterID.Vertex reporterID = taskLatency.getReporterID();
-		TaskLatency existing = this.getOrCreateTaskLatencyMap().get(reporterID);
+	public void addVertexLatency(VertexLatency vertexLatency) {
+		QosReporterID.Vertex reporterID = vertexLatency.getReporterID();
+		VertexLatency existing = this.getOrCreateVertexLatencyMap().get(reporterID);
 		if (existing == null) {
-			this.getOrCreateTaskLatencyMap().put(reporterID, taskLatency);
+			this.getOrCreateVertexLatencyMap().put(reporterID, vertexLatency);
 		} else {
-			existing.add(taskLatency);
+			existing.add(vertexLatency);
 		}
 	}
 
-	public Collection<TaskLatency> getTaskLatencies() {
-		if (this.taskLatencies == null) {
+	public Collection<VertexLatency> getVertexLatencies() {
+		if (this.vertexLatencies == null) {
 			return Collections.emptyList();
 		}
-		return this.taskLatencies.values();
+		return this.vertexLatencies.values();
 	}
 
 	/**
@@ -168,9 +167,9 @@ public class QosReport extends AbstractStreamMessage {
 	@Override
 	public void write(final DataOutput out) throws IOException {
 		super.write(out);
-		this.writeChannelLatencies(out);
-		this.writeOutputChannelStatistics(out);
-		this.writeTaskLatencies(out);
+		this.writeEdgeLatencies(out);
+		this.writeEdgeStatistics(out);
+		this.writeVertexLatencies(out);
 		this.writeVertexReporterAnnouncements(out);
 		this.writeEdgeReporterAnnouncements(out);
 	}
@@ -195,24 +194,24 @@ public class QosReport extends AbstractStreamMessage {
 		}
 	}
 
-	private void writeChannelLatencies(DataOutput out) throws IOException {
-		if (this.channelLatencies != null) {
-			out.writeInt(this.channelLatencies.size());
-			for (Entry<QosReporterID.Edge, ChannelLatency> entry : this.channelLatencies
+	private void writeEdgeLatencies(DataOutput out) throws IOException {
+		if (this.edgeLatencies != null) {
+			out.writeInt(this.edgeLatencies.size());
+			for (Entry<QosReporterID.Edge, EdgeLatency> entry : this.edgeLatencies
 					.entrySet()) {
 				entry.getKey().write(out);
-				out.writeDouble(entry.getValue().getChannelLatency());
+				out.writeDouble(entry.getValue().getEdgeLatency());
 			}
 		} else {
 			out.writeInt(0);
 		}
 	}
 
-	private void writeOutputChannelStatistics(DataOutput out)
+	private void writeEdgeStatistics(DataOutput out)
 			throws IOException {
-		if (this.outputChannelStats != null) {
-			out.writeInt(this.outputChannelStats.size());
-			for (Entry<QosReporterID.Edge, OutputChannelStatistics> entry : this.outputChannelStats
+		if (this.edgeStatistics != null) {
+			out.writeInt(this.edgeStatistics.size());
+			for (Entry<QosReporterID.Edge, EdgeStatistics> entry : this.edgeStatistics
 					.entrySet()) {
 				entry.getKey().write(out);
 				out.writeDouble(entry.getValue().getThroughput());
@@ -225,13 +224,13 @@ public class QosReport extends AbstractStreamMessage {
 		}
 	}
 
-	private void writeTaskLatencies(DataOutput out) throws IOException {
-		if (this.taskLatencies != null) {
-			out.writeInt(this.taskLatencies.size());
-			for (Entry<QosReporterID.Vertex, TaskLatency> entry : this.taskLatencies
+	private void writeVertexLatencies(DataOutput out) throws IOException {
+		if (this.vertexLatencies != null) {
+			out.writeInt(this.vertexLatencies.size());
+			for (Entry<QosReporterID.Vertex, VertexLatency> entry : this.vertexLatencies
 					.entrySet()) {
 				entry.getKey().write(out);
-				out.writeDouble(entry.getValue().getTaskLatency());
+				out.writeDouble(entry.getValue().getVertexLatency());
 			}
 		} else {
 			out.writeInt(0);
@@ -244,9 +243,9 @@ public class QosReport extends AbstractStreamMessage {
 	@Override
 	public void read(final DataInput in) throws IOException {
 		super.read(in);
-		this.readChannelLatencies(in);
-		this.readOutputChannelStatistics(in);
-		this.readTaskLatencies(in);
+		this.readEdgeLatencies(in);
+		this.readOutputEdgeStatistics(in);
+		this.readVertexLatencies(in);
 		this.readVertexReporterAnnouncements(in);
 		this.readEdgeReporterAnnouncements(in);
 	}
@@ -272,47 +271,47 @@ public class QosReport extends AbstractStreamMessage {
 		}
 	}
 
-	private void readChannelLatencies(DataInput in) throws IOException {
+	private void readEdgeLatencies(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			QosReporterID.Edge reporterID = new QosReporterID.Edge();
 			reporterID.read(in);
 
-			ChannelLatency channelLatency = new ChannelLatency(reporterID,
+			EdgeLatency edgeLatency = new EdgeLatency(reporterID,
 					in.readDouble());
-			this.getOrCreateChannelLatencyMap().put(reporterID, channelLatency);
+			this.getOrCreateEdgeLatencyMap().put(reporterID, edgeLatency);
 		}
 	}
 
-	private void readOutputChannelStatistics(DataInput in) throws IOException {
+	private void readOutputEdgeStatistics(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			QosReporterID.Edge reporterID = new QosReporterID.Edge();
 			reporterID.read(in);
 
-			OutputChannelStatistics channelStats = new OutputChannelStatistics(
+			EdgeStatistics edgeStats = new EdgeStatistics(
 					reporterID, in.readDouble(), in.readDouble(),
 					in.readDouble(), in.readDouble());
-			this.getOrCreateOutputChannelStatsMap().put(reporterID,
-					channelStats);
+			this.getOrCreateEdgeStatisticsMap().put(reporterID,
+					edgeStats);
 		}
 	}
 
-	private void readTaskLatencies(DataInput in) throws IOException {
+	private void readVertexLatencies(DataInput in) throws IOException {
 		int toRead = in.readInt();
 		for (int i = 0; i < toRead; i++) {
 			QosReporterID.Vertex reporterID = new QosReporterID.Vertex();
 			reporterID.read(in);
 
-			TaskLatency taskLatency = new TaskLatency(reporterID,
+			VertexLatency vertexLatency = new VertexLatency(reporterID,
 					in.readDouble());
-			this.getOrCreateTaskLatencyMap().put(reporterID, taskLatency);
+			this.getOrCreateVertexLatencyMap().put(reporterID, vertexLatency);
 		}
 	}
 
 	public boolean isEmpty() {
-		return this.channelLatencies == null && this.outputChannelStats == null
-				&& this.taskLatencies == null
+		return this.edgeLatencies == null && this.edgeStatistics == null
+				&& this.vertexLatencies == null
 				&& this.vertexReporterAnnouncements == null
 				&& this.edgeReporterAnnouncements == null;
 	}

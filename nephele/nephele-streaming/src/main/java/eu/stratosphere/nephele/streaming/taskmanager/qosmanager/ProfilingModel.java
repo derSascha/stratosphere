@@ -9,9 +9,9 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
-import eu.stratosphere.nephele.streaming.message.profiling.ChannelLatency;
-import eu.stratosphere.nephele.streaming.message.profiling.OutputChannelStatistics;
-import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
+import eu.stratosphere.nephele.streaming.message.qosreport.VertexLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeQosData;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
@@ -73,19 +73,19 @@ public class ProfilingModel {
 		}
 	}
 
-	public void refreshChannelLatency(long timestamp, ChannelLatency channelLatency) {
+	public void refreshChannelLatency(long timestamp, EdgeLatency channelLatency) {
 		this.edgeCharacteristics.get(channelLatency.getSourceChannelID())
 				.addLatencyMeasurement(timestamp,
-						channelLatency.getChannelLatency());
+						channelLatency.getEdgeLatency());
 	}
 
-	public void refreshTaskLatency(long timestamp, TaskLatency taskLatency) {
+	public void refreshTaskLatency(long timestamp, VertexLatency taskLatency) {
 		this.vertexLatencies.get(taskLatency.getVertexID())
-				.addLatencyMeasurement(timestamp, taskLatency.getTaskLatency());
+				.addLatencyMeasurement(timestamp, taskLatency.getVertexLatency());
 	}
 
 	public void refreshOutputChannelStatistics(long timestamp,
-			OutputChannelStatistics channelStats) {
+			EdgeStatistics channelStats) {
 		
 		this.edgeCharacteristics.get(channelStats.getSourceChannelID())
 				.addOutputChannelStatisticsMeasurement(timestamp, channelStats);

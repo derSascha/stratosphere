@@ -3,7 +3,7 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosreporter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import eu.stratosphere.nephele.streaming.message.profiling.TaskLatency;
+import eu.stratosphere.nephele.streaming.message.qosreport.VertexLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
@@ -67,7 +67,7 @@ public class VertexLatencyReportManager {
 								/ (1.0 * this.inputGateReceiveCounter);
 
 						VertexLatencyReportManager.this.reportForwarder
-								.addToNextReport(new TaskLatency(this.reporterID,
+								.addToNextReport(new VertexLatency(this.reporterID,
 										avgLatencyPerReceivedRecord));
 
 						prepareNextReport(now);
