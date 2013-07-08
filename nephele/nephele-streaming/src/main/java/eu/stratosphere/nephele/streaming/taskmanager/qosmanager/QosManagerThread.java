@@ -1,26 +1,17 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmanager;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
-import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
-import eu.stratosphere.nephele.util.StringUtils;
 
 public class QosManagerThread extends Thread {
 
@@ -28,91 +19,80 @@ public class QosManagerThread extends Thread {
 
 	private final LinkedBlockingQueue<AbstractStreamMessage> streamingDataQueue;
 
-	private final StreamMessagingThread messagingThread;
-
-	private ProfilingLogger logger;
+	private StreamMessagingThread messagingThread;
 
 	private BufferSizeManager bufferSizeManager;
 
 	private QosModel qosModel;
 
-	private JobID jobID;
-	
-	private boolean terminated;
-
-	public QosManagerThread(JobID jobID,
-			StreamMessagingThread messagingThread) {
-		this.jobID = jobID;
+	public QosManagerThread(JobID jobID, StreamMessagingThread messagingThread) {
 		this.messagingThread = messagingThread;
 		this.qosModel = new QosModel(jobID);
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
-
-//		this.bufferSizeManager = new BufferSizeManager(this.jobID, 300,
-//				this.profilingModel, this.messagingThread);
-
-		try {
-			this.logger = new ProfilingLogger(
-					this.bufferSizeManager.getAdjustmentInterval());
-		} catch (IOException e) {
-			LOG.error("Error when opening profiling logger file", e);
-		}
+		this.bufferSizeManager = new BufferSizeManager(jobID, this.qosModel,
+				this.messagingThread);
 	}
 
 	@Override
 	public void run() {
-		LOG.info("Started profiling master thread.");
+		LOG.info("Started Qos manager thread.");
 
-		int totalNoOfMessages = 0;
-		int channelLats = 0;
-		int taskLats = 0;
-		int outChannelStats = 0;
+		int nooOfReports = 0;
+		int noOfEdgeLatencies = 0;
+		int noOfVertexLatencies = 0;
+		int noOfEdgeStatistics = 0;
+		int noOfVertexAnnounces = 0;
+		int noOfEdgeAnnounces = 0;
 
 		try {
 			while (!interrupted()) {
 				AbstractStreamMessage streamingData = this.streamingDataQueue
 						.take();
 
-				totalNoOfMessages++;
+				nooOfReports++;
 
-				long now = System.currentTimeMillis();
 				if (streamingData instanceof QosReport) {
-					this.qosModel.processQosReport((QosReport) streamingData);
-				} else if (streamingData instanceof StreamChainAnnounce) {
-					// FIXME
-//					this.profilingModel
-//							.announceStreamingChain((StreamChainAnnounce) streamingData);
+					QosReport qosReport = (QosReport) streamingData;
+					this.qosModel.processQosReport(qosReport);
+					noOfEdgeLatencies += qosReport.getEdgeLatencies().size();
+					noOfVertexLatencies += qosReport.getVertexLatencies()
+							.size();
+					noOfEdgeStatistics += qosReport.getEdgeStatistics().size();
+					noOfVertexAnnounces += qosReport
+							.getVertexQosReporterAnnouncements().size();
+					noOfEdgeAnnounces += qosReport
+							.getEdgeQosReporterAnnouncements().size();
+					nooOfReports++;
 				} else if (streamingData instanceof DeployInstanceQosRolesAction) {
 					this.qosModel
 							.mergeShallowQosGraph(((DeployInstanceQosRolesAction) streamingData)
 									.getQosManager().getShallowQosGraph());
+				} else if (streamingData instanceof StreamChainAnnounce) {
+					this.qosModel
+							.processStreamChainAnnounce((StreamChainAnnounce) streamingData);
 				}
 
+				long now = System.currentTimeMillis();
 				if (this.bufferSizeManager.isAdjustmentNecessary(now)) {
-					long beginTime = System.currentTimeMillis();
 
-					ProfilingSequenceSummary summary = this.profilingModel
-							.computeProfilingSummary();
-					this.bufferSizeManager.adjustBufferSizes(summary);
-
-					try {
-						this.logger.logLatencies(summary);
-					} catch (IOException e) {
-						LOG.error(StringUtils.stringifyException(e));
-					}
+					this.bufferSizeManager.adjustBufferSizes();
 
 					long buffersizeAdjustmentOverhead = System
-							.currentTimeMillis() - beginTime;
+							.currentTimeMillis() - now;
 					LOG.info(String
-							.format("total messages: %d (channel: %d | task: %d | outChanStats: %d ) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
-									totalNoOfMessages, channelLats, taskLats,
-									outChannelStats,
+							.format("total messages: %d (edge: %d lats and %d stats | vertex: %d | edgeReporters: %d | vertexReporters: %d) || enqueued: %d || buffersizeAdjustmentOverhead: %d",
+									nooOfReports, noOfEdgeLatencies,
+									noOfEdgeStatistics, noOfVertexLatencies,
+									noOfEdgeAnnounces, noOfVertexAnnounces,
 									this.streamingDataQueue.size(),
 									buffersizeAdjustmentOverhead));
 
-					totalNoOfMessages = 0;
-					channelLats = 0;
-					taskLats = 0;
-					outChannelStats = 0;
+					nooOfReports = 0;
+					noOfEdgeLatencies = 0;
+					noOfVertexLatencies = 0;
+					noOfEdgeStatistics = 0;
+					noOfEdgeAnnounces = 0;
+					noOfVertexAnnounces = 0;
 				}
 			}
 
@@ -123,84 +103,11 @@ public class QosManagerThread extends Thread {
 		LOG.info("Stopped profiling master thread");
 	}
 
-	private void triggerChainingDelayed(final long delay) {
-		final LinkedList<LinkedList<ExecutionVertexID>> chainList = new LinkedList<LinkedList<ExecutionVertexID>>();
-		final HashMap<ExecutionVertexID, InstanceConnectionInfo> instances = new HashMap<ExecutionVertexID, InstanceConnectionInfo>();
-
-		for (QosGroupVertex groupVertex : this.profilingSequence
-				.getSequenceVertices()) {
-			if (groupVertex.getName().startsWith("Decoder")) {
-
-				LOG.info("Decoder group members: "
-						+ groupVertex.getMembers().size());
-				for (QosVertex decoder : groupVertex.getMembers()) {
-					instances.put(decoder.getID(),
-							decoder.getExecutingInstance());
-					LinkedList<ExecutionVertexID> chain = new LinkedList<ExecutionVertexID>();
-					chain.add(decoder.getID());
-
-					QosVertex merger = decoder.getForwardEdges().get(0)
-							.getTargetVertex();
-					chain.add(merger.getID());
-
-					QosVertex overlay = merger.getForwardEdges().get(0)
-							.getTargetVertex();
-					chain.add(overlay.getID());
-
-					QosVertex encoder = overlay.getForwardEdges().get(0)
-							.getTargetVertex();
-					chain.add(encoder.getID());
-					chainList.add(chain);
-				}
-				break;
-			}
-		}
-
-		LOG.info("Number of chains to announce: " + chainList.size());
-
-		final Runnable run = new Runnable() {
-			@Override
-			public void run() {
-				try {
-					Thread.sleep(delay);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-					return;
-				}
-				for (LinkedList<ExecutionVertexID> chain : chainList) {
-					QosManagerThread.this
-							.handOffStreamingData(new StreamChainAnnounce(
-									QosManagerThread.this.jobID, chain
-											.getFirst(), chain.getLast()));
-				}
-
-				for (LinkedList<ExecutionVertexID> chain : chainList) {
-					ConstructStreamChainAction csca = new ConstructStreamChainAction(
-							QosManagerThread.this.jobID, chain);
-					InstanceConnectionInfo actionReceiver = instances.get(chain
-							.getFirst());
-					try {
-						QosManagerThread.this.messagingThread
-								.sendToTaskManagerAsynchronously(
-										actionReceiver, csca);
-					} catch (InterruptedException e) {
-					}
-					LOG.info(String.format(
-							"Triggered chaining for %d tasks on %s",
-							chain.size(), actionReceiver.toString()));
-				}
-			}
-		};
-		new Thread(run).start();
-
-	}
-
 	private void cleanUp() {
 		this.streamingDataQueue.clear();
 		this.qosModel = null;
-		this.logger = null;
 		this.bufferSizeManager = null;
-		// FIXME is this complete?
+		this.messagingThread = null;
 	}
 
 	public void shutdown() {

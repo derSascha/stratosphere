@@ -99,10 +99,10 @@ public class QosSetup {
 		};
 
 		for (QosVertex anchorMember : qosManager.getMembersOnInstance()) {
-			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember,
+			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember, sequence,
 					listener);
-			traverser.traverseGraphForwardAlongSequence(sequence);
-			traverser.traverseGraphBackwardAlongSequence(sequence, false, true);
+			traverser.traverseForward();
+			traverser.traverseBackward(false, true);
 		}
 	}
 

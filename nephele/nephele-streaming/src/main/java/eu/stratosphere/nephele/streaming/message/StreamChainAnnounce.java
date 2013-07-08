@@ -4,52 +4,62 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
- * This message, when sent to the QoS manager on a task manager, announces a new
- * chain of tasks. The QoS manager then updates its internal models accordingly.
+ * This message, sent by the Qos reporters on a task manager to their common QoS
+ * manager, announces a new chain of tasks. The QoS manager can then updates its
+ * internal models accordingly.
  * 
  * @author Bjoern Lohrmann
  * 
  */
 public class StreamChainAnnounce extends AbstractStreamMessage {
 
-	private ExecutionVertexID chainBeginVertexID;
+	private QosReporterID.Vertex chainBegin;
 
-	private ExecutionVertexID chainEndVertexID;
+	private QosReporterID.Vertex chainEnd;
 
-	public StreamChainAnnounce(JobID jobID,
-			ExecutionVertexID chainBeginVertexID,
-			ExecutionVertexID chainEndVertexID) {
+	public StreamChainAnnounce(JobID jobID, QosReporterID.Vertex chainBegin,
+			QosReporterID.Vertex chainEnd) {
 		super(jobID);
-		this.chainBeginVertexID = chainBeginVertexID;
-		this.chainEndVertexID = chainEndVertexID;
+		this.chainBegin = chainBegin;
+		this.chainEnd = chainEnd;
 	}
 
-	public ExecutionVertexID getChainBeginVertexID() {
-		return this.chainBeginVertexID;
+	/**
+	 * Returns the chainBegin.
+	 * 
+	 * @return the chainBegin
+	 */
+	public QosReporterID.Vertex getChainBegin() {
+		return this.chainBegin;
 	}
 
-	public ExecutionVertexID getChainEndVertexID() {
-		return this.chainEndVertexID;
+	/**
+	 * Returns the chainEnd.
+	 * 
+	 * @return the chainEnd
+	 */
+	public QosReporterID.Vertex getChainEnd() {
+		return this.chainEnd;
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
-		this.chainBeginVertexID.write(out);
-		this.chainEndVertexID.write(out);
+		this.chainBegin.write(out);
+		this.chainEnd.write(out);
 	}
 
 	@Override
 	public void read(DataInput in) throws IOException {
 		super.read(in);
-		this.chainBeginVertexID = new ExecutionVertexID();
-		this.chainBeginVertexID.read(in);
+		this.chainBegin = new QosReporterID.Vertex();
+		this.chainBegin.read(in);
 
-		this.chainEndVertexID = new ExecutionVertexID();
-		this.chainEndVertexID.read(in);
+		this.chainEnd = new QosReporterID.Vertex();
+		this.chainEnd.read(in);
 	}
 }

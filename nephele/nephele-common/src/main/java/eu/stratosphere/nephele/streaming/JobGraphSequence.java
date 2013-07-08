@@ -40,7 +40,7 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 		implements IOReadableWritable {
 
 	private static final long serialVersionUID = 1199328037569471951L;
-	
+
 	private HashSet<JobVertexID> verticesInSequence;
 
 	public JobGraphSequence() {
@@ -50,8 +50,8 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 	public void addVertex(JobVertexID vertexID, int inputGateIndex,
 			int outputGateIndex) {
 
-		this.add(new SequenceElement<JobVertexID>(vertexID, inputGateIndex,
-				outputGateIndex));
+		this.add(new SequenceElement<JobVertexID>(
+				vertexID, inputGateIndex, outputGateIndex, this.size()));
 		this.verticesInSequence.add(vertexID);
 	}
 
@@ -59,11 +59,19 @@ public class JobGraphSequence extends LinkedList<SequenceElement<JobVertexID>>
 			JobVertexID targetVertexID, int inputGateIndex) {
 
 		this.add(new SequenceElement<JobVertexID>(sourceVertexID,
-				outputGateIndex, targetVertexID, inputGateIndex));
+				outputGateIndex, targetVertexID, inputGateIndex, this.size()));
 	}
-	
+
 	public boolean isInSequence(JobVertexID vertexID) {
 		return this.verticesInSequence.contains(vertexID);
+	}
+
+	public int getNumberOfEdges() {
+		return this.size() - getNumberOfVertices();
+	}
+
+	public int getNumberOfVertices() {
+		return this.verticesInSequence.size();
 	}
 
 	/*

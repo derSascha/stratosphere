@@ -2,7 +2,7 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import eu.stratosphere.nephele.io.channels.ChannelID;
 
-public class QosEdge {
+public class QosEdge implements QosGraphMember {
 
 	private final ChannelID sourceChannelID;
 
@@ -163,5 +163,20 @@ public class QosEdge {
 			return false;
 		return true;
 	}
-	
+
+	/* (non-Javadoc)
+	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isVertex()
+	 */
+	@Override
+	public boolean isVertex() {
+		return false;
+	}
+
+	/* (non-Javadoc)
+	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isEdge()
+	 */
+	@Override
+	public boolean isEdge() {
+		return true;
+	}
 }

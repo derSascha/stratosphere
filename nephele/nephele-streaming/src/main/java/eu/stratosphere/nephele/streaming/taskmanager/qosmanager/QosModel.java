@@ -14,28 +14,36 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.qosmanager;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.jobgraph.JobVertexID;
+import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
+import eu.stratosphere.nephele.streaming.LatencyConstraintID;
+import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
 import eu.stratosphere.nephele.streaming.message.qosreport.VertexLatency;
+import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.EdgeQosData;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGate;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexQosData;
 
 /**
  * @author Bjoern Lohrmann
@@ -111,13 +119,16 @@ public class QosModel {
 	 * All Qos edges of the Qos graph mapped by their source channel ID.
 	 */
 	private HashMap<ChannelID, QosEdge> edgeBySourceChannelID;
-
+	
+	private HashMap<LatencyConstraintID, QosLogger> qosLoggers;
+	
 	public QosModel(JobID jobID) {
 		this.state = State.EMPTY;
 		this.announcementBuffer = new QosReport(jobID);
 		this.gatesByGateId = new HashMap<GateID, QosGate>();
 		this.vertexByID = new HashMap<ExecutionVertexID, QosVertex>();
 		this.edgeBySourceChannelID = new HashMap<ChannelID, QosEdge>();
+		this.qosLoggers = new HashMap<LatencyConstraintID, QosLogger>();
 	}
 
 	public void mergeShallowQosGraph(QosGraph shallowQosGraph) {
@@ -127,7 +138,6 @@ public class QosModel {
 			this.qosGraph.merge(shallowQosGraph);
 		}
 
-		
 		tryToProcessBufferedAnnouncements();
 	}
 
@@ -171,48 +181,84 @@ public class QosModel {
 			break;
 		}
 	}
+	
+	public void processStreamChainAnnounce(StreamChainAnnounce announce) {
+		
+		QosVertex currentVertex = this.vertexByID.get(announce.getChainBegin().getVertexID());
+
+		while (!currentVertex.getID().equals(announce.getChainEnd().getVertexID())) {
+			
+			if(currentVertex.getGroupVertex().getNumberOfOutputGates() != 1) {
+				throw new RuntimeException("Cannot chain task that has more than one output gate");
+			}
+
+			if (currentVertex.getGroupVertex().getForwardEdge(0)
+					.getDistributionPattern() != DistributionPattern.POINTWISE) {
+				
+				throw new RuntimeException(
+						"Cannot chain task with non-POINTIWSE distribution pattern.");
+			}
+			
+			QosEdge forwardEdge = currentVertex.getOutputGate(0).getEdge(0);
+			forwardEdge.getQosData().setIsInChain(true);
+			currentVertex = forwardEdge.getInputGate().getVertex();
+		}
+	}
+	
+	
 
 	private void processQosRecords(QosReport report) {
-		processVertexLatencies(report.getVertexLatencies());
-		processEdgeStatistics(report.getEdgeStatistics());
-		processEdgeLatencies(report.getEdgeLatencies());
+		long now = System.currentTimeMillis();
+		processVertexLatencies(report.getVertexLatencies(), now);
+		processEdgeStatistics(report.getEdgeStatistics(), now);
+		processEdgeLatencies(report.getEdgeLatencies(), now);
 	}
 
 	private void processVertexLatencies(
-			Collection<VertexLatency> vertexLatencies) {
+			Collection<VertexLatency> vertexLatencies, long now) {
 
 		for (VertexLatency vertexLatency : vertexLatencies) {
 			QosReporterID.Vertex reporterID = vertexLatency.getReporterID();
+
 			QosGate inputGate = this.gatesByGateId.get(reporterID
 					.getInputGateID());
+			QosGate outputGate = this.gatesByGateId.get(reporterID
+					.getOutputGateID());
 
 			if (inputGate != null) {
-				QosVertex vertex = inputGate.getVertex();
-				// FIXME add qos data to vertex
+				VertexQosData qosData = inputGate.getVertex().getQosData();
+				qosData.addLatencyMeasurement(inputGate.getGateIndex(),
+						outputGate.getGateIndex(), now,
+						vertexLatency.getVertexLatency());
 			}
 		}
 	}
 
-	private void processEdgeStatistics(Collection<EdgeStatistics> edgeStatistics) {
+	private void processEdgeStatistics(
+			Collection<EdgeStatistics> edgeStatistics, long now) {
 		for (EdgeStatistics edgeStatistic : edgeStatistics) {
 			QosReporterID.Edge reporterID = edgeStatistic.getReporterID();
 			QosEdge edge = this.edgeBySourceChannelID.get(reporterID
 					.getSourceChannelID());
 
 			if (edge != null) {
-				// FIXME add qos data to edge
+				edge.getQosData().addOutputChannelStatisticsMeasurement(now,
+						edgeStatistic);
 			}
 		}
 	}
 
-	private void processEdgeLatencies(Collection<EdgeLatency> edgeLatencies) {
+	private void processEdgeLatencies(Collection<EdgeLatency> edgeLatencies,
+			long now) {
+
 		for (EdgeLatency edgeLatency : edgeLatencies) {
 			QosReporterID.Edge reporterID = edgeLatency.getReporterID();
 			QosEdge edge = this.edgeBySourceChannelID.get(reporterID
 					.getSourceChannelID());
 
 			if (edge != null) {
-				// FIXME add qos data to edge
+				edge.getQosData().addLatencyMeasurement(now,
+						edgeLatency.getEdgeLatency());
 			}
 		}
 	}
@@ -225,7 +271,7 @@ public class QosModel {
 	private void tryToProcessBufferedAnnouncements() {
 		tryToProcessBufferedVertexReporterAnnouncements();
 		tryToProcessBufferedEdgeReporterAnnouncements();
-		
+
 		if (this.qosGraph.isShallow()) {
 			this.state = State.SHALLOW;
 		} else {
@@ -246,12 +292,23 @@ public class QosModel {
 					.getInputGateID());
 
 			if (inputGate != null && outputGate != null) {
-				QosEdge edge = toProcess.toQosEdge();
-				outputGate.addEdge(edge);
-				inputGate.addEdge(edge);
+				assembleQosEdgeFromReporterConfig(toProcess, outputGate,
+						inputGate);
 				vertexIter.remove();
-				this.edgeBySourceChannelID.put(edge.getSourceChannelID(), edge);
 			}
+		}
+	}
+
+	private void assembleQosEdgeFromReporterConfig(
+			EdgeQosReporterConfig toProcess, QosGate outputGate,
+			QosGate inputGate) {
+
+		if (this.edgeBySourceChannelID.get(toProcess.getSourceChannelID()) == null) {
+			QosEdge edge = toProcess.toQosEdge();
+			outputGate.addEdge(edge);
+			inputGate.addEdge(edge);
+			edge.setQosData(new EdgeQosData(edge));
+			this.edgeBySourceChannelID.put(edge.getSourceChannelID(), edge);
 		}
 	}
 
@@ -261,33 +318,64 @@ public class QosModel {
 
 		while (vertexIter.hasNext()) {
 			VertexQosReporterConfig toProcess = vertexIter.next();
-			JobVertexID groupVertexID = toProcess.getGroupVertexID();
+
 			QosGroupVertex groupVertex = this.qosGraph
-					.getGroupVertexByID(groupVertexID);
+					.getGroupVertexByID(toProcess.getGroupVertexID());
 
 			if (groupVertex != null) {
-				int memberIndex = toProcess.getMemberIndex();
-				QosVertex memberVertex = groupVertex.getMember(memberIndex);
-				if (memberVertex == null) {
-					memberVertex = toProcess.toQosVertex();
-					groupVertex.setGroupMember(memberVertex);
-					this.vertexByID.put(memberVertex.getID(), memberVertex);
-				}
-
-				if (toProcess.getInputGateIndex() != -1) {
-					QosGate gate = toProcess.toInputGate();
-					memberVertex.setInputGate(gate);
-					this.gatesByGateId.put(gate.getGateID(), gate);
-				}
-
-				if (toProcess.getOutputGateIndex() != -1) {
-					QosGate gate = toProcess.toOutputGate();
-					memberVertex.setOutputGate(gate);
-					this.gatesByGateId.put(gate.getGateID(), gate);
-				}
-
+				assembleQosVertexFromReporterConfig(toProcess, groupVertex);
 				vertexIter.remove();
 			}
+		}
+	}
+
+	/**
+	 * Assembles a member vertex for the given group vertex, using the reporter
+	 * config data.
+	 */
+	private void assembleQosVertexFromReporterConfig(
+			VertexQosReporterConfig toProcess, QosGroupVertex groupVertex) {
+
+		int memberIndex = toProcess.getMemberIndex();
+		QosVertex memberVertex = groupVertex.getMember(memberIndex);
+
+		// if the reporter config has a previously unknown member
+		// vertex, add it to the group vertex
+		if (memberVertex == null) {
+			memberVertex = toProcess.toQosVertex();
+			memberVertex.setQosData(new VertexQosData(memberVertex));
+			groupVertex.setGroupMember(memberVertex);
+			this.vertexByID.put(memberVertex.getID(), memberVertex);
+		}
+
+		int inputGateIndex = toProcess.getInputGateIndex();
+		int outputGateIndex = toProcess.getOutputGateIndex();
+
+		// if the reporter config has a previously unknown input gate
+		// for us, add it to the vertex
+		if (inputGateIndex != -1
+				&& memberVertex.getInputGate(inputGateIndex) == null) {
+
+			QosGate gate = toProcess.toInputGate();
+			memberVertex.setInputGate(gate);
+			this.gatesByGateId.put(gate.getGateID(), gate);
+		}
+
+		// if the reporter config has a previously unknown output gate
+		// for us, add it to the vertex
+		if (outputGateIndex != -1
+				&& memberVertex.getOutputGate(outputGateIndex) == null) {
+
+			QosGate gate = toProcess.toOutputGate();
+			memberVertex.setOutputGate(gate);
+			this.gatesByGateId.put(gate.getGateID(), gate);
+		}
+
+		// only if the reporter has a valid input/output gate combination,
+		// prepare for reports on that combination
+		if (inputGateIndex != -1 && outputGateIndex != -1) {
+			memberVertex.getQosData().prepareForReporsOnGateCombination(
+					inputGateIndex, outputGateIndex);
 		}
 	}
 
@@ -314,6 +402,29 @@ public class QosModel {
 
 		for (EdgeQosReporterConfig reporterConfig : edgeQosReporterAnnouncements) {
 			this.announcementBuffer.announceEdgeQosReporter(reporterConfig);
+		}
+	}
+
+	public void findQosConstraintViolations(
+			QosConstraintViolationListener listener) {
+		
+		for(JobGraphLatencyConstraint constraint : this.qosGraph.getConstraints()) {
+			QosLogger logger = this.qosLoggers.get(constraint.getID());
+			if(logger == null) {
+				try {
+					logger = new QosLogger(constraint.getID(), this.qosGraph, StreamTaskManagerPlugin
+							.getPluginConfiguration().getLong(
+									BufferSizeManager.QOSMANAGER_ADJUSTMENTINTERVAL_KEY,
+									BufferSizeManager.DEFAULT_ADJUSTMENTINTERVAL));
+					this.qosLoggers.put(constraint.getID(), logger);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			QosConstraintViolationFinder constraintViolationFinder = new QosConstraintViolationFinder(
+					constraint.getID(), this.qosGraph, listener, logger);
+			constraintViolationFinder.findSequencesWithViolatedQosConstraint();
 		}
 	}
 }

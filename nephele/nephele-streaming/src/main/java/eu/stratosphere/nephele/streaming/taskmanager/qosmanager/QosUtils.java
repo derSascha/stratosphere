@@ -5,7 +5,7 @@ import eu.stratosphere.nephele.managementgraph.ManagementAttachment;
 import eu.stratosphere.nephele.managementgraph.ManagementEdge;
 import eu.stratosphere.nephele.managementgraph.ManagementVertex;
 
-public class ProfilingUtils {
+public class QosUtils {
 
 	public static String formatName(ManagementAttachment managementAttachment) {
 		if (managementAttachment instanceof ManagementVertex) {

@@ -7,7 +7,7 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGate.GateType;
 
-public class QosVertex {
+public class QosVertex implements QosGraphMember {
 
 	private QosGroupVertex groupVertex;
 
@@ -172,5 +172,21 @@ public class QosVertex {
 				.getAllocatedResource().getInstance()
 				.getInstanceConnectionInfo(),
 				executionVertex.getIndexInVertexGroup());
+	}
+
+	/* (non-Javadoc)
+	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isVertex()
+	 */
+	@Override
+	public boolean isVertex() {
+		return true;
+	}
+
+	/* (non-Javadoc)
+	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isEdge()
+	 */
+	@Override
+	public boolean isEdge() {
+		return false;
 	}
 }

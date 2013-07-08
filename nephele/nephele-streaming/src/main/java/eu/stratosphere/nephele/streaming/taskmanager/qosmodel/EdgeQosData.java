@@ -1,7 +1,9 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
+import eu.stratosphere.nephele.configuration.GlobalConfiguration;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeHistory;
+import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
 public class EdgeQosData {
 
@@ -32,6 +34,10 @@ public class EdgeQosData {
 		this.recordsPerBufferStatistic = new QosStatistic(noOfStatisticsEntries);
 		this.recordsPerSecondStatistic = new QosStatistic(noOfStatisticsEntries);
 		this.bufferSizeHistory = new BufferSizeHistory(2);
+		this.bufferSizeHistory.addToHistory(System.currentTimeMillis(),
+				GlobalConfiguration.getInteger(
+						"channel.network.bufferSizeInBytes",
+						GlobalBufferPool.DEFAULT_BUFFER_SIZE_IN_BYTES));
 	}
 	
 	public EdgeQosData(QosEdge edge) {

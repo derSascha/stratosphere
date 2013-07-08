@@ -200,12 +200,12 @@ public class QosGraphFactory {
 			}
 		};
 		
-		QosGraphTraversal traverser = new QosGraphTraversal(null, traversalListener);
+		QosGraphTraversal traverser = new QosGraphTraversal(null, sequence, traversalListener);
 		traverser.setClearTraversedVertices(false);
 		for (QosVertex anchor : anchors) {
 			traverser.setStartVertex(anchor);
-			traverser.traverseGraphForwardAlongSequence(sequence);
-			traverser.traverseGraphBackwardAlongSequence(sequence, false, true);
+			traverser.traverseForward();
+			traverser.traverseBackward(false, true);
 		}
 		
 		return toReturn;

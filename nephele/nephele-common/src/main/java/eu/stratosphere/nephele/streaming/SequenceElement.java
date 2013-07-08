@@ -41,28 +41,31 @@ public class SequenceElement<T extends AbstractID> implements
 	private int outputGateIndex;
 	private boolean isVertex;
 	private Class<T> idClass;
+	private int indexInSequence;
 
 	public SequenceElement() {
 	}
 
 	@SuppressWarnings("unchecked")
-	public SequenceElement(T vertexID, int inputGateIndex, int outputGateIndex) {
+	public SequenceElement(T vertexID, int inputGateIndex, int outputGateIndex, int indexInSequence) {
 		this.idClass = (Class<T>) vertexID.getClass();
 		this.sourceVertexID = vertexID;
 		this.inputGateIndex = inputGateIndex;
 		this.outputGateIndex = outputGateIndex;
 		this.isVertex = true;
+		this.indexInSequence = indexInSequence;
 	}
 
 	@SuppressWarnings("unchecked")
 	public SequenceElement(T sourceVertexID, int outputGateIndex,
-			T targetVertexID, int inputGateIndex) {
+			T targetVertexID, int inputGateIndex, int indexInSequence) {
 		this.idClass = (Class<T>) sourceVertexID.getClass();
 		this.sourceVertexID = sourceVertexID;
 		this.targetVertexID = targetVertexID;
 		this.inputGateIndex = inputGateIndex;
 		this.outputGateIndex = outputGateIndex;
 		this.isVertex = false;
+		this.indexInSequence = indexInSequence;
 	}
 
 	public T getVertexID() {
@@ -93,6 +96,14 @@ public class SequenceElement<T extends AbstractID> implements
 		return !this.isVertex;
 	}
 
+	public int getIndexInSequence() {
+		return this.indexInSequence;
+	}
+
+	public void setIndexInSequence(int indexInSequence) {	
+		this.indexInSequence = indexInSequence;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -109,6 +120,7 @@ public class SequenceElement<T extends AbstractID> implements
 		}
 		out.writeInt(this.inputGateIndex);
 		out.writeInt(this.outputGateIndex);
+		out.writeInt(this.indexInSequence);
 	}
 
 	/*
@@ -131,6 +143,7 @@ public class SequenceElement<T extends AbstractID> implements
 			}
 			this.inputGateIndex = in.readInt();
 			this.outputGateIndex = in.readInt();
+			this.indexInSequence = in.readInt();
 		} catch (Exception e) {
 			throw new IOException("Error while deserializing SequenceElement",
 					e);

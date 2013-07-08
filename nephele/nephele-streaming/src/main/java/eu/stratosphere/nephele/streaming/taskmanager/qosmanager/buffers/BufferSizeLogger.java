@@ -1,15 +1,10 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers;
 
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.ProfilingSequence;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
  * 
@@ -35,36 +30,36 @@ public class BufferSizeLogger {
 
 	private long timeBase;
 
-	public BufferSizeLogger(ProfilingSequence profilingSequence)
-			throws IOException {
-		this.timeBase = System.currentTimeMillis();
-
-		String logFile = StreamTaskManagerPlugin.getPluginConfiguration()
-				.getString(BUFFERSIZE_LOGFILE_KEY, DEFAULT_LOGFILE);
-
-		this.out = new FileWriter("buffersizes.txt");
-		this.initEdges(profilingSequence);
-	}
-
-	private void initEdges(ProfilingSequence profilingSequence) {
-		this.edges = new ArrayList<HashSet<QosEdge>>();
-
-		int forwardEdgeCount = profilingSequence.getSequenceVertices().size() - 1;
-		for (int i = 0; i < forwardEdgeCount; i++) {
-			QosGroupVertex groupVertex = profilingSequence
-					.getSequenceVertices().get(i);
-			HashSet<QosEdge> edgeSet = new HashSet<QosEdge>();
-
-			for (QosVertex vertex : groupVertex.getMembers()) {
-				for (QosEdge edge : vertex.getForwardEdges()) {
-					edgeSet.add(edge);
-				}
-			}
-			this.edges.add(edgeSet);
-		}
-	}
-
-	public void logBufferSizes() throws IOException {
+//	public BufferSizeLogger(ProfilingSequence profilingSequence)
+//			throws IOException {
+//		this.timeBase = System.currentTimeMillis();
+//
+//		String logFile = StreamTaskManagerPlugin.getPluginConfiguration()
+//				.getString(BUFFERSIZE_LOGFILE_KEY, DEFAULT_LOGFILE);
+//
+//		this.out = new FileWriter("buffersizes.txt");
+//		this.initEdges(profilingSequence);
+//	}
+//
+//	private void initEdges(ProfilingSequence profilingSequence) {
+//		this.edges = new ArrayList<HashSet<QosEdge>>();
+//
+//		int forwardEdgeCount = profilingSequence.getSequenceVertices().size() - 1;
+//		for (int i = 0; i < forwardEdgeCount; i++) {
+//			QosGroupVertex groupVertex = profilingSequence
+//					.getSequenceVertices().get(i);
+//			HashSet<QosEdge> edgeSet = new HashSet<QosEdge>();
+//
+//			for (QosVertex vertex : groupVertex.getMembers()) {
+//				for (QosEdge edge : vertex.getForwardEdges()) {
+//					edgeSet.add(edge);
+//				}
+//			}
+//			this.edges.add(edgeSet);
+//		}
+//	}
+//
+//	public void logBufferSizes() throws IOException {
 		// FIXME
 		// long timestamp = System.currentTimeMillis() - timeBase;
 		//
@@ -88,5 +83,5 @@ public class BufferSizeLogger {
 		// msg.append('\n');
 		// out.write(msg.toString());
 		// out.flush();
-	}
+//	}
 }
