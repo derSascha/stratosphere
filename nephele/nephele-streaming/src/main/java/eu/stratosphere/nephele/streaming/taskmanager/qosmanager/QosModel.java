@@ -425,6 +425,11 @@ public class QosModel {
 			QosConstraintViolationFinder constraintViolationFinder = new QosConstraintViolationFinder(
 					constraint.getID(), this.qosGraph, listener, logger);
 			constraintViolationFinder.findSequencesWithViolatedQosConstraint();
+			try {
+				logger.logLatencies();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }

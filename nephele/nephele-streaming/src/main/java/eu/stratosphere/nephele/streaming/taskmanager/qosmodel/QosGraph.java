@@ -482,6 +482,7 @@ public class QosGraph implements IOReadableWritable {
 	}
 
 	private void writeGroupVertices(DataOutput out) throws IOException {
+		out.writeInt(this.vertexByID.size());
 		for (QosGroupVertex groupVertex : this.vertexByID.values()) {
 			groupVertex.getJobVertexID().write(out);
 			out.writeUTF(groupVertex.getName());

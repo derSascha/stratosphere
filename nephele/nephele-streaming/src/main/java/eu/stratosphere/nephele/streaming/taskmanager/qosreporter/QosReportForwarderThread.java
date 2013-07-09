@@ -239,9 +239,9 @@ public class QosReportForwarderThread extends Thread {
 		this.pendingProfilingRecords.drainTo(this.tmpRecords);
 		for (AbstractQosReportRecord profilingRecord : this.tmpRecords) {
 			if (profilingRecord instanceof EdgeLatency) {
-				this.processChannelLatency((EdgeLatency) profilingRecord);
+				this.processEdgeLatency((EdgeLatency) profilingRecord);
 			} else if (profilingRecord instanceof EdgeStatistics) {
-				this.processOutputChannelStatistics((EdgeStatistics) profilingRecord);
+				this.processEdgeStatistics((EdgeStatistics) profilingRecord);
 			} else if (profilingRecord instanceof VertexLatency) {
 				this.processTaskLatency((VertexLatency) profilingRecord);
 			}
@@ -286,7 +286,7 @@ public class QosReportForwarderThread extends Thread {
 		}
 	}
 
-	private void processOutputChannelStatistics(
+	private void processEdgeStatistics(
 			EdgeStatistics channelStats) {
 
 		QosReporterID.Edge reporterID = channelStats.getReporterID();
@@ -316,7 +316,7 @@ public class QosReportForwarderThread extends Thread {
 		}
 	}
 
-	private void processChannelLatency(EdgeLatency channelLatency) {
+	private void processEdgeLatency(EdgeLatency channelLatency) {
 		Set<AggregatedReport> reports = getReports(channelLatency
 				.getReporterID());
 		for (AggregatedReport report : reports) {

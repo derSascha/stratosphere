@@ -172,7 +172,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 							.getConnectedChannelID()) != null;
 
 			if (!mustReportQosForGate) {
-				this.inputGateReporters.set(i, null);
+				this.inputGateReporters.add(null);
 				this.reporterConfigCenter.setQosReporterConfigListener(
 						inputGate.getGateID(), this);
 				break;
@@ -180,7 +180,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 
 			InputGateReporterManager reporter = new InputGateReporterManager(
 					this.reporterThread, inputGate.getNumberOfInputChannels());
-			this.inputGateReporters.set(i, reporter);
+			this.inputGateReporters.add(reporter);
 
 			for (int j = 0; j < inputGate.getNumberOfInputChannels(); j++) {
 				int runtimeChannelIndex = inputGate.getInputChannel(j)
@@ -212,7 +212,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 					.getEdgeQosReporter(outputGate.getOutputChannel(0).getID()) != null;
 
 			if (!mustReportQosForGate) {
-				this.outputGateReporters.set(i, null);
+				this.outputGateReporters.add(null);
 				this.reporterConfigCenter.setQosReporterConfigListener(
 						outputGate.getGateID(), this);
 				break;
@@ -221,7 +221,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 			OutputGateReporterManager gateReporterManager = new OutputGateReporterManager(
 					this.reporterThread, outputGate.getNumberOfOutputChannels());
 
-			this.outputGateReporters.set(i, gateReporterManager);
+			this.outputGateReporters.add(gateReporterManager);
 
 			for (int j = 0; j < outputGate.getNumberOfOutputChannels(); j++) {
 				int runtimeChannelIndex = outputGate.getOutputChannel(j)

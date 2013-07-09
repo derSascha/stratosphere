@@ -58,6 +58,7 @@ public class QosReporterConfigCenter {
 	public QosReporterConfigCenter() {
 		this.reporterConfigsByExecutionVertex = new HashMap<ExecutionVertexID, Set<VertexQosReporterConfig>>();
 		this.reporterConfigsByChannel = new HashMap<ChannelID, EdgeQosReporterConfig>();
+		this.configListeners = new HashMap<AbstractID, QosReporterConfigListener>();
 	}
 
 	public synchronized void setQosReporterConfigListener(
@@ -129,7 +130,7 @@ public class QosReporterConfigCenter {
 		Collections.addAll(qosManagers, newReporter.getQosManagers());
 		return new EdgeQosReporterConfig(oldReporter.getSourceChannelID(),
 				oldReporter.getTargetChannelID(),
-				(InstanceConnectionInfo[]) qosManagers.toArray(),
+				qosManagers.toArray(new InstanceConnectionInfo[0]),
 				oldReporter.getOutputGateID(),
 				oldReporter.getInputGateID(),
 				oldReporter.getOutputGateEdgeIndex(),

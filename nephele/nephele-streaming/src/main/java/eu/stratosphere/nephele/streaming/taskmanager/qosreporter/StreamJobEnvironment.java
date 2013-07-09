@@ -73,8 +73,8 @@ public class StreamJobEnvironment {
 		reporterConfig.setTaggingInterval(StreamTaskManagerPlugin
 				.getDefaultTaggingInterval());
 
-		this.qosReportForwarder = new QosReportForwarderThread(jobID, messagingThread,
-				reporterConfig);
+		this.qosReportForwarder = new QosReportForwarderThread(jobID,
+				messagingThread, reporterConfig);
 
 		this.chainCoordinator = new StreamChainCoordinator();
 		this.taskQosCoordinators = new HashMap<ExecutionVertexID, StreamTaskQosCoordinator>();
@@ -117,7 +117,8 @@ public class StreamJobEnvironment {
 
 		this.qosReportForwarder.getConfigCenter().setAggregationInterval(
 				aggregationInterval);
-		this.qosReportForwarder.getConfigCenter().setTaggingInterval(taggingInterval);
+		this.qosReportForwarder.getConfigCenter().setTaggingInterval(
+				taggingInterval);
 	}
 
 	public StreamTaskQosCoordinator getTaskQosCoordinator(
@@ -161,8 +162,14 @@ public class StreamJobEnvironment {
 		if (deployRolesAction.getQosManager() != null) {
 			processQosManagerConfig(deployRolesAction);
 		}
-		
+
 		this.qosReportForwarder.configureReporting(deployRolesAction);
+
+		LOG.info(String
+				.format("Deployed %d vertex Qos reporters, %d edge Qos reporters and %d Qos manager roles",
+						deployRolesAction.getVertexQosReporters().size(),
+						deployRolesAction.getEdgeQosReporters().size(),
+						(deployRolesAction.getQosManager() != null) ? 1 : 0));
 	}
 
 	private void handleQosReport(QosReport data) {

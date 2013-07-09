@@ -72,7 +72,6 @@ public class QosSetupManager implements VertexAssignmentListener {
 
 		for (int i = 0; i < this.executionGraph.getNumberOfInputVertices(); i++) {
 			ExecutionVertex inputVertex = this.executionGraph.getInputVertex(i);
-			visited.add(inputVertex.getID());
 			attachAssignmentListenersToReachableVertices(inputVertex, visited);
 		}
 	}
@@ -226,58 +225,5 @@ public class QosSetupManager implements VertexAssignmentListener {
 		qosSetup.attachRolesToExecutionGraph();
 		
 		// FIXME: continue here: distribute QoS setup
-	}
-	
-//	private void setupQosManagers() throws Exception {
-//		final QosGroupVertex anchor = this.determineProfilingAnchor();
-//
-//		final HashMap<InstanceConnectionInfo, LinkedList<QosVertex>> verticesByQosManager = new HashMap<InstanceConnectionInfo, LinkedList<QosVertex>>();
-//
-//		for (QosVertex vertex : anchor.getMembers()) {
-//			InstanceConnectionInfo qosManager = vertex
-//					.getExecutingInstance();
-//			LinkedList<QosVertex> verticesOnQosManager = verticesByQosManager
-//					.get(qosManager);
-//			if (verticesOnQosManager == null) {
-//				verticesOnQosManager = new LinkedList<QosVertex>();
-//				verticesByQosManager.put(qosManager,
-//						verticesOnQosManager);
-//			}
-//			verticesOnQosManager.add(vertex);
-//		}
-//
-//		ExecutorService threadPool = Executors.newFixedThreadPool(8);
-//		final AtomicReference<Exception> exceptionCollector = new AtomicReference<Exception>();
-//
-//		for (final LinkedList<QosVertex> qosManagerVertices : verticesByQosManager
-//				.values()) {
-//			threadPool.execute(new Runnable() {
-//				@Override
-//				public void run() {
-//					try {
-//						ProfilingSequenceManager.this.setupQosManager(
-//								anchor, qosManagerVertices);
-//					} catch (Exception e) {
-//						LOG.error(StringUtils.stringifyException(e));
-//						exceptionCollector.set(e);
-//					}
-//				}
-//			});
-//		}
-//		threadPool.shutdown();
-//
-//		try {
-//			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-//			if (exceptionCollector.get() != null) {
-//				throw exceptionCollector.get();
-//			}
-//			LOG.info("Successfully set up profiling masters for "
-//					+ this.profilingSequence.toString());
-//		} catch (InterruptedException e) {
-//			LOG.info("Interrupted while setting up profiling masters for "
-//					+ this.profilingSequence.toString());
-//			threadPool.shutdownNow();
-//		}
-//	}
-
+	}	
 }

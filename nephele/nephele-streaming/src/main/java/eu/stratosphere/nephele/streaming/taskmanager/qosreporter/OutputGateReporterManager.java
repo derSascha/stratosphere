@@ -43,8 +43,10 @@ public class OutputGateReporterManager {
 
 		private int recordsSinceLastTag;
 
-		public OutputChannelChannelStatisticsReporter(
+		public OutputChannelChannelStatisticsReporter(QosReporterID.Edge reporterID,
 				int channelIndexInRuntimeGate) {
+			
+			this.reporterID = reporterID;
 			this.channelIndexInRuntimeGate = channelIndexInRuntimeGate;
 			this.timeOfLastReport = System.currentTimeMillis();
 			this.amountTransmittedAtLastReport = 0;
@@ -232,7 +234,7 @@ public class OutputGateReporterManager {
 		}
 
 		OutputChannelChannelStatisticsReporter channelStats = new OutputChannelChannelStatisticsReporter(
-				channelIndexInRuntimeGate);
+				reporterID, channelIndexInRuntimeGate);
 
 		this.reportersByChannelIndexInRuntimeGate.set(
 				channelIndexInRuntimeGate, channelStats);

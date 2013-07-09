@@ -94,7 +94,7 @@ public class QosReporterRole {
 	 * 
 	 * @return the targetQosManagers
 	 */
-	public Set<InstanceConnectionInfo> getTargetQosManager() {
+	public Set<InstanceConnectionInfo> getTargetQosManagers() {
 		return this.targetQosManagers;
 	}
 

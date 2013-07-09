@@ -63,6 +63,7 @@ public class QosLogger {
 
 		JobGraphSequence jobGraphSequence = qosGraph.getConstraintByID(
 				constraintID).getSequence();
+
 		this.aggregatedMemberLatencies = new double[jobGraphSequence.size()][];
 		for (SequenceElement<JobVertexID> sequenceElement : jobGraphSequence) {
 			int index = sequenceElement.getIndexInSequence();
@@ -74,8 +75,6 @@ public class QosLogger {
 		}
 		resetCounters();
 
-		writeHeaders(jobGraphSequence, qosGraph);
-
 		this.loggingInterval = loggingInterval;
 
 		String logFile = StreamTaskManagerPlugin.getPluginConfiguration()
@@ -84,7 +83,7 @@ public class QosLogger {
 			logFile = String.format(logFile, constraintID.toString());
 		}
 		this.writer = new BufferedWriter(new FileWriter(logFile));
-
+		writeHeaders(jobGraphSequence, qosGraph);
 	}
 
 	private void resetCounters() {
@@ -145,6 +144,20 @@ public class QosLogger {
 		builder.append(';');
 		builder.append(this.activeMemberSequences);
 		builder.append(';');
+
+		if (this.activeMemberSequences == 0) {
+			appendDummyLine(builder);
+		} else {
+			appendSummaryLine(builder);
+		}
+
+		builder.append('\n');
+		this.writer.write(builder.toString());
+		this.writer.flush();
+		this.resetCounters();
+	}
+
+	private void appendSummaryLine(StringBuilder builder) {
 		builder.append(this.formatDouble(this.aggregatedTotalLatency
 				/ this.activeMemberSequences));
 		builder.append(';');
@@ -160,11 +173,21 @@ public class QosLogger {
 								/ this.activeMemberSequences));
 			}
 		}
+	}
 
-		builder.append('\n');
-		this.writer.write(builder.toString());
-		this.writer.flush();
-		this.resetCounters();
+	private void appendDummyLine(StringBuilder builder) {
+		builder.append(this.formatDouble(0));
+		builder.append(';');
+		builder.append(this.formatDouble(0));
+		builder.append(';');
+		builder.append(this.formatDouble(0));
+
+		for (int i = 0; i < this.aggregatedMemberLatencies.length; i++) {
+			for (int j = 0; j < this.aggregatedMemberLatencies[i].length; j++) {
+				builder.append(';');
+				builder.append(this.formatDouble(0));
+			}
+		}
 	}
 
 	private String formatDouble(double doubleValue) {

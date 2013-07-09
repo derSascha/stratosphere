@@ -88,14 +88,15 @@ public class InstanceQosRoles {
 						.cloneWithoutMembers());
 			}
 		}
-		deploymentAction.setQosManager(new QosManagerConfig(
-				shallowQosGraph));
+		deploymentAction.setQosManager(new QosManagerConfig(shallowQosGraph));
 		for (QosReporterRole reporterRole : this.reporterRoles.values()) {
 
 			if (reporterRole.getAction() == ReportingAction.REPORT_CHANNEL_STATS) {
-				deploymentAction.addEdgeQosReporter(toEdgeQosReporterConfig(reporterRole));
+				deploymentAction
+						.addEdgeQosReporter(toEdgeQosReporterConfig(reporterRole));
 			} else {
-				deploymentAction.addVertexQosReporter(toVertexQosReporterConfig(reporterRole));
+				deploymentAction
+						.addVertexQosReporter(toVertexQosReporterConfig(reporterRole));
 			}
 		}
 
@@ -104,43 +105,40 @@ public class InstanceQosRoles {
 
 	private VertexQosReporterConfig toVertexQosReporterConfig(
 			QosReporterRole reporterRole) {
-		
+
 		QosVertex vertex = reporterRole.getVertex();
-		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
-				.getTargetQosManager().toArray();
+
+		InstanceConnectionInfo[] managers = reporterRole.getTargetQosManagers()
+				.toArray(new InstanceConnectionInfo[0]);
 
 		int inputGateIndex = reporterRole.getInputGateIndex();
 		int outputGateIndex = reporterRole.getOutputGateIndex();
-		
+
 		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
 				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
-				managers,
-				inputGateIndex,
-				(inputGateIndex != -1) ? vertex.getInputGate(inputGateIndex).getGateID() : null,
-				outputGateIndex,
-				(inputGateIndex != -1) ? vertex.getOutputGate(outputGateIndex).getGateID() : null,
-				vertex.getMemberIndex(),
-				vertex.getName());
-		
+				managers, inputGateIndex, (inputGateIndex != -1) ? vertex
+						.getInputGate(inputGateIndex).getGateID() : null,
+				outputGateIndex, (inputGateIndex != -1) ? vertex.getOutputGate(
+						outputGateIndex).getGateID() : null,
+				vertex.getMemberIndex(), vertex.getName());
+
 		return vertexReporter;
 	}
 
 	private EdgeQosReporterConfig toEdgeQosReporterConfig(
 			QosReporterRole reporterRole) {
-		
+
 		QosEdge edge = reporterRole.getEdge();
-		
-		InstanceConnectionInfo[] managers = (InstanceConnectionInfo[]) reporterRole
-				.getTargetQosManager().toArray();
-		
+
+		InstanceConnectionInfo[] managers = reporterRole.getTargetQosManagers()
+				.toArray(new InstanceConnectionInfo[0]);
+
 		EdgeQosReporterConfig edgeReporter = new EdgeQosReporterConfig(
-				edge.getSourceChannelID(), edge.getTargetChannelID(),
-				managers, 
-				edge.getOutputGate().getGateID(),
-				edge.getInputGate().getGateID(),
-				edge.getOutputGateEdgeIndex(),
+				edge.getSourceChannelID(), edge.getTargetChannelID(), managers,
+				edge.getOutputGate().getGateID(), edge.getInputGate()
+						.getGateID(), edge.getOutputGateEdgeIndex(),
 				edge.getInputGateEdgeIndex());
-		
+
 		return edgeReporter;
 	}
 }
