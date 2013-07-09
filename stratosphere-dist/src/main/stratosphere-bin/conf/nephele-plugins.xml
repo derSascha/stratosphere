@@ -38,8 +38,8 @@
 			  <value>/tmp/buffersizes.txt</value>
 		  </property>
 		  <property>
-			  <key>streaming.qosmanager.logging.profilingfile</key>
-			  <value>/tmp/profiling.txt</value>
+			  <key>streaming.qosmanager.logging.qos_statistics_filepattern</key>
+			  <value>/tmp/qos_statistics_%s</value>
 		  </property>
 		   -->
 	  </configuration>

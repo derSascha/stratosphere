@@ -40,7 +40,7 @@ public class QosLogger {
 	 * Provides access to the configuration entry which defines the log file
 	 * location.
 	 */
-	private static final String PROFILING_LOGFILE_KEY = "streaming.qosmanager.logging.qosstatistics";
+	private static final String PROFILING_LOGFILE_KEY = "streaming.qosmanager.logging.qos_statistics_filepattern";
 
 	private static final String DEFAULT_LOGFILE_PATTERN = "/tmp/qos_statistics_%s";
 
