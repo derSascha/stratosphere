@@ -546,14 +546,20 @@ public class QosGraph implements IOReadableWritable {
 	}
 
 	/**
-	 * Determines whether this Qos graph is shallow. A graph is shallow, if any
-	 * of group vertices does not have any members.
-	 * 
+	 * Determines whether this Qos graph is shallow. A graph is shallow, if at
+	 * least one of the group vertices does not have any members.
 	 * 
 	 * @return whether this Qos graph is shallow or not.
 	 */
 	public boolean isShallow() {
-		// FIXME: implement
-		throw new RuntimeException("not yet implemented");
+		boolean isShallow = false;
+
+		for (QosGroupVertex groupVertex : this.getAllVertices()) {
+			if (groupVertex.getNumberOfMembers() == 0) {
+				isShallow = true;
+				break;
+			}
+		}
+		return isShallow;
 	}
 }
