@@ -31,44 +31,69 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
  * @author Bjoern Lohrmann
  * 
  */
-public class VertexQosReporterConfig implements
-		IOReadableWritable {
+public class VertexQosReporterConfig implements IOReadableWritable {
 
 	private JobVertexID groupVertexID;
-	
+
 	private ExecutionVertexID vertexID;
+	
+	private InstanceConnectionInfo reporterInstance;
 
 	private InstanceConnectionInfo[] qosManagers;
 
 	private int inputGateIndex;
-	
+
 	private GateID inputGateID;
 
 	private int outputGateIndex;
-	
+
 	private GateID outputGateID;
 
 	private int memberIndex;
 
 	private String name;
-	
+
 	public VertexQosReporterConfig() {
 	}
 
 	/**
-	 * Initializes VertexQosReporterConfig.
-	 *
+	 * 
+	 * Initializes VertexQosReporterConfig. Dummy reporter configs can be
+	 * created by prividing -1 gate indices and null gate IDs.
+	 * 
+	 * @param groupVertexID
+	 * @param vertexID
+	 * @param qosManagers
+	 * @param inputGateIndex
+	 *            If inputGateIndex is -1, inputGateID must be null (and vice
+	 *            versa).
+	 * @param inputGateID
+	 * @param outputGateIndex
+	 *            If outputGateIndex is -1, outputGateID must be null (and vice
+	 *            versa).
+	 * @param outputGateID
+	 * @param memberIndex
+	 * @param name
 	 */
 	public VertexQosReporterConfig(JobVertexID groupVertexID,
-			ExecutionVertexID vertexID, InstanceConnectionInfo[] qosManagers,
-			int inputGateIndex, GateID inputGateID,
-			int outputGateIndex,
-			GateID outputGateID,
-			int memberIndex,
-			String name) {
-		
+			ExecutionVertexID vertexID, 
+			InstanceConnectionInfo reporterInstance,
+			InstanceConnectionInfo[] qosManagers,
+			int inputGateIndex, GateID inputGateID, int outputGateIndex,
+			GateID outputGateID, int memberIndex, String name) {
+
+		if ((inputGateIndex == -1 && inputGateID != null)
+				|| (inputGateIndex != -1 && inputGateID == null)
+				|| (outputGateIndex != -1 && outputGateID == null)
+				|| (outputGateIndex != -1 && outputGateID == null)) {
+
+			throw new RuntimeException(
+					"If inputGateIndex/outputGateIndex is (not) -1, the respective gate ID must (not) be null. This is a bug.");
+		}
+
 		this.groupVertexID = groupVertexID;
 		this.vertexID = vertexID;
+		this.reporterInstance = reporterInstance;
 		this.qosManagers = qosManagers;
 		this.inputGateIndex = inputGateIndex;
 		this.inputGateID = inputGateID;
@@ -77,8 +102,10 @@ public class VertexQosReporterConfig implements
 		this.memberIndex = memberIndex;
 		this.name = name;
 	}
-	
-	
+
+	public boolean isDummy() {
+		return getReporterID().isDummy();
+	}
 
 	/**
 	 * Returns the groupVertexID.
@@ -96,6 +123,15 @@ public class VertexQosReporterConfig implements
 	 */
 	public ExecutionVertexID getVertexID() {
 		return this.vertexID;
+	}
+
+	/**
+	 * Returns the reporterInstance.
+	 * 
+	 * @return the reporterInstance
+	 */
+	public InstanceConnectionInfo getReporterInstance() {
+		return this.reporterInstance;
 	}
 
 	/**
@@ -124,8 +160,6 @@ public class VertexQosReporterConfig implements
 	public int getOutputGateIndex() {
 		return this.outputGateIndex;
 	}
-	
-	
 
 	/**
 	 * Returns the inputGateID.
@@ -162,15 +196,20 @@ public class VertexQosReporterConfig implements
 	public String getName() {
 		return this.name;
 	}
-	
-	public QosVertex toQosVertex() {
-		return new QosVertex(this.vertexID, this.name, null, this.memberIndex);
+
+	public QosReporterID.Vertex getReporterID() {
+		return QosReporterID.forVertex(this.vertexID, this.inputGateID,
+				this.outputGateID);
 	}
-	
+
+	public QosVertex toQosVertex() {
+		return new QosVertex(this.vertexID, this.name, this.reporterInstance, this.memberIndex);
+	}
+
 	public QosGate toInputGate() {
 		return new QosGate(this.inputGateID, this.inputGateIndex);
 	}
-	
+
 	public QosGate toOutputGate() {
 		return new QosGate(this.outputGateID, this.outputGateIndex);
 	}
@@ -185,14 +224,23 @@ public class VertexQosReporterConfig implements
 	public void write(DataOutput out) throws IOException {
 		this.groupVertexID.write(out);
 		this.vertexID.write(out);
+		this.reporterInstance.write(out);
+		
 		out.writeInt(this.qosManagers.length);
 		for (InstanceConnectionInfo qosManager : this.qosManagers) {
 			qosManager.write(out);
 		}
+
 		out.writeInt(this.inputGateIndex);
-		this.inputGateID.write(out);
+		if (this.inputGateIndex != -1) {
+			this.inputGateID.write(out);
+		}
+
 		out.writeInt(this.outputGateIndex);
-		this.outputGateID.write(out);
+		if (this.outputGateIndex != -1) {
+			this.outputGateID.write(out);
+		}
+
 		out.writeInt(this.memberIndex);
 		out.writeUTF(this.name);
 	}
@@ -209,23 +257,27 @@ public class VertexQosReporterConfig implements
 		this.groupVertexID.read(in);
 		this.vertexID = new ExecutionVertexID();
 		this.vertexID.read(in);
+		this.reporterInstance = new InstanceConnectionInfo();
+		this.reporterInstance.read(in);
+		
 		this.qosManagers = new InstanceConnectionInfo[in.readInt()];
 		for (int i = 0; i < this.qosManagers.length; i++) {
 			this.qosManagers[i] = new InstanceConnectionInfo();
 			this.qosManagers[i].read(in);
 		}
 		this.inputGateIndex = in.readInt();
-		this.inputGateID = new GateID();
-		this.inputGateID.read(in);
+		if (this.inputGateIndex != -1) {
+			this.inputGateID = new GateID();
+			this.inputGateID.read(in);
+		}
+
 		this.outputGateIndex = in.readInt();
-		this.outputGateID = new GateID();
-		this.outputGateID.read(in);
+		if (this.outputGateIndex != -1) {
+			this.outputGateID = new GateID();
+			this.outputGateID.read(in);
+		}
+
 		this.memberIndex = in.readInt();
 		this.name = in.readUTF();
-	}
-
-	public QosReporterID getReporterID() {
-		return QosReporterID.forVertex(this.vertexID, this.inputGateID,
-				this.outputGateID);
 	}
 }

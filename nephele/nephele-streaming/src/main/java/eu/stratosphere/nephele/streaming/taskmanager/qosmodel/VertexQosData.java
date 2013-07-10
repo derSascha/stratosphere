@@ -9,8 +9,6 @@ public class VertexQosData {
 	 */
 	private QosStatistic[][] qosStatistics;
 
-	private QosStatistic latencyStatistics;
-
 	private final static int DEFAULT_NO_OF_STATISTICS_ENTRIES = 4;
 
 	public VertexQosData(QosVertex vertex) {
@@ -22,15 +20,17 @@ public class VertexQosData {
 		return this.vertex;
 	}
 
-	public double getLatencyInMillis() {
-		if (this.latencyStatistics.hasValues()) {
-			return this.latencyStatistics.getArithmeticMean();
+	public double getLatencyInMillis(int inputGateIndex, int outputGateIndex) {
+		QosStatistic statistic = this.qosStatistics[inputGateIndex][outputGateIndex];
+		
+		if (statistic.hasValues()) {
+			return statistic.getArithmeticMean();
 		}
 		return -1;
 	}
 
-	public boolean isActive() {
-		return this.latencyStatistics.hasValues();
+	public boolean isActive(int inputGateIndex, int outputGateIndex) {
+		return this.qosStatistics[inputGateIndex][outputGateIndex].hasValues();
 	}
 
 	public void prepareForReporsOnGateCombination(int inputGateIndex,
@@ -63,11 +63,5 @@ public class VertexQosData {
 
 		QosValue value = new QosValue(latencyInMillis, timestamp);
 		this.qosStatistics[inputGateIndex][outputGateIndex].addValue(value);
-	}
-
-	@Override
-	public String toString() {
-		return String.format("VertexLatency[%s|%.03f]", this.vertex.toString(),
-				this.getLatencyInMillis());
 	}
 }

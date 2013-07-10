@@ -102,7 +102,7 @@ public class QosReport extends AbstractStreamMessage {
 		return this.vertexReporterAnnouncements;
 	}
 
-	public void announceEdgeQosReporter(EdgeQosReporterConfig edgeReporter) {
+	public void addEdgeQosReporterAnnouncement(EdgeQosReporterConfig edgeReporter) {
 		if (this.edgeReporterAnnouncements == null) {
 			this.edgeReporterAnnouncements = new LinkedList<EdgeQosReporterConfig>();
 		}

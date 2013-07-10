@@ -18,6 +18,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
@@ -44,6 +46,18 @@ public abstract class QosReporterID implements IOReadableWritable {
 		public Vertex() {
 		}
 
+		/**
+		 * Creates a new Qos reporter ID. Initializes Vertex.
+		 * 
+		 * @param vertexID
+		 *            The ID of the vertex that is reported on.
+		 * @param inputGateID
+		 *            The ID of vertex's input gate that is reported on. May be
+		 *            null for dummy reporters.
+		 * @param outputGateID
+		 *            The ID of vertex's output gate that is reported on. May be
+		 *            null for dummy reporters.
+		 */
 		public Vertex(ExecutionVertexID vertexID, GateID inputGateID,
 				GateID outputGateID) {
 
@@ -81,9 +95,15 @@ public abstract class QosReporterID implements IOReadableWritable {
 		}
 
 		private void precomputeHash() {
-			this.precomputedHash = (this.vertexID.hashCode()
-					^ this.inputGateID.hashCode() ^ this.outputGateID
-					.hashCode());
+			this.precomputedHash = this.vertexID.hashCode();
+
+			if (this.inputGateID != null) {
+				this.precomputedHash ^= this.inputGateID.hashCode();
+			}
+
+			if (this.outputGateID != null) {
+				this.precomputedHash ^= this.outputGateID.hashCode();
+			}
 		}
 
 		/*
@@ -96,8 +116,29 @@ public abstract class QosReporterID implements IOReadableWritable {
 		@Override
 		public void write(DataOutput out) throws IOException {
 			this.vertexID.write(out);
-			this.inputGateID.write(out);
-			this.outputGateID.write(out);
+
+			byte dummyIndicatorByte = 0;
+			if (this.inputGateID != null) {
+				dummyIndicatorByte |= 0x01;
+			}
+
+			if (this.outputGateID != null) {
+				dummyIndicatorByte |= 0x02;
+			}
+
+			out.writeByte(dummyIndicatorByte);
+
+			if (this.inputGateID != null) {
+				this.inputGateID.write(out);
+			}
+
+			if (this.outputGateID != null) {
+				this.outputGateID.write(out);
+			}
+		}
+
+		public boolean isDummy() {
+			return this.inputGateID == null || this.outputGateID == null;
 		}
 
 		/*
@@ -110,10 +151,18 @@ public abstract class QosReporterID implements IOReadableWritable {
 		public void read(DataInput in) throws IOException {
 			this.vertexID = new ExecutionVertexID();
 			this.vertexID.read(in);
-			this.inputGateID = new GateID();
-			this.inputGateID.read(in);
-			this.outputGateID = new GateID();
-			this.outputGateID.read(in);
+
+			byte dummyIndicatorByte = in.readByte();
+
+			if ((dummyIndicatorByte & 0x01) == 1) {
+				this.inputGateID = new GateID();
+				this.inputGateID.read(in);
+			}
+
+			if ((dummyIndicatorByte & 0x02) == 2) {
+				this.outputGateID = new GateID();
+				this.outputGateID.read(in);
+			}
 		}
 
 		/*
@@ -139,16 +188,12 @@ public abstract class QosReporterID implements IOReadableWritable {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
+
 			Vertex other = (Vertex) obj;
 
-			if (this.vertexID.equals(other.vertexID)
-					&& this.inputGateID.equals(other.inputGateID)
-					&& this.outputGateID.equals(other.outputGateID)) {
-
-				return true;
-			}
-
-			return false;
+			return new EqualsBuilder().append(this.vertexID, other.vertexID)
+					.append(this.inputGateID, other.inputGateID)
+					.append(this.outputGateID, other.outputGateID).isEquals();
 		}
 
 		@Override
@@ -254,7 +299,7 @@ public abstract class QosReporterID implements IOReadableWritable {
 
 	public static QosReporterID.Vertex forVertex(ExecutionVertexID vertexID,
 			GateID inputGateID, GateID outputGateID) {
-		
+
 		return new Vertex(vertexID, inputGateID, outputGateID);
 	}
 

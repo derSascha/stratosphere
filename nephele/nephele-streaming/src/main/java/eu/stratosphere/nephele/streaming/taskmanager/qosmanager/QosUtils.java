@@ -47,4 +47,76 @@ public class QosUtils {
 
 		return timestampInMillis - remainder;
 	}
+
+	// FIXME remove this code
+//	/**
+//	 * @return Returns true when the group edge of the given (member-level)
+//	 *         output gate is the last element of a constraint in the given Qos
+//	 *         graph.
+//	 */
+//	public static boolean isOnLastElementOfConstraint(QosGate outputGate,
+//			QosGraph qosGraph) {
+//
+//		if (!outputGate.isOutputGate()) {
+//			throw new RuntimeException(
+//					"You must only provide output gates to this method. This is a bug.");
+//		}
+//
+//		JobVertexID sourceGroupVertexID = outputGate.getVertex()
+//				.getGroupVertex().getJobVertexID();
+//
+//		JobVertexID targetGroupVertexID = outputGate.getVertex()
+//				.getGroupVertex().getForwardEdge(outputGate.getGateIndex())
+//				.getTargetVertex().getJobVertexID();
+//
+//		for (JobGraphLatencyConstraint constraint : qosGraph.getConstraints()) {
+//			SequenceElement<JobVertexID> lastSequenceElement = constraint
+//					.getSequence().getLast();
+//			if (lastSequenceElement.isEdge()
+//					&& lastSequenceElement.getSourceVertexID().equals(
+//							sourceGroupVertexID)
+//					&& lastSequenceElement.getTargetVertexID().equals(
+//							targetGroupVertexID)) {
+//				return true;
+//			}
+//		}
+//
+//		return false;
+//	}
+//
+//	/**
+//	 * @return Returns true when the group edge of the given (member-level)
+//	 *         input gate is the first element of a constraint in the given Qos
+//	 *         graph.
+//	 */
+//	public static boolean isOnFirstElementOfConstraint(QosGate inputGate,
+//			QosGraph qosGraph) {
+//
+//		if (!inputGate.isInputGate()) {
+//			throw new RuntimeException(
+//					"You must only provide input gates to this method. This is a bug.");
+//		}
+//
+//		JobVertexID targetGroupVertexID = inputGate.getVertex()
+//				.getGroupVertex().getJobVertexID();
+//
+//		JobVertexID sourceGroupVertexID = inputGate.getVertex()
+//				.getGroupVertex().getBackwardEdge(inputGate.getGateIndex())
+//				.getSourceVertex().getJobVertexID();
+//
+//		for (JobGraphLatencyConstraint constraint : qosGraph.getConstraints()) {
+//			SequenceElement<JobVertexID> firstSequenceElement = constraint
+//					.getSequence().getFirst();
+//			if (firstSequenceElement.isEdge()
+//					&& firstSequenceElement.getSourceVertexID().equals(
+//							sourceGroupVertexID)
+//					&& firstSequenceElement.getTargetVertexID().equals(
+//							targetGroupVertexID)) {
+//				return true;
+//			}
+//		}
+//
+//		return false;
+//	}
+
 }

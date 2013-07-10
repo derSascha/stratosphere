@@ -67,25 +67,14 @@ public class QosModel {
 		SHALLOW,
 
 		/**
-		 * If the Qos model is ready but incomplete, it means that the internal
-		 * Qos graph does contain group vertices, and each group vertex has at
-		 * least one member vertex. However, there are still buffered
-		 * vertex/edge announcements that cannot be added to the graph. This can
-		 * happen two cases: First, the Qos graph may not yet contain all group
-		 * vertices necessary to process buffered vertex announcements. Second,
-		 * the required source or target vertex of an edge is not yet part of
-		 * the Qos graph. In either case, we can have buffered vertex/edge
-		 * announcements that cannot be added to the Qos graph.
+		 * If the Qos model is ready, it means that the internal Qos graph does
+		 * contain group vertices, and each group vertex has at least one member
+		 * vertex. A transition back to SHALLOW is possible, when new shallow
+		 * group vertices are merged into the Qos graph. Members may still be
+		 * added by vertex/edge announcements piggybacked inside of Qos reports
+		 * at any time.
 		 */
-		READY_BUT_INCOMPLETE,
-
-		/**
-		 * If the Qos model is ready and seemingly complete, it means that the
-		 * internal Qos graph does contain group vertices, each group vertex has
-		 * at least one member vertex and there no buffered vertex/edge
-		 * announcements that cannot be added to the graph.
-		 */
-		READY_AND_SEEMS_COMPLETE
+		READY
 	}
 
 	private State state;
@@ -119,9 +108,9 @@ public class QosModel {
 	 * All Qos edges of the Qos graph mapped by their source channel ID.
 	 */
 	private HashMap<ChannelID, QosEdge> edgeBySourceChannelID;
-	
+
 	private HashMap<LatencyConstraintID, QosLogger> qosLoggers;
-	
+
 	public QosModel(JobID jobID) {
 		this.state = State.EMPTY;
 		this.announcementBuffer = new QosReport(jobID);
@@ -142,8 +131,7 @@ public class QosModel {
 	}
 
 	public boolean isReady() {
-		return this.state == State.READY_BUT_INCOMPLETE
-				|| this.state == State.READY_AND_SEEMS_COMPLETE;
+		return this.state == State.READY;
 	}
 
 	public boolean isEmpty() {
@@ -156,56 +144,47 @@ public class QosModel {
 
 	public void processQosReport(QosReport report) {
 		switch (this.state) {
-		case READY_AND_SEEMS_COMPLETE:
-			processQosRecords(report);
-			if (report.hasAnnouncements()) {
-				processOrBufferAnnouncements(report);
-				if (this.announcementBuffer.hasAnnouncements()) {
-					this.state = State.READY_BUT_INCOMPLETE;
-				}
+		case READY:
+			if (report.hasAnnouncements()
+					|| this.announcementBuffer.hasAnnouncements()) {
+				bufferAndTryToProcessAnnouncements(report);
 			}
-			break;
-		case READY_BUT_INCOMPLETE:
-			processOrBufferAnnouncements(report);
 			processQosRecords(report);
-			if (!this.announcementBuffer.hasAnnouncements()) {
-				this.state = State.READY_AND_SEEMS_COMPLETE;
-			}
 			break;
 		case SHALLOW:
-			processOrBufferAnnouncements(report);
-			tryToProcessBufferedAnnouncements();
+			bufferAndTryToProcessAnnouncements(report);
 			break;
 		case EMPTY:
 			bufferAnnouncements(report);
 			break;
 		}
 	}
-	
-	public void processStreamChainAnnounce(StreamChainAnnounce announce) {
-		
-		QosVertex currentVertex = this.vertexByID.get(announce.getChainBegin().getVertexID());
 
-		while (!currentVertex.getID().equals(announce.getChainEnd().getVertexID())) {
-			
-			if(currentVertex.getGroupVertex().getNumberOfOutputGates() != 1) {
-				throw new RuntimeException("Cannot chain task that has more than one output gate");
+	public void processStreamChainAnnounce(StreamChainAnnounce announce) {
+
+		QosVertex currentVertex = this.vertexByID.get(announce.getChainBegin()
+				.getVertexID());
+
+		while (!currentVertex.getID().equals(
+				announce.getChainEnd().getVertexID())) {
+
+			if (currentVertex.getGroupVertex().getNumberOfOutputGates() != 1) {
+				throw new RuntimeException(
+						"Cannot chain task that has more than one output gate");
 			}
 
 			if (currentVertex.getGroupVertex().getForwardEdge(0)
 					.getDistributionPattern() != DistributionPattern.POINTWISE) {
-				
+
 				throw new RuntimeException(
 						"Cannot chain task with non-POINTIWSE distribution pattern.");
 			}
-			
+
 			QosEdge forwardEdge = currentVertex.getOutputGate(0).getEdge(0);
 			forwardEdge.getQosData().setIsInChain(true);
 			currentVertex = forwardEdge.getInputGate().getVertex();
 		}
 	}
-	
-	
 
 	private void processQosRecords(QosReport report) {
 		long now = System.currentTimeMillis();
@@ -263,7 +242,7 @@ public class QosModel {
 		}
 	}
 
-	private void processOrBufferAnnouncements(QosReport report) {
+	private void bufferAndTryToProcessAnnouncements(QosReport report) {
 		bufferAnnouncements(report);
 		tryToProcessBufferedAnnouncements();
 	}
@@ -275,7 +254,7 @@ public class QosModel {
 		if (this.qosGraph.isShallow()) {
 			this.state = State.SHALLOW;
 		} else {
-			this.state = State.READY_BUT_INCOMPLETE;
+			this.state = State.READY;
 		}
 	}
 
@@ -305,8 +284,8 @@ public class QosModel {
 
 		if (this.edgeBySourceChannelID.get(toProcess.getSourceChannelID()) == null) {
 			QosEdge edge = toProcess.toQosEdge();
-			outputGate.addEdge(edge);
-			inputGate.addEdge(edge);
+			edge.setOutputGate(outputGate);
+			edge.setInputGate(inputGate);
 			edge.setQosData(new EdgeQosData(edge));
 			this.edgeBySourceChannelID.put(edge.getSourceChannelID(), edge);
 		}
@@ -401,27 +380,33 @@ public class QosModel {
 			List<EdgeQosReporterConfig> edgeQosReporterAnnouncements) {
 
 		for (EdgeQosReporterConfig reporterConfig : edgeQosReporterAnnouncements) {
-			this.announcementBuffer.announceEdgeQosReporter(reporterConfig);
+			this.announcementBuffer
+					.addEdgeQosReporterAnnouncement(reporterConfig);
 		}
 	}
 
 	public void findQosConstraintViolations(
 			QosConstraintViolationListener listener) {
-		
-		for(JobGraphLatencyConstraint constraint : this.qosGraph.getConstraints()) {
+
+		for (JobGraphLatencyConstraint constraint : this.qosGraph
+				.getConstraints()) {
 			QosLogger logger = this.qosLoggers.get(constraint.getID());
-			if(logger == null) {
+			if (logger == null) {
 				try {
-					logger = new QosLogger(constraint.getID(), this.qosGraph, StreamTaskManagerPlugin
-							.getPluginConfiguration().getLong(
-									BufferSizeManager.QOSMANAGER_ADJUSTMENTINTERVAL_KEY,
-									BufferSizeManager.DEFAULT_ADJUSTMENTINTERVAL));
+					logger = new QosLogger(
+							constraint.getID(),
+							this.qosGraph,
+							StreamTaskManagerPlugin
+									.getPluginConfiguration()
+									.getLong(
+											BufferSizeManager.QOSMANAGER_ADJUSTMENTINTERVAL_KEY,
+											BufferSizeManager.DEFAULT_ADJUSTMENTINTERVAL));
 					this.qosLoggers.put(constraint.getID(), logger);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
-			
+
 			QosConstraintViolationFinder constraintViolationFinder = new QosConstraintViolationFinder(
 					constraint.getID(), this.qosGraph, listener, logger);
 			constraintViolationFinder.findSequencesWithViolatedQosConstraint();

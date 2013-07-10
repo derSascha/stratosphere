@@ -24,7 +24,7 @@ import eu.stratosphere.nephele.streaming.util.SparseDelegateIterable;
  * 
  */
 public class QosGate {
-	
+
 	private GateID gateID;
 
 	private int gateIndex;
@@ -40,7 +40,7 @@ public class QosGate {
 		INPUT_GATE, OUTPUT_GATE;
 	}
 
-	private GateType isOutputGate;
+	private GateType gateType;
 
 	private int noOfEdges;
 
@@ -68,12 +68,24 @@ public class QosGate {
 	}
 
 	public void setGateType(GateType gateType) {
-		this.isOutputGate = gateType;
+		this.gateType = gateType;
+	}
+
+	public GateType getGateType() {
+		return this.gateType;
+	}
+
+	public boolean isInputGate() {
+		return this.gateType == GateType.INPUT_GATE;
+	}
+
+	public boolean isOutputGate() {
+		return this.gateType == GateType.OUTPUT_GATE;
 	}
 
 	public void addEdge(QosEdge edge) {
-		int edgeIndex = (this.isOutputGate == GateType.OUTPUT_GATE) ? edge
-				.getOutputGateEdgeIndex() : edge.getInputGateEdgeIndex();
+		int edgeIndex = isOutputGate() ? edge.getOutputGateEdgeIndex() : edge
+				.getInputGateEdgeIndex();
 
 		if (edgeIndex >= this.edges.size()) {
 			fillWithNulls(this.edges, edgeIndex + 1);
@@ -114,7 +126,7 @@ public class QosGate {
 	public QosVertex getVertex() {
 		return this.vertex;
 	}
-	
+
 	public QosGate cloneWithoutEdgesAndVertex() {
 		return new QosGate(this.gateID, this.gateIndex);
 	}

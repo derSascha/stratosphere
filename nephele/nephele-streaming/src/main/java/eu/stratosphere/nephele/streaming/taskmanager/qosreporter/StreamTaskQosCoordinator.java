@@ -30,6 +30,7 @@ import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainActi
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
+import eu.stratosphere.nephele.streaming.message.qosreport.DummyVertexReporterActivity;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.QosReportingListenerHelper;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
@@ -130,16 +131,24 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 					this.vertexID, this);
 		} else {
 			for (VertexQosReporterConfig reporterConfig : vertexReporterConfigs) {
-				installVertexLatencyReporter(reporterConfig);
+				if (reporterConfig.isDummy()) {
+					announceDummyReporter(reporterConfig.getReporterID());
+				} else {
+					installVertexLatencyReporter(reporterConfig);
+				}
 			}
 		}
+	}
+
+	private void announceDummyReporter(QosReporterID.Vertex reporterID) {
+		this.reporterThread.addToNextReport(new DummyVertexReporterActivity(
+				reporterID));
 	}
 
 	private void installVertexLatencyReporter(
 			VertexQosReporterConfig reporterConfig) {
 
-		QosReporterID.Vertex reporterID = (QosReporterID.Vertex) reporterConfig
-				.getReporterID();
+		QosReporterID.Vertex reporterID = reporterConfig.getReporterID();
 
 		if (this.vertexLatencyManager.containsReporter(reporterID)) {
 			return;
@@ -289,11 +298,12 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 			ChannelID sourceChannelID) {
 
 		for (int i = 0; i < this.taskEnvironment.getNumberOfOutputGates(); i++) {
-			AbstractOutputChannel<?> channel = this.taskEnvironment.getOutputGate(i).getOutputChannel(sourceChannelID);
-			
-			if(channel != null) {
+			AbstractOutputChannel<?> channel = this.taskEnvironment
+					.getOutputGate(i).getOutputChannel(sourceChannelID);
+
+			if (channel != null) {
 				return (AbstractByteBufferedOutputChannel<?>) channel;
-			}			
+			}
 		}
 
 		return null;
@@ -309,7 +319,11 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	 */
 	@Override
 	public void newVertexQosReporter(VertexQosReporterConfig reporterConfig) {
-		installVertexLatencyReporter(reporterConfig);
+		if (reporterConfig.isDummy()) {
+			announceDummyReporter(reporterConfig.getReporterID());
+		} else {
+			installVertexLatencyReporter(reporterConfig);
+		}
 	}
 
 	/*

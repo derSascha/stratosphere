@@ -18,6 +18,7 @@ import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAc
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.qosreport.AbstractQosReportRecord;
+import eu.stratosphere.nephele.streaming.message.qosreport.DummyVertexReporterActivity;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
@@ -66,7 +67,7 @@ public class QosReportForwarderThread extends Thread {
 
 	private final ConcurrentHashMap<QosReporterID, Boolean> reporterActivityMap;
 
-	private final LinkedBlockingQueue<AbstractQosReportRecord> pendingProfilingRecords;
+	private final LinkedBlockingQueue<AbstractQosReportRecord> pendingReportRecords;
 
 	private volatile boolean started;
 
@@ -154,7 +155,7 @@ public class QosReportForwarderThread extends Thread {
 		this.reportByQosManager = new ConcurrentHashMap<InstanceConnectionInfo, AggregatedReport>();
 		this.reportsByReporter = new ConcurrentHashMap<QosReporterID, Set<AggregatedReport>>();
 		this.reporterActivityMap = new ConcurrentHashMap<QosReporterID, Boolean>();
-		this.pendingProfilingRecords = new LinkedBlockingQueue<AbstractQosReportRecord>();
+		this.pendingReportRecords = new LinkedBlockingQueue<AbstractQosReportRecord>();
 		this.started = false;
 	}
 
@@ -164,9 +165,9 @@ public class QosReportForwarderThread extends Thread {
 			while (!interrupted()) {
 
 				AggregatedReport currentReport = getCurrentReport();
-				this.processPendingQosData();
+				this.processPendingReportRecords();
 				this.sleepUntilReportDue(currentReport);
-				this.processPendingQosData();
+				this.processPendingReportRecords();
 
 				if (!currentReport.isEmpty()) {
 					if (isLocalReport(currentReport)) {
@@ -230,23 +231,35 @@ public class QosReportForwarderThread extends Thread {
 	private void cleanUp() {
 		this.pendingReports = null;
 		this.reportByQosManager.clear();
-		this.pendingProfilingRecords.clear();
+		this.pendingReportRecords.clear();
 	}
 
 	private ArrayList<AbstractQosReportRecord> tmpRecords = new ArrayList<AbstractQosReportRecord>();
 
-	private void processPendingQosData() {
-		this.pendingProfilingRecords.drainTo(this.tmpRecords);
-		for (AbstractQosReportRecord profilingRecord : this.tmpRecords) {
-			if (profilingRecord instanceof EdgeLatency) {
-				this.processEdgeLatency((EdgeLatency) profilingRecord);
-			} else if (profilingRecord instanceof EdgeStatistics) {
-				this.processEdgeStatistics((EdgeStatistics) profilingRecord);
-			} else if (profilingRecord instanceof VertexLatency) {
-				this.processTaskLatency((VertexLatency) profilingRecord);
+	private void processPendingReportRecords() {
+		this.pendingReportRecords.drainTo(this.tmpRecords);
+		for (AbstractQosReportRecord record : this.tmpRecords) {
+			if (record instanceof EdgeLatency) {
+				this.processEdgeLatency((EdgeLatency) record);
+			} else if (record instanceof EdgeStatistics) {
+				this.processEdgeStatistics((EdgeStatistics) record);
+			} else if (record instanceof VertexLatency) {
+				this.processTaskLatency((VertexLatency) record);
+			} else if (record instanceof DummyVertexReporterActivity) {
+				this.processDummyVertexReporterActivity((DummyVertexReporterActivity) record);
 			}
 		}
 		this.tmpRecords.clear();
+	}
+
+	private void processDummyVertexReporterActivity(
+			DummyVertexReporterActivity record) {
+		
+		QosReporterID.Vertex reporterID = record.getReporterID();
+
+		if (this.reporterActivityMap.get(reporterID) != Boolean.TRUE) {
+			activateReporter(reporterID);
+		}
 	}
 
 	private Set<AggregatedReport> getReports(QosReporterID reporterID) {
@@ -312,7 +325,7 @@ public class QosReportForwarderThread extends Thread {
 
 		Set<AggregatedReport> reports = getReports(reporterID);
 		for (AggregatedReport report : reports) {
-			report.getReport().announceEdgeQosReporter(reporterConfig);
+			report.getReport().addEdgeQosReporterAnnouncement(reporterConfig);
 		}
 	}
 
@@ -430,8 +443,8 @@ public class QosReportForwarderThread extends Thread {
 		return newReport;
 	}
 
-	public void addToNextReport(AbstractQosReportRecord profilingRecord) {
-		this.pendingProfilingRecords.add(profilingRecord);
+	public void addToNextReport(AbstractQosReportRecord record) {
+		this.pendingReportRecords.add(record);
 	}
 
 	public void shutdown() {

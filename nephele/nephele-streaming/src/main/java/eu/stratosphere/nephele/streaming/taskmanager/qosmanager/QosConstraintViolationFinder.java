@@ -140,7 +140,9 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 	@Override
 	public boolean shallTraverseVertex(QosVertex vertex,
 			SequenceElement<JobVertexID> sequenceElement) {
-		return vertex.getQosData().isActive();
+		return vertex.getQosData().isActive(
+				sequenceElement.getInputGateIndex(),
+				sequenceElement.getOutputGateIndex());
 	}
 
 	/*
@@ -157,10 +159,13 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 			SequenceElement<JobVertexID> sequenceElem) {
 
 		int index = sequenceElem.getIndexInSequence();
+		int inputGateIndex = sequenceElem.getInputGateIndex();
+		int outputGateIndex = sequenceElem.getOutputGateIndex();
 		this.currentSequenceMembers.set(index, vertex);
-		this.memberLatencies[index] = vertex.getQosData().getLatencyInMillis();
+		this.memberLatencies[index] = vertex.getQosData().getLatencyInMillis(
+				inputGateIndex, outputGateIndex);
 
-		if (index == this.sequenceLength - 1) {
+		if (index + 1 == this.sequenceLength) {
 			handleFullSequence();
 		}
 	}
@@ -209,7 +214,7 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 		this.memberLatencies[index] = edge.getQosData()
 				.getChannelLatencyInMillis();
 
-		if (index == this.sequenceLength) {
+		if (index + 1 == this.sequenceLength) {
 			handleFullSequence();
 		}
 	}

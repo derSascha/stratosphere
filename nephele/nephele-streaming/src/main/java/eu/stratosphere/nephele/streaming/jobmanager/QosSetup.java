@@ -80,7 +80,7 @@ public class QosSetup {
 	}
 
 	private void computeReportersForManager(final QosManagerRole qosManager) {
-		JobGraphSequence sequence = qosManager.getQosGraph()
+		final JobGraphSequence sequence = qosManager.getQosGraph()
 				.getConstraintByID(qosManager.getConstraintID()).getSequence();
 
 		QosGraphTraversalListener listener = new QosGraphTraversalListener() {
@@ -94,13 +94,13 @@ public class QosSetup {
 			@Override
 			public void processQosEdge(QosEdge edge,
 					SequenceElement<JobVertexID> sequenceElem) {
-				addReportersForQosEdge(qosManager, edge);
+				addReportersForQosEdge(qosManager, edge, sequence, sequenceElem);
 			}
 		};
 
 		for (QosVertex anchorMember : qosManager.getMembersOnInstance()) {
-			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember, sequence,
-					listener);
+			QosGraphTraversal traverser = new QosGraphTraversal(anchorMember,
+					sequence, listener);
 			traverser.traverseForward();
 			traverser.traverseBackward(false, true);
 		}
@@ -120,7 +120,10 @@ public class QosSetup {
 				.addReporterRole(reporterRole);
 	}
 
-	private void addReportersForQosEdge(QosManagerRole qosManager, QosEdge edge) {
+	private void addReportersForQosEdge(QosManagerRole qosManager,
+			QosEdge edge, JobGraphSequence sequence,
+			SequenceElement<JobVertexID> sequenceElem) {
+
 		InstanceConnectionInfo srcReporterInstance = edge.getOutputGate()
 				.getVertex().getExecutingInstance();
 		InstanceConnectionInfo targetReporterInstance = edge.getInputGate()
@@ -132,6 +135,27 @@ public class QosSetup {
 				reporterRole);
 		getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
 				reporterRole);
+
+		// corner case: if we have a sequence that starts/ends with an edge
+		// we need to create dummy Qos reporters for the originating/destination
+		// member vertices of the edge. Dummy vertex reporters will not actually
+		// do any reporting, but need to be announced to the Qos manager so it
+		// can build a complete model of the Qos graph.
+		if (sequence.getLast() == sequenceElem) {
+			QosReporterRole dummyVertexReporter = new QosReporterRole(edge
+					.getInputGate().getVertex(),
+					sequenceElem.getInputGateIndex(), -1,
+					qosManager.getManagerInstance());
+			getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
+					dummyVertexReporter);
+		} else if (sequence.getFirst() == sequenceElem) {
+			QosReporterRole dummyVertexReporter = new QosReporterRole(edge
+					.getOutputGate().getVertex(), -1,
+					sequenceElem.getOutputGateIndex(),
+					qosManager.getManagerInstance());
+			getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
+					dummyVertexReporter);
+		}
 	}
 
 	private void createQosGraphs() {

@@ -73,7 +73,8 @@ public class QosManagerThread extends Thread {
 				}
 
 				long now = System.currentTimeMillis();
-				if (this.bufferSizeManager.isAdjustmentNecessary(now)) {
+				if (this.qosModel.isReady()
+						&& this.bufferSizeManager.isAdjustmentNecessary(now)) {
 
 					this.bufferSizeManager.adjustBufferSizes();
 

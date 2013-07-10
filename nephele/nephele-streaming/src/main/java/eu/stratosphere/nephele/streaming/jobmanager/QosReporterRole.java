@@ -19,6 +19,7 @@ import java.util.TreeSet;
 
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
@@ -43,27 +44,7 @@ public class QosReporterRole {
 
 	private QosEdge edge;
 	
-	public class ReporterRoleID {
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.lang.Object#hashCode()
-		 */
-		@Override
-		public int hashCode() {
-			return QosReporterRole.this.hashCode();
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.lang.Object#equals(java.lang.Object)
-		 */
-		@Override
-		public boolean equals(Object obj) {
-			return QosReporterRole.this.equals(obj);
-		}
-	}
+	private QosReporterID reporterID;
 
 	public QosReporterRole(QosVertex vertex, int inputGateIndex,
 			int outputGateIndex, InstanceConnectionInfo targetQosManager) {
@@ -73,6 +54,7 @@ public class QosReporterRole {
 		this.targetQosManagers.add(targetQosManager);
 		this.inputGateIndex = inputGateIndex;
 		this.outputGateIndex = outputGateIndex;
+		this.reporterID = createReporterRoleID();
 	}
 
 	public QosReporterRole(QosEdge edge, InstanceConnectionInfo targetQosManager) {
@@ -80,7 +62,21 @@ public class QosReporterRole {
 		this.action = ReportingAction.REPORT_CHANNEL_STATS;
 		this.edge = edge;
 		this.targetQosManagers.add(targetQosManager);
+		this.reporterID = createReporterRoleID();
 	}
+	
+	private QosReporterID createReporterRoleID() {
+		if (this.action == ReportingAction.REPORT_CHANNEL_STATS) {
+			return QosReporterID.forEdge(this.edge.getSourceChannelID());
+		}
+		return QosReporterID.forVertex(
+				this.vertex.getID(),
+				(this.inputGateIndex != -1) ? this.vertex.getInputGate(
+						this.inputGateIndex).getGateID() : null,
+				(this.outputGateIndex != -1) ? this.vertex.getOutputGate(
+						this.outputGateIndex).getGateID() : null);
+	}
+
 
 	public void mergeInto(QosReporterRole otherRole) {
 		if (!this.equals(otherRole)) {
@@ -142,55 +138,13 @@ public class QosReporterRole {
 	public QosEdge getEdge() {
 		return this.edge;
 	}
-	
-	public ReporterRoleID getReporterRoleID() {
-		return new ReporterRoleID();
-	}
 
-	/*
-	 * (non-Javadoc)
+	/**
+	 * Returns the reporterID.
 	 * 
-	 * @see java.lang.Object#hashCode()
+	 * @return the reporterID
 	 */
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((edge == null) ? 0 : edge.hashCode());
-		result = prime * result + inputGateIndex;
-		result = prime * result + outputGateIndex;
-		result = prime * result + ((vertex == null) ? 0 : vertex.hashCode());
-		return result;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		QosReporterRole other = (QosReporterRole) obj;
-		if (edge == null) {
-			if (other.edge != null)
-				return false;
-		} else if (!edge.equals(other.edge))
-			return false;
-		if (inputGateIndex != other.inputGateIndex)
-			return false;
-		if (outputGateIndex != other.outputGateIndex)
-			return false;
-		if (vertex == null) {
-			if (other.vertex != null)
-				return false;
-		} else if (!vertex.equals(other.vertex))
-			return false;
-		return true;
+	public QosReporterID getReporterID() {
+		return this.reporterID;
 	}
 }

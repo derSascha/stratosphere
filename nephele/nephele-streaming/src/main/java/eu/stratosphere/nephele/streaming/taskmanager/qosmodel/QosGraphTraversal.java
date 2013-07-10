@@ -220,7 +220,7 @@ public class QosGraphTraversal {
 	private void traverseForwardConditionalEdge(QosEdge edge,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque) {
 
-		if (this.traversalCondition.shallTraverseEdge(edge, sequenceDeque.getFirst())) {
+		if (!this.traversalCondition.shallTraverseEdge(edge, sequenceDeque.getFirst())) {
 			return;
 		}
 

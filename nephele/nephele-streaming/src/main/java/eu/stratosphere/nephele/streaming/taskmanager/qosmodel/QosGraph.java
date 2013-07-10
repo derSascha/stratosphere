@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import eu.stratosphere.nephele.io.DistributionPattern;
@@ -302,44 +301,21 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	public void merge(QosGraph graph) {
 		mergeVerticesAndEdges(graph);
-		recomputeStartVertices(graph);
-		recomputeEndVertices(graph);
+		recomputeStartAndEndVertices();
 		this.constraints.putAll(graph.constraints);
 	}
 
-	private void recomputeStartVertices(QosGraph mergedGraph) {
-		Iterator<QosGroupVertex> startVertexIter = this.startVertices
-				.iterator();
-		while (startVertexIter.hasNext()) {
-			if (startVertexIter.next().getNumberOfInputGates() > 0) {
-				startVertexIter.remove();
-			}
-		}
+	private void recomputeStartAndEndVertices() {
+		this.startVertices.clear();
+		this.endVertices.clear();
 
-		startVertexIter = mergedGraph.startVertices.iterator();
-		while (startVertexIter.hasNext()) {
-			QosGroupVertex vertex = this.vertexByID.get(startVertexIter.next()
-					.getJobVertexID());
-			if (vertex.getNumberOfInputGates() == 0) {
-				this.startVertices.add(vertex);
+		for (QosGroupVertex groupVertex : this.vertexByID.values()) {
+			if (groupVertex.getNumberOfInputGates() == 0) {
+				this.startVertices.add(groupVertex);
 			}
-		}
-	}
 
-	private void recomputeEndVertices(QosGraph mergedGraph) {
-		Iterator<QosGroupVertex> endVertexIter = this.endVertices.iterator();
-		while (endVertexIter.hasNext()) {
-			if (endVertexIter.next().getNumberOfOutputGates() > 0) {
-				endVertexIter.remove();
-			}
-		}
-
-		endVertexIter = mergedGraph.endVertices.iterator();
-		while (endVertexIter.hasNext()) {
-			QosGroupVertex vertex = this.vertexByID.get(endVertexIter.next()
-					.getJobVertexID());
-			if (vertex.getNumberOfOutputGates() == 0) {
-				this.endVertices.add(vertex);
+			if (groupVertex.getNumberOfOutputGates() == 0) {
+				this.endVertices.add(groupVertex);
 			}
 		}
 	}
@@ -498,6 +474,7 @@ public class QosGraph implements IOReadableWritable {
 		readConstraints(in);
 		readGroupVertices(in);
 		readGroupEdges(in);
+		recomputeStartAndEndVertices();
 	}
 
 	private void readConstraints(DataInput in) throws IOException {

@@ -20,7 +20,6 @@ import java.util.HashMap;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
-import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReporterRoleID;
 import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReportingAction;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
@@ -28,6 +27,7 @@ import eu.stratosphere.nephele.streaming.message.action.QosManagerConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
+import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
@@ -40,12 +40,12 @@ public class InstanceQosRoles {
 
 	private HashMap<LatencyConstraintID, QosManagerRole> managerRoles;
 
-	private HashMap<ReporterRoleID, QosReporterRole> reporterRoles;
+	private HashMap<QosReporterID, QosReporterRole> reporterRoles;
 
 	public InstanceQosRoles(InstanceConnectionInfo connectionInfo) {
 		this.connectionInfo = connectionInfo;
 		this.managerRoles = new HashMap<LatencyConstraintID, QosManagerRole>();
-		this.reporterRoles = new HashMap<ReporterRoleID, QosReporterRole>();
+		this.reporterRoles = new HashMap<QosReporterID, QosReporterRole>();
 	}
 
 	public InstanceConnectionInfo getConnectionInfo() {
@@ -62,11 +62,11 @@ public class InstanceQosRoles {
 	}
 
 	public void addReporterRole(QosReporterRole reporterRole) {
-		ReporterRoleID reporterRoleID = reporterRole.getReporterRoleID();
-		if (this.reporterRoles.containsKey(reporterRoleID)) {
-			this.reporterRoles.get(reporterRoleID).mergeInto(reporterRole);
+		QosReporterID reporterID = reporterRole.getReporterID();
+		if (this.reporterRoles.containsKey(reporterID)) {
+			this.reporterRoles.get(reporterID).mergeInto(reporterRole);
 		} else {
-			this.reporterRoles.put(reporterRoleID, reporterRole);
+			this.reporterRoles.put(reporterID, reporterRole);
 		}
 	}
 
@@ -89,8 +89,8 @@ public class InstanceQosRoles {
 			}
 		}
 		deploymentAction.setQosManager(new QosManagerConfig(shallowQosGraph));
+		
 		for (QosReporterRole reporterRole : this.reporterRoles.values()) {
-
 			if (reporterRole.getAction() == ReportingAction.REPORT_CHANNEL_STATS) {
 				deploymentAction
 						.addEdgeQosReporter(toEdgeQosReporterConfig(reporterRole));
@@ -115,12 +115,16 @@ public class InstanceQosRoles {
 		int outputGateIndex = reporterRole.getOutputGateIndex();
 
 		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
-				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
-				managers, inputGateIndex, (inputGateIndex != -1) ? vertex
-						.getInputGate(inputGateIndex).getGateID() : null,
-				outputGateIndex, (inputGateIndex != -1) ? vertex.getOutputGate(
-						outputGateIndex).getGateID() : null,
-				vertex.getMemberIndex(), vertex.getName());
+				vertex.getGroupVertex().getJobVertexID(), 
+				vertex.getID(),
+				vertex.getExecutingInstance(),
+				managers, 
+				inputGateIndex, 
+				(inputGateIndex != -1) ? vertex.getInputGate(inputGateIndex).getGateID() : null,
+				outputGateIndex, 
+				(outputGateIndex != -1) ? vertex.getOutputGate(outputGateIndex).getGateID() : null,
+				vertex.getMemberIndex(), 
+				vertex.getName());
 
 		return vertexReporter;
 	}
