@@ -142,7 +142,7 @@ public class QosLogger {
 			this.minTotalLatency = sequenceLatency;
 		}
 
-		if (sequenceLatency < this.maxTotalLatency) {
+		if (sequenceLatency > this.maxTotalLatency) {
 			this.maxTotalLatency = sequenceLatency;
 		}
 
@@ -166,6 +166,7 @@ public class QosLogger {
 		builder.append('\n');
 		this.writer.write(builder.toString());
 		this.writer.flush();
+		
 		this.resetCounters();
 	}
 

@@ -36,22 +36,24 @@ public class VertexLatencyReportManager {
 
 	private class VertexQosReporter {
 
-		public QosReporterID.Vertex reporterID;
+		private QosReporterID.Vertex reporterID;
 
-		public int inputGateReceiveCounter;
+		private int inputGateReceiveCounter;
 
-		public int outputGateEmitCounter;
+		private int outputGateEmitCounter;
 
-		public long inputGateTimeOfFirstReceive;
+		private long inputGateTimeOfFirstReceive;
 
-		public int reportingProbeInterval;
+		private int reportingProbeInterval;
 
-		public int currentReportingProbeCounter;
+		private int currentReportingProbeCounter;
 
-		public long timeOfNextReport;
+		private long timeOfNextReport;
 
 		public VertexQosReporter(QosReporterID.Vertex reporterID) {
 			this.reporterID = reporterID;
+			this.reportingProbeInterval = VertexLatencyReportManager.this.reportForwarder
+					.getConfigCenter().getTaggingInterval();
 		}
 
 		public void sendReportIfDue() {
@@ -91,6 +93,9 @@ public class VertexLatencyReportManager {
 		}
 
 		public void recordReceived() {
+			if(this.inputGateReceiveCounter == 0) {
+				this.inputGateTimeOfFirstReceive = System.currentTimeMillis();
+			}
 			this.inputGateReceiveCounter++;
 		}
 
