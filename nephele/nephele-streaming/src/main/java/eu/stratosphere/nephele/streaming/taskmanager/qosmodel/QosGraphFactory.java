@@ -148,9 +148,12 @@ public class QosGraphFactory {
 								executionEdge.getInputGate().getVertex()
 										.getIndexInVertexGroup());
 
-				QosGate qosInputGate = new QosGate(executionEdge.getInputGate().getGateID(), 
-						qosGroupEdge.getInputGateIndex());
-				targetVertex.setInputGate(qosInputGate);
+				QosGate qosInputGate = targetVertex.getInputGate(qosGroupEdge.getInputGateIndex());
+				if(qosInputGate == null) {
+					qosInputGate = new QosGate(executionEdge.getInputGate()
+							.getGateID(), qosGroupEdge.getInputGateIndex());
+					targetVertex.setInputGate(qosInputGate);					
+				}
 
 				qosEdge.setOutputGate(qosOutputGate);
 				qosEdge.setInputGate(qosInputGate);
