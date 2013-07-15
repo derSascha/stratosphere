@@ -181,6 +181,8 @@ public class QosReport extends AbstractStreamMessage {
 			for (EdgeQosReporterConfig reporterConfig : this.edgeReporterAnnouncements) {
 				reporterConfig.write(out);
 			}
+		} else {
+			out.writeInt(0);
 		}
 	}
 
@@ -191,6 +193,8 @@ public class QosReport extends AbstractStreamMessage {
 			for (VertexQosReporterConfig reporterConfig : this.vertexReporterAnnouncements) {
 				reporterConfig.write(out);
 			}
+		} else {
+			out.writeInt(0);
 		}
 	}
 
