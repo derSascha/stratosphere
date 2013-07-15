@@ -79,7 +79,7 @@ public class QosReporterRole {
 
 
 	public void mergeInto(QosReporterRole otherRole) {
-		if (!this.equals(otherRole)) {
+		if (!this.reporterID.equals(otherRole.reporterID)) {
 			throw new RuntimeException("Cannot merge unequal QosReporter roles");
 		}
 		this.targetQosManagers.addAll(otherRole.targetQosManagers);
