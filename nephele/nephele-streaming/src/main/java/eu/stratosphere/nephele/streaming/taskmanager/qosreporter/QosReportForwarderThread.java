@@ -383,7 +383,7 @@ public class QosReportForwarderThread extends Thread {
 
 		LOG.info(String.format(
 				"Registered Qos reports to %d QosManagers for QosReporter %s",
-				edgeReports.size(), reporterID.toString()));
+				edgeReports.size(), edgeReporter.getName()));
 	}
 
 	private void registerVertexQosReporter(

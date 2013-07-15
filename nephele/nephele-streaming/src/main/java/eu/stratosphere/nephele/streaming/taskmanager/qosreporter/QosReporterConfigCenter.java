@@ -134,7 +134,8 @@ public class QosReporterConfigCenter {
 				oldReporter.getOutputGateID(),
 				oldReporter.getInputGateID(),
 				oldReporter.getOutputGateEdgeIndex(),
-				oldReporter.getInputGateEdgeIndex());
+				oldReporter.getInputGateEdgeIndex(),
+				oldReporter.getName());
 	}
 
 	public synchronized Set<VertexQosReporterConfig> getVertexQosReporters(

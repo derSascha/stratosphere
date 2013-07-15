@@ -44,6 +44,8 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	private int outputGateEdgeIndex;
 
 	private int inputGateEdgeIndex;
+	
+	private String name;
 
 	public EdgeQosReporterConfig() {
 	}
@@ -63,7 +65,8 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	public EdgeQosReporterConfig(ChannelID sourceChannelID,
 			ChannelID targetChannelID, InstanceConnectionInfo[] qosManagers,
 			GateID outputGateID,
-			GateID inputGateID, int outputGateEdgeIndex, int inputGateEdgeIndex) {
+			GateID inputGateID, int outputGateEdgeIndex, int inputGateEdgeIndex,
+			String name) {
 
 		this.sourceChannelID = sourceChannelID;
 		this.targetChannelID = targetChannelID;
@@ -72,6 +75,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 		this.inputGateID = inputGateID;
 		this.outputGateEdgeIndex = outputGateEdgeIndex;
 		this.inputGateEdgeIndex = inputGateEdgeIndex;
+		this.name = name;
 	}
 
 	/**
@@ -137,6 +141,15 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 		return this.inputGateEdgeIndex;
 	}
 	
+	/**
+	 * Returns the name.
+	 * 
+	 * @return the name
+	 */
+	public String getName() {
+		return this.name;
+	}
+
 	public QosEdge toQosEdge() {
 		return new QosEdge(this.sourceChannelID, this.targetChannelID,
 				this.outputGateEdgeIndex, this.inputGateEdgeIndex);
@@ -160,6 +173,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 		this.inputGateID.write(out);
 		out.writeInt(this.outputGateEdgeIndex);
 		out.writeInt(this.inputGateEdgeIndex);
+		out.writeUTF(this.name);
 	}
 
 	/*
@@ -185,6 +199,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 		this.inputGateID.read(in);
 		this.outputGateEdgeIndex = in.readInt();
 		this.inputGateEdgeIndex = in.readInt();
+		this.name = in.readUTF();
 	}
 
 	public QosReporterID getReporterID() {

@@ -141,7 +141,7 @@ public class InstanceQosRoles {
 				edge.getSourceChannelID(), edge.getTargetChannelID(), managers,
 				edge.getOutputGate().getGateID(), edge.getInputGate()
 						.getGateID(), edge.getOutputGateEdgeIndex(),
-				edge.getInputGateEdgeIndex());
+				edge.getInputGateEdgeIndex(), edge.toString());
 
 		return edgeReporter;
 	}
