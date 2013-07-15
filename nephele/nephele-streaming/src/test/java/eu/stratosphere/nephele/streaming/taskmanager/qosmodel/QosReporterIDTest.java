@@ -25,10 +25,10 @@ import eu.stratosphere.nephele.io.channels.ChannelID;
 
 
 /**
- * @author bjoern
+ * @author Bjoern Lohrmann
  *
  */
-public class QosReportIDTest {
+public class QosReporterIDTest {
 	
 	@Test
 	public void testReportIDVertex() {
