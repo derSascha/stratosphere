@@ -78,18 +78,10 @@ public class InstanceQosRoles {
 		DeployInstanceQosRolesAction deploymentAction = new DeployInstanceQosRolesAction(
 				jobID, this.connectionInfo);
 
-		QosGraph shallowQosGraph = null;
-		for (QosManagerRole managerRole : this.managerRoles.values()) {
-			if (shallowQosGraph == null) {
-				shallowQosGraph = managerRole.getQosGraph()
-						.cloneWithoutMembers();
-			} else {
-				shallowQosGraph.merge(managerRole.getQosGraph()
-						.cloneWithoutMembers());
-			}
+		if (!this.managerRoles.isEmpty()) {
+			addQosManagerConfig(deploymentAction);
 		}
-		deploymentAction.setQosManager(new QosManagerConfig(shallowQosGraph));
-		
+
 		for (QosReporterRole reporterRole : this.reporterRoles.values()) {
 			if (reporterRole.getAction() == ReportingAction.REPORT_CHANNEL_STATS) {
 				deploymentAction
@@ -101,6 +93,22 @@ public class InstanceQosRoles {
 		}
 
 		return deploymentAction;
+	}
+
+	private void addQosManagerConfig(
+			DeployInstanceQosRolesAction deploymentAction) {
+		
+		QosGraph shallowQosGraph = null;
+		for (QosManagerRole managerRole : this.managerRoles.values()) {
+			if (shallowQosGraph == null) {
+				shallowQosGraph = managerRole.getQosGraph()
+						.cloneWithoutMembers();
+			} else {
+				shallowQosGraph.merge(managerRole.getQosGraph()
+						.cloneWithoutMembers());
+			}
+		}
+		deploymentAction.setQosManager(new QosManagerConfig(shallowQosGraph));
 	}
 
 	private VertexQosReporterConfig toVertexQosReporterConfig(
@@ -115,15 +123,12 @@ public class InstanceQosRoles {
 		int outputGateIndex = reporterRole.getOutputGateIndex();
 
 		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
-				vertex.getGroupVertex().getJobVertexID(), 
-				vertex.getID(),
-				vertex.getExecutingInstance(),
-				managers, 
-				inputGateIndex, 
-				(inputGateIndex != -1) ? vertex.getInputGate(inputGateIndex).getGateID() : null,
-				outputGateIndex, 
-				(outputGateIndex != -1) ? vertex.getOutputGate(outputGateIndex).getGateID() : null,
-				vertex.getMemberIndex(), 
+				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
+				vertex.getExecutingInstance(), managers, inputGateIndex,
+				(inputGateIndex != -1) ? vertex.getInputGate(inputGateIndex)
+						.getGateID() : null, outputGateIndex,
+				(outputGateIndex != -1) ? vertex.getOutputGate(outputGateIndex)
+						.getGateID() : null, vertex.getMemberIndex(),
 				vertex.getName());
 
 		return vertexReporter;

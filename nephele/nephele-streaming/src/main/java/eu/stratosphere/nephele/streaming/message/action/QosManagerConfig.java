@@ -27,12 +27,16 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
  */
 public class QosManagerConfig implements IOReadableWritable {
 
-	private QosGraph shallowQosGraph;
+	private final QosGraph shallowQosGraph;
 
 	public QosManagerConfig() {
+		this.shallowQosGraph = new QosGraph();
 	}
 
 	public QosManagerConfig(QosGraph shallowQosGraph) {
+		if (shallowQosGraph == null) {
+			throw new RuntimeException("Need to provide a Qos graph!");
+		}
 		this.shallowQosGraph = shallowQosGraph;
 	}
 
@@ -64,7 +68,6 @@ public class QosManagerConfig implements IOReadableWritable {
 	 */
 	@Override
 	public void read(DataInput in) throws IOException {
-		this.shallowQosGraph = new QosGraph();
 		this.shallowQosGraph.read(in);
 	}
 }

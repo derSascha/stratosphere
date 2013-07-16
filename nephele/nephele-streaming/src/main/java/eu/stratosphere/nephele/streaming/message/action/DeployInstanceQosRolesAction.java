@@ -29,15 +29,16 @@ import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
  */
 public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 	
-	private InstanceConnectionInfo instanceConnectionInfo;
+	private final InstanceConnectionInfo instanceConnectionInfo;
 
-	private QosManagerConfig qosManager = new QosManagerConfig();
+	private QosManagerConfig qosManager;
 
-	private LinkedList<EdgeQosReporterConfig> edgeQosReporters = new LinkedList<EdgeQosReporterConfig>();
+	private final LinkedList<EdgeQosReporterConfig> edgeQosReporters = new LinkedList<EdgeQosReporterConfig>();
 
-	private LinkedList<VertexQosReporterConfig> vertexQosReporters = new LinkedList<VertexQosReporterConfig>();
+	private final LinkedList<VertexQosReporterConfig> vertexQosReporters = new LinkedList<VertexQosReporterConfig>();
 
 	public DeployInstanceQosRolesAction() {
+		this.instanceConnectionInfo = new InstanceConnectionInfo();
 	}
 
 	public DeployInstanceQosRolesAction(JobID jobID, InstanceConnectionInfo instanceConnectionInfo) {
@@ -102,7 +103,6 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 	@Override
 	public void read(final DataInput in) throws IOException {
 		super.read(in);
-		this.instanceConnectionInfo = new InstanceConnectionInfo();
 		this.instanceConnectionInfo.read(in);
 		if (in.readBoolean()) {
 			this.qosManager = new QosManagerConfig();
