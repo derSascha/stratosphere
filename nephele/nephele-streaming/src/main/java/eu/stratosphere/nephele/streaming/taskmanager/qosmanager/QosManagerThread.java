@@ -31,6 +31,7 @@ public class QosManagerThread extends Thread {
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
 		this.bufferSizeManager = new BufferSizeManager(jobID, this.qosModel,
 				this.messagingThread);
+		this.setName(String.format("QosManagerThread (JobID: %s)", jobID.toString()));
 	}
 
 	@Override

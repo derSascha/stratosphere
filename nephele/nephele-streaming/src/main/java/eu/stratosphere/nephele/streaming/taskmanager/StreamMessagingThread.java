@@ -60,6 +60,10 @@ public final class StreamMessagingThread extends Thread {
 
 	private HashMap<InstanceConnectionInfo, PluginCommunicationProtocol> proxies = new HashMap<InstanceConnectionInfo, PluginCommunicationProtocol>();
 
+	public StreamMessagingThread() {
+		this.setName("StreamMessagingThread");
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 */

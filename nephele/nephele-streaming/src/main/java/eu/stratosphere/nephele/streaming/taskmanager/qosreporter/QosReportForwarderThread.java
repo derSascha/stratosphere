@@ -157,6 +157,7 @@ public class QosReportForwarderThread extends Thread {
 		this.reporterActivityMap = new ConcurrentHashMap<QosReporterID, Boolean>();
 		this.pendingReportRecords = new LinkedBlockingQueue<AbstractQosReportRecord>();
 		this.started = false;
+		this.setName(String.format("QosReporterForwarderThread (JobID: %s)", jobID.toString()));
 	}
 
 	@Override
