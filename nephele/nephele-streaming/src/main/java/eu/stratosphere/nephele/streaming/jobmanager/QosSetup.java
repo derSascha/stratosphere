@@ -18,8 +18,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
@@ -51,6 +54,8 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
  */
 public class QosSetup {
 
+	private static final Logger LOG = Logger.getLogger(QosSetup.class);
+
 	private ExecutionGraph executionGraph;
 
 	private List<JobGraphLatencyConstraint> constraints;
@@ -72,11 +77,19 @@ public class QosSetup {
 	}
 
 	private void computeQosReporterRoles() {
-		for (InstanceQosRoles instanceRoles : this.qosRoles.values()) {
-			for (QosManagerRole qosManager : instanceRoles.getManagerRoles()) {
-				computeReportersForManager(qosManager);
-			}
+		for (QosManagerRole qosManager : collectAllManagerRoles()) {
+			computeReportersForManager(qosManager);
 		}
+	}
+
+	private LinkedList<QosManagerRole> collectAllManagerRoles() {
+		LinkedList<QosManagerRole> managers = new LinkedList<QosManagerRole>();
+
+		for (InstanceQosRoles instanceRoles : this.qosRoles.values()) {
+			managers.addAll(instanceRoles.getManagerRoles());
+		}
+
+		return managers;
 	}
 
 	private void computeReportersForManager(final QosManagerRole qosManager) {
@@ -187,8 +200,13 @@ public class QosSetup {
 						anchorVertex, membersOnInstance);
 				getOrCreateInstanceRoles(instance).addManagerRole(managerRole);
 			}
-		}
+			
+			LOG.info(String
+					.format("Using group vertex %s to run %d QosManagers for constraint %s",
+							anchorVertex.getName(), this.qosRoles.size(),
+							qosGraph.getConstraints().iterator().next().getID()));
 
+		}
 	}
 
 	private InstanceQosRoles getOrCreateInstanceRoles(
