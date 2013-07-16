@@ -210,12 +210,16 @@ public class QosSetupManager implements VertexAssignmentListener {
 	public synchronized void vertexAssignmentChanged(ExecutionVertexID id,
 			AllocatedResource newAllocatedResource) {
 
-		this.verticesWithPendingAllocation.remove(id);
-		AbstractInstance instance = newAllocatedResource.getInstance();
-		this.instances.putIfAbsent(instance.getInstanceConnectionInfo(),
-				instance);
-		if (this.verticesWithPendingAllocation.isEmpty()) {
-			computeAndDistributeQosSetup();
+		try {
+			this.verticesWithPendingAllocation.remove(id);
+			AbstractInstance instance = newAllocatedResource.getInstance();
+			this.instances.putIfAbsent(instance.getInstanceConnectionInfo(),
+					instance);
+			if (this.verticesWithPendingAllocation.isEmpty()) {
+				computeAndDistributeQosSetup();
+			}
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
 		}
 	}
 
