@@ -126,8 +126,8 @@ public class QosLogger {
 				EdgeQosData edgeQos = ((QosEdge) member).getQosData();
 				double outputBufferLatency = edgeQos
 						.getOutputBufferLifetimeInMillis() / 2;
-				this.aggregatedMemberLatencies[index][0] = outputBufferLatency;
-				this.aggregatedMemberLatencies[index][1] = Math.max(0,
+				this.aggregatedMemberLatencies[index][0] += outputBufferLatency;
+				this.aggregatedMemberLatencies[index][1] += Math.max(0,
 						edgeQos.getChannelLatencyInMillis()
 								- outputBufferLatency);
 				sequenceLatency += edgeQos.getChannelLatencyInMillis();
