@@ -33,7 +33,8 @@ import eu.stratosphere.nephele.io.compression.CompressionLevel;
 import eu.stratosphere.nephele.io.compression.Compressor;
 import eu.stratosphere.nephele.types.Record;
 
-public abstract class AbstractByteBufferedOutputChannel<T extends Record> extends AbstractOutputChannel<T> {
+public abstract class AbstractByteBufferedOutputChannel<T extends Record>
+		extends AbstractOutputChannel<T> {
 
 	/**
 	 * The serialization buffer used to serialize records.
@@ -51,7 +52,8 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	private boolean closeRequested = false;
 
 	/**
-	 * The output channel broker the channel should contact to request and release write buffers.
+	 * The output channel broker the channel should contact to request and
+	 * release write buffers.
 	 */
 	private ByteBufferedOutputChannelBroker outputChannelBroker = null;
 
@@ -61,29 +63,42 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	private Compressor compressor = null;
 
 	/**
-	 * Stores the number of bytes transmitted through this output channel since its instantiation.
+	 * Stores the number of bytes transmitted through this output channel since
+	 * its instantiation.
 	 */
 	private long amountOfDataTransmitted = 0L;
 
-	private static final Log LOG = LogFactory.getLog(AbstractByteBufferedOutputChannel.class);
+	/**
+	 * Determines when to release the {@link #dataBuffer}. bufferSizeLimit=0 is
+	 * equivalent to auto-flushing after each record whereas the initial value
+	 * (Integer.MAX_VALUE) implies that we never release the buffer unless it is
+	 * full.
+	 */
+	private int bufferSizeLimit = Integer.MAX_VALUE;
+
+	private static final Log LOG = LogFactory
+			.getLog(AbstractByteBufferedOutputChannel.class);
 
 	/**
 	 * Creates a new byte buffered output channel.
 	 * 
 	 * @param outputGate
-	 *        the output gate this channel is wired to
+	 *            the output gate this channel is wired to
 	 * @param channelIndex
-	 *        the channel's index at the associated output gate
+	 *            the channel's index at the associated output gate
 	 * @param channelID
-	 *        the ID of the channel
+	 *            the ID of the channel
 	 * @param connectedChannelID
-	 *        the ID of the channel this channel is connected to
+	 *            the ID of the channel this channel is connected to
 	 * @param compressionLevel
-	 *        the level of compression to be used for this channel
+	 *            the level of compression to be used for this channel
 	 */
-	protected AbstractByteBufferedOutputChannel(final OutputGate<T> outputGate, final int channelIndex,
-			final ChannelID channelID, final ChannelID connectedChannelID, final CompressionLevel compressionLevel) {
-		super(outputGate, channelIndex, channelID, connectedChannelID, compressionLevel);
+	protected AbstractByteBufferedOutputChannel(final OutputGate<T> outputGate,
+			final int channelIndex, final ChannelID channelID,
+			final ChannelID connectedChannelID,
+			final CompressionLevel compressionLevel) {
+		super(outputGate, channelIndex, channelID, connectedChannelID,
+				compressionLevel);
 	}
 
 	/**
@@ -92,8 +107,10 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	@Override
 	public boolean isClosed() throws IOException, InterruptedException {
 
-		if (this.closeRequested && this.dataBuffer == null
-			&& !this.serializationBuffer.dataLeftFromPreviousSerialization()) {
+		if (this.closeRequested
+				&& this.dataBuffer == null
+				&& !this.serializationBuffer
+						.dataLeftFromPreviousSerialization()) {
 
 			if (!this.outputChannelBroker.hasDataLeftToTransmit()) {
 				return true;
@@ -112,7 +129,8 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 		if (!this.closeRequested) {
 			this.closeRequested = true;
 			if (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
-				// make sure we serialized all data before we send the close event
+				// make sure we serialized all data before we send the close
+				// event
 				flush();
 			}
 
@@ -124,31 +142,38 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	}
 
 	/**
-	 * Requests a new write buffer from the framework. This method blocks until the requested buffer is available.
+	 * Requests a new write buffer from the framework. This method blocks until
+	 * the requested buffer is available.
 	 * 
 	 * @throws InterruptedException
-	 *         thrown if the thread is interrupted while waiting for the buffer
+	 *             thrown if the thread is interrupted while waiting for the
+	 *             buffer
 	 * @throws IOException
-	 *         thrown if an I/O error occurs while waiting for the buffer
+	 *             thrown if an I/O error occurs while waiting for the buffer
 	 */
-	private void requestWriteBufferFromBroker() throws InterruptedException, IOException {
+	private void requestWriteBufferFromBroker() throws InterruptedException,
+			IOException {
 
 		this.dataBuffer = this.outputChannelBroker.requestEmptyWriteBuffer();
 	}
 
 	/**
-	 * Returns the filled buffer to the framework and triggers further processing.
+	 * Returns the filled buffer to the framework and triggers further
+	 * processing.
 	 * 
 	 * @throws IOException
-	 *         thrown if an I/O error occurs while releasing the buffers
+	 *             thrown if an I/O error occurs while releasing the buffers
 	 * @throws InterruptedException
-	 *         thrown if the thread is interrupted while releasing the buffers
+	 *             thrown if the thread is interrupted while releasing the
+	 *             buffers
 	 */
 	private void releaseWriteBuffer() throws IOException, InterruptedException {
 
 		if (getCompressionLevel() == CompressionLevel.DYNAMIC_COMPRESSION) {
-			this.outputChannelBroker.transferEventToInputChannel(new CompressionEvent(this.compressor
-				.getCurrentInternalCompressionLibraryIndex()));
+			this.outputChannelBroker
+					.transferEventToInputChannel(new CompressionEvent(
+							this.compressor
+									.getCurrentInternalCompressionLibraryIndex()));
 		}
 
 		// Keep track of number of bytes transmitted through this channel
@@ -176,60 +201,43 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 			throw new IOException("Channel is aready requested to be closed");
 		}
 
-		// Check if we can accept new records or if there are still old
-		// records to be transmitted
-		if (this.compressor != null) {
-			while (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
-
-				this.serializationBuffer.read(this.dataBuffer);
-				if (this.dataBuffer.remaining() == 0) {
-
-					this.dataBuffer = this.compressor.compress(this.dataBuffer);
-					// this.leasedWriteBuffer.flip();
-					releaseWriteBuffer();
-					requestWriteBufferFromBroker();
-				}
-			}
-		} else {
-			while (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
-
-				this.serializationBuffer.read(this.dataBuffer);
-				if (this.dataBuffer.remaining() == 0) {
-					releaseWriteBuffer();
-					requestWriteBufferFromBroker();
-				}
-			}
-		}
-
 		if (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
-			throw new IOException("Serialization buffer is expected to be empty!");
+			throw new IOException(
+					"Serialization buffer is expected to be empty!");
 		}
 
 		this.serializationBuffer.serialize(record);
 
-		if (this.compressor != null) {
+		while (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
 			this.serializationBuffer.read(this.dataBuffer);
+			if (this.dataBuffer.remaining() == 0) {
+				if (this.compressor != null) {
+					this.dataBuffer = this.compressor.compress(this.dataBuffer);
+				}
 
-			if (this.dataBuffer.remaining() == 0) {
-				this.dataBuffer = this.compressor.compress(this.dataBuffer);
-				// this.leasedWriteBuffer.flip();
 				releaseWriteBuffer();
+				requestWriteBufferFromBroker();
 			}
-		} else {
-			this.serializationBuffer.read(this.dataBuffer);
-			if (this.dataBuffer.remaining() == 0) {
-				releaseWriteBuffer();
-			}
+		}
+
+		int bytesInBuffer = this.dataBuffer.size()
+				- this.dataBuffer.remaining();
+		if (bytesInBuffer >= this.bufferSizeLimit) {
+			releaseWriteBuffer();
+			requestWriteBufferFromBroker();
 		}
 	}
 
 	/**
-	 * Sets the output channel broker this channel should contact to request and release write buffers.
+	 * Sets the output channel broker this channel should contact to request and
+	 * release write buffers.
 	 * 
 	 * @param byteBufferedOutputChannelBroker
-	 *        the output channel broker the channel should contact to request and release write buffers
+	 *            the output channel broker the channel should contact to
+	 *            request and release write buffers
 	 */
-	public void setByteBufferedOutputChannelBroker(ByteBufferedOutputChannelBroker byteBufferedOutputChannelBroker) {
+	public void setByteBufferedOutputChannelBroker(
+			ByteBufferedOutputChannelBroker byteBufferedOutputChannelBroker) {
 
 		this.outputChannelBroker = byteBufferedOutputChannelBroker;
 	}
@@ -241,11 +249,14 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	public void initializeCompressor() throws CompressionException {
 
 		if (this.compressor != null) {
-			throw new IllegalStateException("Decompressor has already been initialized for channel " + getID());
+			throw new IllegalStateException(
+					"Decompressor has already been initialized for channel "
+							+ getID());
 		}
 
 		if (this.outputChannelBroker == null) {
-			throw new IllegalStateException("Input channel broker has not been set");
+			throw new IllegalStateException(
+					"Input channel broker has not been set");
 		}
 
 		this.compressor = this.outputChannelBroker.getCompressor();
@@ -268,7 +279,8 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void transferEvent(AbstractEvent event) throws IOException, InterruptedException {
+	public void transferEvent(AbstractEvent event) throws IOException,
+			InterruptedException {
 
 		flush();
 		this.outputChannelBroker.transferEventToInputChannel(event);
@@ -350,16 +362,15 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 
 		return this.amountOfDataTransmitted;
 	}
-	
+
 	/**
-	 * Limits the size of the buffer this channel will write its records to before passing them on to the framework.
+	 * Limits the size of the buffer this channel will write its records to
+	 * before passing them on to the framework.
 	 * 
 	 * @param bufferSize
-	 *        the new limit for the by
+	 *            the new limit for the by
 	 */
 	public void limitBufferSize(final int bufferSize) {
-
-		// Delegate call to the assigned output channel broker
-		this.outputChannelBroker.limitBufferSize(bufferSize);
+		this.bufferSizeLimit = bufferSize;
 	}
 }
