@@ -35,19 +35,18 @@ import eu.stratosphere.nephele.types.Record;
 public final class StreamOutputGate<T extends Record> extends
 		AbstractOutputGateWrapper<T> {
 
-	// private long lastThroughputTimestamp = -1L;
-	//
-	// private long[] lastSentBytes = null;
-
 	private StreamChain streamChain = null;
 
 	private volatile OutputGateQosReportingListener qosCallback;
 
 	private HashMap<ChannelID, AbstractOutputChannel<T>> outputChannels;
 
-	public StreamOutputGate(final OutputGate<T> wrappedOutputGate) {
+	private StreamChannelSelector<T> streamChannelSelector;
+
+	public StreamOutputGate(final OutputGate<T> wrappedOutputGate, StreamChannelSelector<T> streamChannelSelector) {
 		super(wrappedOutputGate);
 		this.outputChannels = new HashMap<ChannelID, AbstractOutputChannel<T>>();
+		this.streamChannelSelector = streamChannelSelector;
 	}
 
 	public void setQosReportingListener(
@@ -84,11 +83,12 @@ public final class StreamOutputGate<T extends Record> extends
 	}
 
 	public void reportRecordEmitted(final T record) {
+		int outputChannel = this.streamChannelSelector
+				.invokeWrappedChannelSelector(record,
+						getNumberOfOutputChannels())[0];
+
 		if (this.qosCallback != null) {
 			AbstractTaggableRecord taggableRecord = (AbstractTaggableRecord) record;
-			int outputChannel = getChannelSelector().selectChannels(record,
-					getNumberOfOutputChannels())[0];
-
 			this.qosCallback.recordEmitted(outputChannel, taggableRecord);
 		}
 	}

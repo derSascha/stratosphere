@@ -19,11 +19,13 @@ import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.ChannelSelector;
+import eu.stratosphere.nephele.io.DefaultChannelSelector;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.OutputGate;
 import eu.stratosphere.nephele.io.RecordDeserializerFactory;
 import eu.stratosphere.nephele.plugins.wrapper.EnvironmentWrapper;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamChannelSelector;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
 import eu.stratosphere.nephele.types.Record;
@@ -90,11 +92,18 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	@Override
 	public <T extends Record> OutputGate<T> createOutputGate(
 			final GateID gateID, final Class<T> outputClass,
-			final ChannelSelector<T> selector, final boolean isBroadcast) {
+			ChannelSelector<T> selector, final boolean isBroadcast) {
+		
+		StreamChannelSelector<T> wrappedSelector;
+		if(selector == null) {
+			wrappedSelector = new StreamChannelSelector<T>(new DefaultChannelSelector<T>());
+		} else {
+			wrappedSelector = new StreamChannelSelector<T>(selector);
+		}
 
 		OutputGate<T> outputGate = this.getWrappedEnvironment()
-				.createOutputGate(gateID, outputClass, selector, isBroadcast);
-		return new StreamOutputGate<T>(outputGate);
+				.createOutputGate(gateID, outputClass, wrappedSelector, isBroadcast);
+		return new StreamOutputGate<T>(outputGate, wrappedSelector);
 	}
 	
 	public boolean isMapperTask() {
