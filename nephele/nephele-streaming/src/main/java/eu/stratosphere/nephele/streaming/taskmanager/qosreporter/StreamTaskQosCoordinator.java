@@ -289,8 +289,10 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		}
 
 		int bufferSize = lbsa.getBufferSize();
-		LOG.info("Setting buffer size limit of output channel " + channelID
-				+ " to " + bufferSize + " bytes");
+		LOG.info(String.format(
+				"Setting buffer size output channel %s (%s) to %d bytes",
+				channelID, this.reporterThread.getConfigCenter()
+						.getEdgeQosReporter(channelID).getName(), bufferSize));
 		channel.limitBufferSize(bufferSize);
 	}
 
