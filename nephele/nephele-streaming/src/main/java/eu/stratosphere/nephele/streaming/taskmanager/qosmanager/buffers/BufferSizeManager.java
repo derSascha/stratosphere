@@ -84,8 +84,11 @@ public class BufferSizeManager {
 		QosConstraintViolationListener listener = new QosConstraintViolationListener() {
 			@Override
 			public void handleViolatedConstraint(
-					List<QosGraphMember> sequenceMembers) {
-				collectEdgesToAdjust(sequenceMembers, edgesToAdjust);
+					List<QosGraphMember> sequenceMembers,
+					double constraintViolatedByMillis) {
+				if(constraintViolatedByMillis > 0) {
+					collectEdgesToAdjust(sequenceMembers, edgesToAdjust);
+				}
 			}
 		};
 

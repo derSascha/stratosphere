@@ -24,6 +24,6 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember;
  */
 public interface QosConstraintViolationListener {
 
-	public void handleViolatedConstraint(List<QosGraphMember> currentSequenceMembers);
+	public void handleViolatedConstraint(List<QosGraphMember> currentSequenceMembers, double constraintViolatedByMillis);
 
 }

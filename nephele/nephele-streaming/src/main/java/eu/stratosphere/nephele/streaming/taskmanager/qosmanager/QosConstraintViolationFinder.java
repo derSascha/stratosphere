@@ -44,6 +44,8 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 
 	private double[] memberLatencies;
 
+	private int totalLatency;
+
 	private int sequenceLength;
 
 	private JobGraphLatencyConstraint constraint;
@@ -61,14 +63,6 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 		this(constraintID, qosGraph, constraintViolationListener, null);
 	}
 
-	/**
-	 * Initializes QosConstraintViolationFinder.
-	 * 
-	 * @param id
-	 * @param qosGraph2
-	 * @param listener
-	 * @param logger
-	 */
 	public QosConstraintViolationFinder(LatencyConstraintID constraintID,
 			QosGraph qosGraph,
 			QosConstraintViolationListener constraintViolationListener,
@@ -84,6 +78,7 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 
 		this.sequenceLength = this.constraint.getSequence().size();
 		this.memberLatencies = new double[this.sequenceLength];
+		this.totalLatency = 0;
 
 		// init sequence with nulls so that during graph traversal we can
 		// just invoke set(index, member).
@@ -170,30 +165,28 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 		}
 	}
 
-	/**
-	 * 
-	 */
 	private void handleFullSequence() {
-		if(this.logger != null) {
+		if (this.logger != null) {
 			this.logger.addMemberSequenceToLog(this.currentSequenceMembers);
 		}
-		if (isConstraintViolated()) {
-			notifyListenerAboutViolatedConstraint();
+
+		computeTotalLatency();
+
+		double constraintViolatedByMillis = this.totalLatency
+				- this.constraint.getLatencyConstraintInMillis();
+
+		// only act on violations of >5% of the constraint
+		if (Math.abs(constraintViolatedByMillis) / this.constraint.getLatencyConstraintInMillis() > 0.05) {
+			this.constraintViolationListener.handleViolatedConstraint(
+					this.currentSequenceMembers, constraintViolatedByMillis);
 		}
 	}
 
-	private void notifyListenerAboutViolatedConstraint() {
-		this.constraintViolationListener
-				.handleViolatedConstraint(this.currentSequenceMembers);
-	}
-
-	private boolean isConstraintViolated() {
-		double totalLatency = 0;
+	private void computeTotalLatency() {
+		this.totalLatency = 0;
 		for (int i = 0; i < this.sequenceLength; i++) {
-			totalLatency += this.memberLatencies[i];
+			this.totalLatency += this.memberLatencies[i];
 		}
-
-		return totalLatency > this.constraint.getLatencyConstraintInMillis();
 	}
 
 	/*
