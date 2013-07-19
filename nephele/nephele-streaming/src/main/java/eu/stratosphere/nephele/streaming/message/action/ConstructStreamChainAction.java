@@ -31,7 +31,7 @@ import eu.stratosphere.nephele.util.SerializableArrayList;
  * 
  * @author warneke
  */
-public final class ConstructStreamChainAction extends AbstractAction {
+public final class ConstructStreamChainAction extends AbstractQosAction {
 
 	private final SerializableArrayList<ExecutionVertexID> vertexIDs = new SerializableArrayList<ExecutionVertexID>();
 

@@ -16,17 +16,12 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosreporter;
 
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.io.channels.AbstractOutputChannel;
 import eu.stratosphere.nephele.io.channels.ChannelID;
-import eu.stratosphere.nephele.io.channels.bytebuffered.AbstractByteBufferedOutputChannel;
-import eu.stratosphere.nephele.streaming.message.action.AbstractAction;
-import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
@@ -34,7 +29,6 @@ import eu.stratosphere.nephele.streaming.message.qosreport.DummyVertexReporterAc
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.QosReportingListenerHelper;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChain;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
@@ -81,8 +75,6 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	 */
 	private VertexLatencyReportManager vertexLatencyManager;
 
-	private LinkedBlockingQueue<AbstractAction> pendingActions;
-
 	private StreamChainCoordinator chainCoordinator;
 
 	private QosReporterConfigCenter reporterConfigCenter;
@@ -96,7 +88,6 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		this.taskEnvironment = taskEnvironment;
 		this.reporterThread = reportForwarder;
 		this.chainCoordinator = chainCoordinator;
-		this.pendingActions = new LinkedBlockingQueue<AbstractAction>();
 		this.reporterConfigCenter = reportForwarder.getConfigCenter();
 
 		this.vertexLatencyManager = new VertexLatencyReportManager(
@@ -248,67 +239,30 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 
 			QosReportingListenerHelper
 					.listenToOutputChannelStatisticsOnOutputGate(outputGate,
-							gateReporterManager, this);
+							gateReporterManager);
 		}
 	}
 
-	public void queueQosAction(AbstractAction action) {
-		this.pendingActions.add(action);
-	}
+	public void handleLimitBufferSizeAction(
+			LimitBufferSizeAction limitBufferSizeAction) {
 
-	public void executeQueuedQosActions() throws InterruptedException {
-		AbstractAction action;
-		while ((action = this.pendingActions.poll()) != null) {
-			if (action instanceof LimitBufferSizeAction) {
-				this.limitBufferSize((LimitBufferSizeAction) action);
-			} else if (action instanceof ConstructStreamChainAction) {
-				this.constructStreamChain((ConstructStreamChainAction) action);
-			} else {
-				LOG.error("Ignoring unknown action of type "
-						+ action.getClass());
+		StreamOutputGate<?> outputGate = this.taskEnvironment
+				.getOutputGate(limitBufferSizeAction.getOutputGateID());
+
+		if (outputGate != null) {
+			ChannelID sourceChannelID = limitBufferSizeAction
+					.getSourceChannelID();
+			EdgeQosReporterConfig edgeReporter = this.reporterThread
+					.getConfigCenter().getEdgeQosReporter(sourceChannelID);
+
+			if (edgeReporter != null) {
+				LOG.info(String
+						.format("Setting buffer size output channel %s (%s) to %d bytes",
+								sourceChannelID, edgeReporter.getName(),
+								limitBufferSizeAction.getBufferSize()));
+				outputGate.enqueueQosAction(limitBufferSizeAction);
 			}
 		}
-	}
-
-	private void constructStreamChain(ConstructStreamChainAction csca)
-			throws InterruptedException {
-
-		StreamChain streamChain = this.chainCoordinator
-				.constructStreamChain(csca.getVertexIDs());
-		streamChain.waitUntilFlushed();
-	}
-
-	private void limitBufferSize(LimitBufferSizeAction lbsa) {
-
-		ChannelID channelID = lbsa.getSourceChannelID();
-
-		AbstractByteBufferedOutputChannel<?> channel = retrieveOutputChannel(channelID);
-		if (channel == null) {
-			LOG.error("Cannot find output channel with ID " + channelID);
-			return;
-		}
-
-		int bufferSize = lbsa.getBufferSize();
-		LOG.info(String.format(
-				"Setting buffer size output channel %s (%s) to %d bytes",
-				channelID, this.reporterThread.getConfigCenter()
-						.getEdgeQosReporter(channelID).getName(), bufferSize));
-		channel.limitBufferSize(bufferSize);
-	}
-
-	private AbstractByteBufferedOutputChannel<?> retrieveOutputChannel(
-			ChannelID sourceChannelID) {
-
-		for (int i = 0; i < this.taskEnvironment.getNumberOfOutputGates(); i++) {
-			AbstractOutputChannel<?> channel = this.taskEnvironment
-					.getOutputGate(i).getOutputChannel(sourceChannelID);
-
-			if (channel != null) {
-				return (AbstractByteBufferedOutputChannel<?>) channel;
-			}
-		}
-
-		return null;
 	}
 
 	/*
@@ -395,6 +349,6 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		this.outputGateReporters.set(runtimeGateIndex, gateReporterManager);
 
 		QosReportingListenerHelper.listenToOutputChannelStatisticsOnOutputGate(
-				outputGate, gateReporterManager, this);
+				outputGate, gateReporterManager);
 	}
 }

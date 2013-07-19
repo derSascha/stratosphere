@@ -23,15 +23,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.configuration.Configuration;
-import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.execution.RuntimeEnvironment;
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.StreamJobEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
+import eu.stratosphere.nephele.taskmanager.Task;
+import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
 public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 
@@ -139,28 +139,31 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void registerTask(final ExecutionVertexID vertexID,
+	public void registerTask(final Task task,
 			final Configuration jobConfiguration,
-			final Environment environment, final IOReadableWritable pluginData) {
+			final IOReadableWritable pluginData) {
+		
+		if(task instanceof RuntimeTask) {
+			
+			RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) task.getEnvironment();
+			if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
+				StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv
+						.getInvokable().getEnvironment();
 
-		RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) environment;
-		if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
-			StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv
-					.getInvokable().getEnvironment();
-
-			// unfortunately, Nephele's runtime environment does not know
-			// its ExecutionVertexID.
-			streamEnv.setVertexID(vertexID);
-			this.getOrCreateJobEnvironment(environment.getJobID()).registerTask(vertexID, streamEnv);
-		}
-
-		// process attached plugin data, such as Qos manager/reporter configs
-		if (pluginData != null) {
-			try {
-				this.sendData(pluginData);
-			} catch (IOException e) {
-				LOG.error("Error when consuming attached plugin data", e);
+				// unfortunately, Nephele's runtime environment does not know
+				// its ExecutionVertexID.
+				streamEnv.setVertexID(task.getVertexID());
+				this.getOrCreateJobEnvironment(runtimeEnv.getJobID()).registerTask((RuntimeTask) task, streamEnv);
 			}
+
+			// process attached plugin data, such as Qos manager/reporter configs
+			if (pluginData != null) {
+				try {
+					this.sendData(pluginData);
+				} catch (IOException e) {
+					LOG.error("Error when consuming attached plugin data", e);
+				}
+			}	
 		}
 	}
 
@@ -168,10 +171,11 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void unregisterTask(final ExecutionVertexID vertexID,
-			final Environment environment) {
-		this.getOrCreateJobEnvironment(environment.getJobID()).unregisterTask(
-				vertexID, environment);
+	public void unregisterTask(final Task task) {
+		if(task instanceof RuntimeTask) {
+			this.getOrCreateJobEnvironment(task.getJobID()).unregisterTask(
+					task.getVertexID(), ((RuntimeTask) task).getRuntimeEnvironment());
+		}
 	}
 
 	private StreamJobEnvironment getOrCreateJobEnvironment(JobID jobID) {

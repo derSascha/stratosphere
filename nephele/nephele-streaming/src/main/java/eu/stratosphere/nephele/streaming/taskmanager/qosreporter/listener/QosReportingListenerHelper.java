@@ -16,7 +16,6 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener;
 
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.InputGateReporterManager;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.OutputGateReporterManager;
-import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.StreamTaskQosCoordinator;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.TimestampTag;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.VertexLatencyReportManager;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
@@ -71,11 +70,6 @@ public class QosReportingListenerHelper {
 					long currentAmountTransmitted) {
 				// do nothing
 			}
-
-			@Override
-			public void handlePendingQosActions() throws InterruptedException {
-				// do nothing
-			}
 		};
 
 		OutputGateQosReportingListener oldListener = outputGate
@@ -120,8 +114,7 @@ public class QosReportingListenerHelper {
 
 	public static void listenToOutputChannelStatisticsOnOutputGate(
 			StreamOutputGate<? extends Record> outputGate,
-			final OutputGateReporterManager gateReporterManager,
-			final StreamTaskQosCoordinator taskQosCoordinator) {
+			final OutputGateReporterManager gateReporterManager) {
 
 		OutputGateQosReportingListener listener = new OutputGateQosReportingListener() {
 
@@ -136,11 +129,6 @@ public class QosReportingListenerHelper {
 			public void recordEmitted(int runtimeGateChannelIndex,
 					AbstractTaggableRecord record) {
 				gateReporterManager.recordEmitted(runtimeGateChannelIndex, record);
-			}
-
-			@Override
-			public void handlePendingQosActions() throws InterruptedException {
-				taskQosCoordinator.executeQueuedQosActions();
 			}
 		};
 
@@ -189,12 +177,6 @@ public class QosReportingListenerHelper {
 
 				first.recordEmitted(outputChannel, record);
 				second.recordEmitted(outputChannel, record);
-			}
-
-			@Override
-			public void handlePendingQosActions() throws InterruptedException {
-				first.handlePendingQosActions();
-				second.handlePendingQosActions();
 			}
 		};
 	}

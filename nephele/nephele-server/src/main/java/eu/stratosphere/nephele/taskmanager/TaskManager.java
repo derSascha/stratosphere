@@ -664,7 +664,7 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 				// Allow plugins to register their listeners for this task
 				if (!this.taskManagerPlugins.isEmpty()) {
 					for(PluginID pluginID : this.taskManagerPlugins.keySet()) {
-						this.taskManagerPlugins.get(pluginID).registerTask(id, jobConfiguration, ee, pluginData.get(pluginID));
+						this.taskManagerPlugins.get(pluginID).registerTask(task, jobConfiguration, pluginData.get(pluginID));
 					}
 				}
 
@@ -705,7 +705,7 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 			if (!this.taskManagerPlugins.isEmpty()) {
 				final Iterator<TaskManagerPlugin> it = this.taskManagerPlugins.values().iterator();
 				while (it.hasNext()) {
-					it.next().unregisterTask(id, task.getEnvironment());
+					it.next().unregisterTask(task);
 				}
 			}
 

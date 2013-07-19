@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 
@@ -27,14 +28,19 @@ import eu.stratosphere.nephele.jobgraph.JobID;
  * This class implements an action to limit the buffer size of a particular
  * output channel.
  * 
- * @author warneke
+ * @author warneke, Bjoern Lohrmann
  */
-public final class LimitBufferSizeAction extends AbstractAction {
+public final class LimitBufferSizeAction extends AbstractQosAction {
 
 	/**
 	 * The ID of the vertex the initiated action applies to.
 	 */
 	private final ExecutionVertexID vertexID;
+	
+	/**
+	 * The ID of the output gate the channel whose buffer size shall be limited belongs to.
+	 */	
+	private final GateID outputGateID;
 
 	/**
 	 * The ID of the output channel whose buffer size shall be limited.
@@ -60,13 +66,20 @@ public final class LimitBufferSizeAction extends AbstractAction {
 	 *            the new buffer size in bytes
 	 */
 	public LimitBufferSizeAction(final JobID jobID,
-			final ExecutionVertexID vertexID, final ChannelID sourceChannelID,
+			final ExecutionVertexID vertexID,
+			final GateID outputGateID,
+			final ChannelID sourceChannelID,
 			final int bufferSize) {
 		super(jobID);
 
 		if (vertexID == null) {
 			throw new IllegalArgumentException(
 					"Argument vertexID must not be null");
+		}
+		
+		if (outputGateID == null) {
+			throw new IllegalArgumentException(
+					"Argument outputGateID must not be null");
 		}
 
 		if (sourceChannelID == null) {
@@ -80,6 +93,7 @@ public final class LimitBufferSizeAction extends AbstractAction {
 		}
 
 		this.vertexID = vertexID;
+		this.outputGateID = outputGateID;
 		this.sourceChannelID = sourceChannelID;
 		this.bufferSize = bufferSize;
 	}
@@ -90,36 +104,11 @@ public final class LimitBufferSizeAction extends AbstractAction {
 	public LimitBufferSizeAction() {
 		super();
 		this.vertexID = new ExecutionVertexID();
+		this.outputGateID = new GateID();
 		this.sourceChannelID = new ChannelID();
 		this.bufferSize = 0;
 	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void write(final DataOutput out) throws IOException {
-
-		super.write(out);
-
-		this.vertexID.write(out);
-		this.sourceChannelID.write(out);
-		out.writeInt(this.bufferSize);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void read(final DataInput in) throws IOException {
-
-		super.read(in);
-
-		this.vertexID.read(in);
-		this.sourceChannelID.read(in);
-		this.bufferSize = in.readInt();
-	}
-
+	
 	/**
 	 * Returns the ID of the output channel whose buffer size shall be limited.
 	 * 
@@ -147,5 +136,42 @@ public final class LimitBufferSizeAction extends AbstractAction {
 	 */
 	public ExecutionVertexID getVertexID() {
 		return this.vertexID;
+	}
+
+	/**
+	 * Returns the outputGateID.
+	 * 
+	 * @return the outputGateID
+	 */
+	public GateID getOutputGateID() {
+		return this.outputGateID;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void write(final DataOutput out) throws IOException {
+
+		super.write(out);
+
+		this.vertexID.write(out);
+		this.outputGateID.write(out);
+		this.sourceChannelID.write(out);
+		out.writeInt(this.bufferSize);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void read(final DataInput in) throws IOException {
+
+		super.read(in);
+
+		this.vertexID.read(in);
+		this.outputGateID.read(in);
+		this.sourceChannelID.read(in);
+		this.bufferSize = in.readInt();
 	}
 }

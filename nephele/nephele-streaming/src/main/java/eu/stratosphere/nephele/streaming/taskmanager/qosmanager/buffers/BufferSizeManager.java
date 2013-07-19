@@ -238,8 +238,9 @@ public class BufferSizeManager {
 			throws InterruptedException {
 
 		LimitBufferSizeAction limitBufferSizeAction = new LimitBufferSizeAction(
-				this.jobID, edge.getOutputGate().getVertex().getID(), edge.getSourceChannelID(),
-				bufferSize);
+				this.jobID, edge.getOutputGate().getVertex().getID(), edge
+						.getOutputGate().getGateID(),
+				edge.getSourceChannelID(), bufferSize);
 
 		InstanceConnectionInfo receiver = edge.getOutputGate().getVertex()
 				.getExecutingInstance();

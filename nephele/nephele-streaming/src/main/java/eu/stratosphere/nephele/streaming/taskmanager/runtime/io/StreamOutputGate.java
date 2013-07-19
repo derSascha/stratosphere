@@ -17,16 +17,23 @@ package eu.stratosphere.nephele.streaming.taskmanager.runtime.io;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import org.apache.log4j.Logger;
 
 import eu.stratosphere.nephele.io.OutputGate;
 import eu.stratosphere.nephele.io.channels.AbstractOutputChannel;
 import eu.stratosphere.nephele.io.channels.ChannelID;
+import eu.stratosphere.nephele.io.channels.bytebuffered.AbstractByteBufferedOutputChannel;
 import eu.stratosphere.nephele.io.channels.bytebuffered.FileOutputChannel;
 import eu.stratosphere.nephele.io.channels.bytebuffered.InMemoryOutputChannel;
 import eu.stratosphere.nephele.io.channels.bytebuffered.NetworkOutputChannel;
 import eu.stratosphere.nephele.io.compression.CompressionException;
 import eu.stratosphere.nephele.io.compression.CompressionLevel;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractOutputGateWrapper;
+import eu.stratosphere.nephele.streaming.message.action.AbstractQosAction;
+import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
+import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.OutputGateQosReportingListener;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChain;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
@@ -34,6 +41,8 @@ import eu.stratosphere.nephele.types.Record;
 
 public final class StreamOutputGate<T extends Record> extends
 		AbstractOutputGateWrapper<T> {
+	
+	private final static Logger LOG = Logger.getLogger(StreamOutputGate.class);
 
 	private StreamChain streamChain = null;
 
@@ -42,11 +51,14 @@ public final class StreamOutputGate<T extends Record> extends
 	private HashMap<ChannelID, AbstractOutputChannel<T>> outputChannels;
 
 	private StreamChannelSelector<T> streamChannelSelector;
+	
+	private LinkedBlockingQueue<AbstractQosAction> qosActionQueue;
 
 	public StreamOutputGate(final OutputGate<T> wrappedOutputGate, StreamChannelSelector<T> streamChannelSelector) {
 		super(wrappedOutputGate);
 		this.outputChannels = new HashMap<ChannelID, AbstractOutputChannel<T>>();
 		this.streamChannelSelector = streamChannelSelector;
+		this.qosActionQueue = new LinkedBlockingQueue<AbstractQosAction>();
 	}
 
 	public void setQosReportingListener(
@@ -75,11 +87,47 @@ public final class StreamOutputGate<T extends Record> extends
 
 		this.handlePendingQosActions();
 	}
-
+	
+	public void enqueueQosAction(AbstractQosAction qosAction) {
+		this.qosActionQueue.add(qosAction);
+	}
+	 
 	private void handlePendingQosActions() throws InterruptedException {
-		if (this.qosCallback != null) {
-			this.qosCallback.handlePendingQosActions();
+		AbstractQosAction action;
+		while ((action = this.qosActionQueue.poll()) != null) {
+			if (action instanceof LimitBufferSizeAction) {
+				this.limitBufferSize((LimitBufferSizeAction) action);
+			} else if (action instanceof ConstructStreamChainAction) {
+				this.constructStreamChain((ConstructStreamChainAction) action);
+			}
 		}
+	}
+	
+	public AbstractOutputChannel<T> getOutputChannel(ChannelID channelID) {
+		return this.outputChannels.get(channelID);
+	}
+
+	private void constructStreamChain(ConstructStreamChainAction csca)
+			throws InterruptedException {
+
+		// FIXME
+//		StreamChain streamChain = this.chainCoordinator
+//				.constructStreamChain(csca.getVertexIDs());
+//		streamChain.waitUntilFlushed();
+	}
+
+	private void limitBufferSize(LimitBufferSizeAction lbsa) {
+		ChannelID channelID = lbsa.getSourceChannelID();
+
+		AbstractByteBufferedOutputChannel<T> channel = (AbstractByteBufferedOutputChannel<T>) this.outputChannels
+				.get(channelID); 
+
+		if (channel == null) {
+			LOG.error("Cannot find output channel with ID " + channelID);
+			return;
+		}
+
+		channel.limitBufferSize(lbsa.getBufferSize());
 	}
 
 	public void reportRecordEmitted(final T record) {
@@ -113,11 +161,6 @@ public final class StreamOutputGate<T extends Record> extends
 	@Override
 	public void initializeCompressors() throws CompressionException {
 		this.getWrappedOutputGate().initializeCompressors();
-	}
-
-	public AbstractOutputChannel<? extends Record> getOutputChannel(
-			ChannelID channelID) {
-		return this.outputChannels.get(channelID);
 	}
 
 	/**

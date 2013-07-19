@@ -32,6 +32,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosManagerThread;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChainCoordinator;
+import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
 /**
  * 
@@ -84,29 +85,28 @@ public class StreamJobEnvironment {
 		return this.jobID;
 	}
 
-	public void registerTask(ExecutionVertexID vertexID,
-			StreamTaskEnvironment taskEnvironment) {
-
+	
+	public void registerTask(RuntimeTask task, StreamTaskEnvironment streamEnv) {
 		if (this.environmentIsShutDown) {
 			return;
 		}
 
-		updateReportingConfiguration(taskEnvironment);
+		updateAggregationAndTaggingIntervals(streamEnv);
 
 		synchronized (this.taskQosCoordinators) {
-			if (this.taskQosCoordinators.containsKey(vertexID)) {
+			if (this.taskQosCoordinators.containsKey(task.getVertexID())) {
 				throw new RuntimeException(String.format(
 						"Task %s is already registered",
-						taskEnvironment.getTaskName()));
+						streamEnv.getTaskName()));
 			}
 
-			this.taskQosCoordinators.put(vertexID,
-					new StreamTaskQosCoordinator(vertexID, taskEnvironment,
+			this.taskQosCoordinators.put(task.getVertexID(),
+					new StreamTaskQosCoordinator(task.getVertexID(), streamEnv,
 							this.qosReportForwarder, this.chainCoordinator));
 		}
 	}
 
-	private void updateReportingConfiguration(Environment taskEnvironment) {
+	private void updateAggregationAndTaggingIntervals(Environment taskEnvironment) {
 		long aggregationInterval = taskEnvironment
 				.getJobConfiguration()
 				.getLong(StreamTaskManagerPlugin.AGGREGATION_INTERVAL_KEY,
@@ -198,7 +198,7 @@ public class StreamJobEnvironment {
 				.get(action.getVertexID());
 
 		if (qosCoordinator != null) {
-			qosCoordinator.queueQosAction(action);
+			qosCoordinator.handleLimitBufferSizeAction(action);
 		} else {
 			LOG.error("Cannot find QoS coordinator for vertex with ID "
 					+ action.getVertexID());
@@ -207,16 +207,17 @@ public class StreamJobEnvironment {
 
 	private void handleConstructStreamChainAction(
 			ConstructStreamChainAction action) {
-
-		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
-				.get(action.getVertexID());
-
-		if (qosCoordinator != null) {
-			qosCoordinator.queueQosAction(action);
-		} else {
-			LOG.error("Cannot find QoS coordinator for vertex with ID "
-					+ action.getVertexID());
-		}
+		
+		//FIXME
+//		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
+//				.get(action.getVertexID());
+//
+//		if (qosCoordinator != null) {
+//			qosCoordinator.handleLimitBufferSizeAction(action);
+//		} else {
+//			LOG.error("Cannot find QoS coordinator for vertex with ID "
+//					+ action.getVertexID());
+//		}
 	}
 
 	public void unregisterTask(ExecutionVertexID vertexID,
@@ -224,5 +225,4 @@ public class StreamJobEnvironment {
 
 		// FIXME
 	}
-
 }
