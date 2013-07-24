@@ -64,11 +64,13 @@ import eu.stratosphere.nephele.types.Record;
 
 /**
  * 
- * Provides fixtures (qos graphs, a job graph and an execution graph).
- * If you use this class in your unit test, be sure to annotate your class
- * with the following Powermock annotations:
- * @PrepareForTest({ ExecutionSignature.class, AbstractInstance.class, AllocatedResource.class })
- * @RunWith(PowerMockRunner.class) 
+ * Provides fixtures (qos graphs, a job graph and an execution graph). If you
+ * use this class in your unit test, be sure to annotate your class with the
+ * following Powermock annotations:
+ * 
+ * @PrepareForTest({ ExecutionSignature.class, AbstractInstance.class,
+ *                   AllocatedResource.class })
+ * @RunWith(PowerMockRunner.class)
  * 
  * 
  * @author Bjoern Lohrmann
@@ -171,30 +173,28 @@ public class QosGraphFixture {
 	 * Covers v2,e24,v4
 	 */
 	public JobGraphLatencyConstraint constraint4;
-	
+
 	/**
 	 * Covers e1011,v11,e1112,v12,e1213
-	 */	
+	 */
 	public JobGraphLatencyConstraint constraint5;
 
 	private InstanceConnectionInfo[][] instanceConnectionInfos;
 
-
-
 	public QosGraphFixture() throws Exception {
-		// if there is currently no log4j configuration, 
+		// if there is currently no log4j configuration,
 		// make a default stdout config with WARN level
 		if (!Logger.getRootLogger().getAllAppenders().hasMoreElements()) {
 			BasicConfigurator.configure();
 			Logger.getRootLogger().setLevel(Level.WARN);
 		}
 
-		makeJobGraph();
-		makeExecutionGraph();
-		connectVertices1To5();
-		connectVertices0To6();
-		connectvertices10To13();
-		makeConstraints();
+		this.makeJobGraph();
+		this.makeExecutionGraph();
+		this.connectVertices1To5();
+		this.connectVertices0To6();
+		this.connectvertices10To13();
+		this.makeConstraints();
 	}
 
 	private void connectvertices10To13() {
@@ -228,13 +228,16 @@ public class QosGraphFixture {
 
 		ExecutionSignature execSig = mock(ExecutionSignature.class);
 
-		when(ExecutionSignature.createSignature(
+		when(
+				ExecutionSignature.createSignature(
 						Matchers.eq(AbstractGenericInputTask.class),
 						Matchers.any(JobID.class))).thenReturn(execSig);
-		when(ExecutionSignature.createSignature(
+		when(
+				ExecutionSignature.createSignature(
 						Matchers.eq(AbstractTask.class),
 						Matchers.any(JobID.class))).thenReturn(execSig);
-		when(ExecutionSignature.createSignature(
+		when(
+				ExecutionSignature.createSignature(
 						Matchers.eq(AbstractOutputTask.class),
 						Matchers.any(JobID.class))).thenReturn(execSig);
 
@@ -263,34 +266,41 @@ public class QosGraphFixture {
 				this.execVertex5 = execVertex;
 			}
 		}
-		
+
 		// inject InstanceConnectionInfos
 		this.instanceConnectionInfos = new InstanceConnectionInfo[5][];
-		this.instanceConnectionInfos[0] = this.generateAndAssignInstances(this.execVertex1);
-		this.instanceConnectionInfos[1] = this.generateAndAssignInstances(this.execVertex2);
-		this.instanceConnectionInfos[2] = this.generateAndAssignInstances(this.execVertex3);
-		this.instanceConnectionInfos[3] = this.generateAndAssignInstances(this.execVertex4);
-		this.instanceConnectionInfos[4] = this.generateAndAssignInstances(this.execVertex5);
+		this.instanceConnectionInfos[0] = this
+				.generateAndAssignInstances(this.execVertex1);
+		this.instanceConnectionInfos[1] = this
+				.generateAndAssignInstances(this.execVertex2);
+		this.instanceConnectionInfos[2] = this
+				.generateAndAssignInstances(this.execVertex3);
+		this.instanceConnectionInfos[3] = this
+				.generateAndAssignInstances(this.execVertex4);
+		this.instanceConnectionInfos[4] = this
+				.generateAndAssignInstances(this.execVertex5);
 	}
 
 	private InstanceConnectionInfo[] generateAndAssignInstances(
 			ExecutionGroupVertex groupVertex) {
-		
-		InstanceConnectionInfo[] connectionInfos = new InstanceConnectionInfo[groupVertex.getCurrentNumberOfGroupMembers()];
-		for(int i=0; i<connectionInfos.length; i++) {
+
+		InstanceConnectionInfo[] connectionInfos = new InstanceConnectionInfo[groupVertex
+				.getCurrentNumberOfGroupMembers()];
+		for (int i = 0; i < connectionInfos.length; i++) {
 			ExecutionVertex vertex = groupVertex.getGroupMember(i);
-			
+
 			try {
 				connectionInfos[i] = new InstanceConnectionInfo(
 						InetAddress.getByName(String.format("10.10.10.%d",
 								i + 1)), 1, 1);
-							
+
 				AbstractInstance instance = mock(AbstractInstance.class);
-				when(instance.getInstanceConnectionInfo()).thenReturn(connectionInfos[i]);
+				when(instance.getInstanceConnectionInfo()).thenReturn(
+						connectionInfos[i]);
 
 				AllocatedResource resource = mock(AllocatedResource.class);
 				when(resource.getInstance()).thenReturn(instance);
-				
+
 				vertex.setAllocatedResource(resource);
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
@@ -347,16 +357,19 @@ public class QosGraphFixture {
 				1);
 		sequence4.addVertex(this.jobVertex4.getID(), 1, 0);
 		this.constraint4 = new JobGraphLatencyConstraint(sequence4, 2000);
-		
+
 		/**
 		 * Covers e1011,v11,e1112,v12,e1213
-		 */	
+		 */
 		JobGraphSequence sequence5 = new JobGraphSequence();
-		sequence5.addEdge(this.vertex10.getJobVertexID(), 0, this.vertex11.getJobVertexID(), 0);
+		sequence5.addEdge(this.vertex10.getJobVertexID(), 0,
+				this.vertex11.getJobVertexID(), 0);
 		sequence5.addVertex(this.vertex11.getJobVertexID(), 0, 0);
-		sequence5.addEdge(this.vertex11.getJobVertexID(), 0, this.vertex12.getJobVertexID(), 0);
+		sequence5.addEdge(this.vertex11.getJobVertexID(), 0,
+				this.vertex12.getJobVertexID(), 0);
 		sequence5.addVertex(this.vertex12.getJobVertexID(), 0, 0);
-		sequence5.addEdge(this.vertex12.getJobVertexID(), 0, this.vertex13.getJobVertexID(), 0);
+		sequence5.addEdge(this.vertex12.getJobVertexID(), 0,
+				this.vertex13.getJobVertexID(), 0);
 		this.constraint5 = new JobGraphLatencyConstraint(sequence5, 2000);
 	}
 
@@ -480,7 +493,8 @@ public class QosGraphFixture {
 		for (int i = 0; i < execGroupVertex.getCurrentNumberOfGroupMembers(); i++) {
 			ExecutionVertex execVertex = execGroupVertex.getGroupMember(i);
 			QosVertex member = new QosVertex(execVertex.getID(),
-					execVertex.getName(), execVertex.getAllocatedResource().getInstance().getInstanceConnectionInfo(),
+					execVertex.getName(), execVertex.getAllocatedResource()
+							.getInstance().getInstanceConnectionInfo(),
 					execVertex.getIndexInVertexGroup());
 			groupVertex.setGroupMember(member);
 		}
@@ -501,7 +515,8 @@ public class QosGraphFixture {
 
 		for (int i = 0; i < sourceMembers; i++) {
 			QosVertex sourceMember = groupEdge.getSourceVertex().getMember(i);
-			QosGate outputGate = new QosGate(new GateID(), groupEdge.getOutputGateIndex());
+			QosGate outputGate = new QosGate(new GateID(),
+					groupEdge.getOutputGateIndex());
 			sourceMember.setOutputGate(outputGate);
 
 			for (int j = 0; j < targetMembers; j++) {
@@ -515,7 +530,8 @@ public class QosGraphFixture {
 					QosGate inputGate = targetMember.getInputGate(groupEdge
 							.getInputGateIndex());
 					if (inputGate == null) {
-						inputGate = new QosGate(new GateID(), groupEdge.getOutputGateIndex());
+						inputGate = new QosGate(new GateID(),
+								groupEdge.getOutputGateIndex());
 						targetMember.setInputGate(inputGate);
 					}
 
@@ -538,7 +554,6 @@ public class QosGraphFixture {
 		public void read(DataInput in) throws IOException {
 		}
 	}
-
 
 	public static class DummyInputTask extends AbstractGenericInputTask {
 

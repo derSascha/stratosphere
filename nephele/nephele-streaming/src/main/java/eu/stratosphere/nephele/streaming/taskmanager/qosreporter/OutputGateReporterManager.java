@@ -9,8 +9,8 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 
 /**
- * A instance of this class keeps track of and reports on the Qos statistics of an
- * output gate's output channels.
+ * A instance of this class keeps track of and reports on the Qos statistics of
+ * an output gate's output channels.
  * 
  * This class is thread-safe.
  * 
@@ -18,7 +18,7 @@ import eu.stratosphere.nephele.types.AbstractTaggableRecord;
  * provided {@link QosReportForwarderThread} approximately once per aggregation
  * interval (see {@link QosReporterConfigCenter}). "Approximately" because if no
  * records have been received/emitted, nothing will be reported.
-
+ * 
  * 
  * @author Bjoern Lohrmann
  * 
@@ -34,7 +34,8 @@ public class OutputGateReporterManager {
 	/**
 	 * Maps from an output channels index in the runtime gate to the statistics
 	 * reporter. This needs to be threadsafe because statistics collection may
-	 * already be running while OutputChannelChannelStatisticsReporters are being added.
+	 * already be running while OutputChannelChannelStatisticsReporters are
+	 * being added.
 	 */
 	private CopyOnWriteArrayList<OutputChannelChannelStatisticsReporter> reportersByChannelIndexInRuntimeGate;
 
@@ -58,9 +59,9 @@ public class OutputGateReporterManager {
 
 		private int recordsSinceLastTag;
 
-		public OutputChannelChannelStatisticsReporter(QosReporterID.Edge reporterID,
-				int channelIndexInRuntimeGate) {
-			
+		public OutputChannelChannelStatisticsReporter(
+				QosReporterID.Edge reporterID, int channelIndexInRuntimeGate) {
+
 			this.reporterID = reporterID;
 			this.channelIndexInRuntimeGate = channelIndexInRuntimeGate;
 			this.timeOfLastReport = System.currentTimeMillis();
@@ -143,9 +144,9 @@ public class OutputGateReporterManager {
 		}
 
 		public void sendReportIfDue(long now) {
-			if (reportIsDue(now)) {
-				sendReport(now);
-				reset(now);
+			if (this.reportIsDue(now)) {
+				this.sendReport(now);
+				this.reset(now);
 			}
 		}
 
@@ -166,11 +167,12 @@ public class OutputGateReporterManager {
 		private void sendReport(long now) {
 
 			double secsPassed = (now - this.timeOfLastReport) / 1000.0;
-			double mbitPerSec = ((this.currentAmountTransmitted - this.amountTransmittedAtLastReport) * 8)
-					/ (1000000.0 * secsPassed);
+			double mbitPerSec = (this.currentAmountTransmitted - this.amountTransmittedAtLastReport)
+					* 8 / (1000000.0 * secsPassed);
 			long outputBufferLifetime = (now - this.timeOfLastReport)
 					/ this.outputBuffersSentSinceLastReport;
-			double recordsPerBuffer = ((double) this.recordsEmittedSinceLastReport / this.outputBuffersSentSinceLastReport);
+			double recordsPerBuffer = (double) this.recordsEmittedSinceLastReport
+					/ this.outputBuffersSentSinceLastReport;
 			double recordsPerSecond = this.recordsEmittedSinceLastReport
 					/ secsPassed;
 
@@ -190,7 +192,7 @@ public class OutputGateReporterManager {
 			if (this.recordsSinceLastTag >= OutputGateReporterManager.this.reportForwarder
 					.getConfigCenter().getTaggingInterval()) {
 
-				tagRecord(record);
+				this.tagRecord(record);
 				this.recordsSinceLastTag = 0;
 			} else {
 				record.setTag(null);

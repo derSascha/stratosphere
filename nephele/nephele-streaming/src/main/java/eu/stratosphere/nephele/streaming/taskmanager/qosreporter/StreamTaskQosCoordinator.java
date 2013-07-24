@@ -101,8 +101,8 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		this.inputGateReporters = new ArrayList<InputGateReporterManager>();
 		this.outputGateReporters = new ArrayList<OutputGateReporterManager>();
 
-		prepareQosReporting();
-		registerTaskAsChainMapperIfNecessary();
+		this.prepareQosReporting();
+		this.registerTaskAsChainMapperIfNecessary();
 	}
 
 	private void registerTaskAsChainMapperIfNecessary() {
@@ -112,9 +112,9 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	}
 
 	private void prepareQosReporting() {
-		installVertexLatencyReporters();
-		installInputGateListeners();
-		installOutputGateListeners();
+		this.installVertexLatencyReporters();
+		this.installInputGateListeners();
+		this.installOutputGateListeners();
 	}
 
 	private void installVertexLatencyReporters() {
@@ -127,9 +127,9 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		} else {
 			for (VertexQosReporterConfig reporterConfig : vertexReporterConfigs) {
 				if (reporterConfig.isDummy()) {
-					announceDummyReporter(reporterConfig.getReporterID());
+					this.announceDummyReporter(reporterConfig.getReporterID());
 				} else {
-					installVertexLatencyReporter(reporterConfig);
+					this.installVertexLatencyReporter(reporterConfig);
 				}
 			}
 		}
@@ -280,9 +280,9 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	@Override
 	public void newVertexQosReporter(VertexQosReporterConfig reporterConfig) {
 		if (reporterConfig.isDummy()) {
-			announceDummyReporter(reporterConfig.getReporterID());
+			this.announceDummyReporter(reporterConfig.getReporterID());
 		} else {
-			installVertexLatencyReporter(reporterConfig);
+			this.installVertexLatencyReporter(reporterConfig);
 		}
 	}
 
@@ -307,7 +307,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 					edgeReporter.getTargetChannelID()).getChannelIndex();
 
 			if (this.inputGateReporters.get(runtimeGateIndex) == null) {
-				createAndRegisterGateReporterManager(inputGate);
+				this.createAndRegisterGateReporterManager(inputGate);
 			}
 
 			this.inputGateReporters.get(runtimeGateIndex)
@@ -321,7 +321,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 					edgeReporter.getSourceChannelID()).getChannelIndex();
 
 			if (this.outputGateReporters.get(runtimeGateIndex) == null) {
-				createAndRegisterGateReporterManager(outputGate);
+				this.createAndRegisterGateReporterManager(outputGate);
 			}
 
 			this.outputGateReporters.get(runtimeGateIndex)

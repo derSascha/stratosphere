@@ -60,7 +60,7 @@ public class QosGraphTest {
 	public void testMergeForwardWithNonemptyGraph() {
 		QosGraph graph = new QosGraph(this.fix.vertex1);
 		graph.mergeForwardReachableGroupVertices(this.fix.vertex0);
-		assertMergedFixtureGraphs(graph);
+		this.assertMergedFixtureGraphs(graph);
 	}
 
 	/**

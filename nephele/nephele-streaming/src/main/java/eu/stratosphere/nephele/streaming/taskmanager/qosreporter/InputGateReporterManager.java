@@ -50,9 +50,9 @@ public class InputGateReporterManager {
 		int tagsReceived;
 
 		public void sendReportIfDue(long now) {
-			if (reportIsDue(now)) {
-				sendReport();
-				reset(now);
+			if (this.reportIsDue(now)) {
+				this.sendReport();
+				this.reset(now);
 			}
 		}
 
@@ -86,7 +86,7 @@ public class InputGateReporterManager {
 
 		this.reportForwarder = qosReporter;
 		this.reportersByChannelIndexInRuntimeGate = new CopyOnWriteArrayList<EdgeLatencyReporter>();
-		fillChannelLatenciesWithNulls(noOfInputChannels);
+		this.fillChannelLatenciesWithNulls(noOfInputChannels);
 		this.reporters = new HashSet<QosReporterID>();
 	}
 

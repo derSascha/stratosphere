@@ -23,8 +23,8 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
- * Abstract base class to be used to for exchanging messages between the different
- * components of the streaming plugin.
+ * Abstract base class to be used to for exchanging messages between the
+ * different components of the streaming plugin.
  * 
  * @author warneke
  */

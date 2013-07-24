@@ -194,7 +194,7 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 				.get(jobID);
 
 		if (jobEnvironment == null) {
-			jobEnvironment = createJobEnvironmentIfNecessary(jobID);
+			jobEnvironment = this.createJobEnvironmentIfNecessary(jobID);
 		}
 
 		return jobEnvironment;

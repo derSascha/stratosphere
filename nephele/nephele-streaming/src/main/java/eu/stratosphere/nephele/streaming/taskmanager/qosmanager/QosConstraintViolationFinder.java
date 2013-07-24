@@ -32,9 +32,10 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
- * Instances of this class can be used by a Qos manager to look for violations of a Qos constraint
- * inside a Qos graph. Sequences of Qos vertices and edges that violate the Qos constraint are handed
- * to a  {@link QosConstraintViolationListener}.
+ * Instances of this class can be used by a Qos manager to look for violations
+ * of a Qos constraint inside a Qos graph. Sequences of Qos vertices and edges
+ * that violate the Qos constraint are handed to a
+ * {@link QosConstraintViolationListener}.
  * 
  * @author Bjoern Lohrmann
  * 
@@ -165,7 +166,7 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 				inputGateIndex, outputGateIndex);
 
 		if (index + 1 == this.sequenceLength) {
-			handleFullSequence();
+			this.handleFullSequence();
 		}
 	}
 
@@ -174,13 +175,14 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 			this.logger.addMemberSequenceToLog(this.currentSequenceMembers);
 		}
 
-		computeTotalLatency();
+		this.computeTotalLatency();
 
 		double constraintViolatedByMillis = this.totalLatency
 				- this.constraint.getLatencyConstraintInMillis();
 
 		// only act on violations of >5% of the constraint
-		if (Math.abs(constraintViolatedByMillis) / this.constraint.getLatencyConstraintInMillis() > 0.05) {
+		if (Math.abs(constraintViolatedByMillis)
+				/ this.constraint.getLatencyConstraintInMillis() > 0.05) {
 			this.constraintViolationListener.handleViolatedConstraint(
 					this.currentSequenceMembers, constraintViolatedByMillis);
 		}
@@ -212,7 +214,7 @@ public class QosConstraintViolationFinder implements QosGraphTraversalListener,
 				.getChannelLatencyInMillis();
 
 		if (index + 1 == this.sequenceLength) {
-			handleFullSequence();
+			this.handleFullSequence();
 		}
 	}
 }

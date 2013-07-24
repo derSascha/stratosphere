@@ -166,16 +166,16 @@ public class QosReportForwarderThread extends Thread {
 		try {
 			while (!interrupted()) {
 
-				AggregatedReport currentReport = getCurrentReport();
+				AggregatedReport currentReport = this.getCurrentReport();
 				this.processPendingReportRecords();
 				this.sleepUntilReportDue(currentReport);
 				this.processPendingReportRecords();
 
 				if (!currentReport.isEmpty()) {
-					if (isLocalReport(currentReport)) {
-						sendToLocal(currentReport);
+					if (this.isLocalReport(currentReport)) {
+						this.sendToLocal(currentReport);
 					} else {
-						sendToRemote(currentReport);
+						this.sendToRemote(currentReport);
 					}
 				}
 				currentReport.shiftToNextReportingInterval();
@@ -260,7 +260,7 @@ public class QosReportForwarderThread extends Thread {
 		QosReporterID.Vertex reporterID = record.getReporterID();
 
 		if (this.reporterActivityMap.get(reporterID) != Boolean.TRUE) {
-			activateReporter(reporterID);
+			this.activateReporter(reporterID);
 		}
 	}
 
@@ -277,10 +277,10 @@ public class QosReportForwarderThread extends Thread {
 		QosReporterID.Vertex reporterID = taskLatency.getReporterID();
 
 		if (this.reporterActivityMap.get(reporterID) != Boolean.TRUE) {
-			activateReporter(reporterID);
+			this.activateReporter(reporterID);
 		}
 
-		Set<AggregatedReport> reports = getReports(reporterID);
+		Set<AggregatedReport> reports = this.getReports(reporterID);
 		for (AggregatedReport report : reports) {
 			report.getReport().addVertexLatency(taskLatency);
 		}
@@ -295,7 +295,7 @@ public class QosReportForwarderThread extends Thread {
 		VertexQosReporterConfig reporterConfig = this.reporterConfigCenter
 				.getVertexQosReporter(reporterID);
 
-		Set<AggregatedReport> reports = getReports(reporterID);
+		Set<AggregatedReport> reports = this.getReports(reporterID);
 		for (AggregatedReport report : reports) {
 			report.getReport().announceVertexQosReporter(reporterConfig);
 		}
@@ -306,10 +306,10 @@ public class QosReportForwarderThread extends Thread {
 		QosReporterID.Edge reporterID = channelStats.getReporterID();
 
 		if (this.reporterActivityMap.get(reporterID) != Boolean.TRUE) {
-			activateReporter(reporterID);
+			this.activateReporter(reporterID);
 		}
 
-		Set<AggregatedReport> reports = getReports(reporterID);
+		Set<AggregatedReport> reports = this.getReports(reporterID);
 		for (AggregatedReport report : reports) {
 			report.getReport().addEdgeStatistics(channelStats);
 		}
@@ -324,14 +324,14 @@ public class QosReportForwarderThread extends Thread {
 		EdgeQosReporterConfig reporterConfig = this.reporterConfigCenter
 				.getEdgeQosReporter(reporterID);
 
-		Set<AggregatedReport> reports = getReports(reporterID);
+		Set<AggregatedReport> reports = this.getReports(reporterID);
 		for (AggregatedReport report : reports) {
 			report.getReport().addEdgeQosReporterAnnouncement(reporterConfig);
 		}
 	}
 
 	private void processEdgeLatency(EdgeLatency channelLatency) {
-		Set<AggregatedReport> reports = getReports(channelLatency
+		Set<AggregatedReport> reports = this.getReports(channelLatency
 				.getReporterID());
 		for (AggregatedReport report : reports) {
 			report.getReport().addEdgeLatency(channelLatency);

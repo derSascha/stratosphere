@@ -56,19 +56,19 @@ public class QosGraph implements IOReadableWritable {
 	public QosGraph(QosGroupVertex startVertex) {
 		this();
 		this.startVertices.add(startVertex);
-		exploreForward(startVertex);
+		this.exploreForward(startVertex);
 	}
 
 	public QosGraph(QosGroupVertex startVertex,
 			JobGraphLatencyConstraint constraint) {
 		this(startVertex);
-		addConstraint(constraint);
+		this.addConstraint(constraint);
 	}
 
 	private void exploreForward(QosGroupVertex vertex) {
 		this.vertexByID.put(vertex.getJobVertexID(), vertex);
 		for (QosGroupEdge forwardEdge : vertex.getForwardEdges()) {
-			exploreForward(forwardEdge.getTargetVertex());
+			this.exploreForward(forwardEdge.getTargetVertex());
 		}
 
 		if (vertex.getNumberOfOutputGates() == 0) {
@@ -86,14 +86,14 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	public void mergeForwardReachableGroupVertices(
 			QosGroupVertex templateVertex, boolean cloneMembers) {
-		QosGroupVertex vertex = getOrCreate(templateVertex, cloneMembers);
+		QosGroupVertex vertex = this.getOrCreate(templateVertex, cloneMembers);
 
 		for (QosGroupEdge templateEdge : templateVertex.getForwardEdges()) {
 			if (!vertex.hasOutputGate(templateEdge.getOutputGateIndex())) {
-				QosGroupVertex edgeTarget = getOrCreate(
+				QosGroupVertex edgeTarget = this.getOrCreate(
 						templateEdge.getTargetVertex(), cloneMembers);
 				vertex.wireTo(edgeTarget, templateEdge);
-				wireMembersUsingTemplate(vertex, edgeTarget, templateEdge);
+				this.wireMembersUsingTemplate(vertex, edgeTarget, templateEdge);
 
 				// remove vertex from end vertices if necessary (vertex has an
 				// output gate now)
@@ -104,8 +104,8 @@ public class QosGraph implements IOReadableWritable {
 				this.startVertices.remove(edgeTarget);
 			}
 			// recursive call
-			mergeForwardReachableGroupVertices(templateEdge.getTargetVertex(),
-					cloneMembers);
+			this.mergeForwardReachableGroupVertices(
+					templateEdge.getTargetVertex(), cloneMembers);
 		}
 
 		if (vertex.getNumberOfInputGates() == 0) {
@@ -136,7 +136,7 @@ public class QosGraph implements IOReadableWritable {
 				fromMember.setOutputGate(outputGate);
 			}
 
-			addEdgesToOutputGate(outputGate, templateOutputGate, to,
+			this.addEdgesToOutputGate(outputGate, templateOutputGate, to,
 					inputGateIndex);
 		}
 	}
@@ -168,7 +168,7 @@ public class QosGraph implements IOReadableWritable {
 				.getJobVertexID());
 
 		if (toReturn == null) {
-			toReturn = (cloneMembers) ? cloneTemplate.cloneWithoutEdges()
+			toReturn = cloneMembers ? cloneTemplate.cloneWithoutEdges()
 					: cloneTemplate.cloneWithoutMembersOrEdges();
 			this.vertexByID.put(toReturn.getJobVertexID(), toReturn);
 		}
@@ -187,14 +187,14 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	public void mergeBackwardReachableGroupVertices(
 			QosGroupVertex templateVertex, boolean cloneMembers) {
-		QosGroupVertex vertex = getOrCreate(templateVertex, cloneMembers);
+		QosGroupVertex vertex = this.getOrCreate(templateVertex, cloneMembers);
 
 		for (QosGroupEdge templateEdge : templateVertex.getBackwardEdges()) {
 			if (!vertex.hasInputGate(templateEdge.getInputGateIndex())) {
-				QosGroupVertex edgeSource = getOrCreate(
+				QosGroupVertex edgeSource = this.getOrCreate(
 						templateEdge.getSourceVertex(), cloneMembers);
 				edgeSource.wireTo(vertex, templateEdge);
-				wireMembersUsingTemplate(edgeSource, vertex, templateEdge);
+				this.wireMembersUsingTemplate(edgeSource, vertex, templateEdge);
 
 				// remove edgeSource from end vertices if necessary (edgeSource
 				// has an
@@ -206,7 +206,8 @@ public class QosGraph implements IOReadableWritable {
 				this.startVertices.remove(vertex);
 			}
 			// recursive call
-			mergeBackwardReachableGroupVertices(templateEdge.getSourceVertex());
+			this.mergeBackwardReachableGroupVertices(templateEdge
+					.getSourceVertex());
 		}
 
 		if (vertex.getNumberOfInputGates() == 0) {
@@ -219,7 +220,7 @@ public class QosGraph implements IOReadableWritable {
 	}
 
 	public void addConstraint(JobGraphLatencyConstraint constraint) {
-		ensureGraphContainsConstrainedVertices(constraint);
+		this.ensureGraphContainsConstrainedVertices(constraint);
 		this.constraints.put(constraint.getID(), constraint);
 	}
 
@@ -300,8 +301,8 @@ public class QosGraph implements IOReadableWritable {
 	 * one.
 	 */
 	public void merge(QosGraph graph) {
-		mergeVerticesAndEdges(graph);
-		recomputeStartAndEndVertices();
+		this.mergeVerticesAndEdges(graph);
+		this.recomputeStartAndEndVertices();
 		this.constraints.putAll(graph.constraints);
 	}
 
@@ -322,16 +323,16 @@ public class QosGraph implements IOReadableWritable {
 
 	private void mergeVerticesAndEdges(QosGraph graph) {
 		for (QosGroupVertex templateVertex : graph.vertexByID.values()) {
-			QosGroupVertex edgeSource = getOrCreate(templateVertex, true);
+			QosGroupVertex edgeSource = this.getOrCreate(templateVertex, true);
 
 			for (QosGroupEdge templateEdge : templateVertex.getForwardEdges()) {
 				if (!edgeSource
 						.hasOutputGate(templateEdge.getOutputGateIndex())) {
-					QosGroupVertex egdeTarget = getOrCreate(
+					QosGroupVertex egdeTarget = this.getOrCreate(
 							templateEdge.getTargetVertex(), true);
 
 					edgeSource.wireTo(egdeTarget, templateEdge);
-					wireMembersUsingTemplate(edgeSource, egdeTarget,
+					this.wireMembersUsingTemplate(edgeSource, egdeTarget,
 							templateEdge);
 				}
 			}
@@ -403,12 +404,15 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		if (this.getClass() != obj.getClass()) {
 			return false;
+		}
 		QosGraph other = (QosGraph) obj;
 
 		return this.qosGraphID.equals(other.qosGraphID);
@@ -420,9 +424,9 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	@Override
 	public void write(DataOutput out) throws IOException {
-		writeConstraints(out);
-		writeGroupVertices(out);
-		writeGroupEdges(out);
+		this.writeConstraints(out);
+		this.writeGroupVertices(out);
+		this.writeGroupEdges(out);
 	}
 
 	private void writeConstraints(DataOutput out) throws IOException {
@@ -463,10 +467,10 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	@Override
 	public void read(DataInput in) throws IOException {
-		readConstraints(in);
-		readGroupVertices(in);
-		readGroupEdges(in);
-		recomputeStartAndEndVertices();
+		this.readConstraints(in);
+		this.readGroupVertices(in);
+		this.readGroupEdges(in);
+		this.recomputeStartAndEndVertices();
 	}
 
 	private void readConstraints(DataInput in) throws IOException {

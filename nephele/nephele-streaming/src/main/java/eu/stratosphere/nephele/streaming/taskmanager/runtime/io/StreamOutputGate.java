@@ -49,7 +49,7 @@ import eu.stratosphere.nephele.types.Record;
  */
 public final class StreamOutputGate<T extends Record> extends
 		AbstractOutputGateWrapper<T> {
-	
+
 	private final static Logger LOG = Logger.getLogger(StreamOutputGate.class);
 
 	private StreamChain streamChain = null;
@@ -59,10 +59,11 @@ public final class StreamOutputGate<T extends Record> extends
 	private HashMap<ChannelID, AbstractOutputChannel<T>> outputChannels;
 
 	private StreamChannelSelector<T> streamChannelSelector;
-	
+
 	private LinkedBlockingQueue<AbstractQosAction> qosActionQueue;
 
-	public StreamOutputGate(final OutputGate<T> wrappedOutputGate, StreamChannelSelector<T> streamChannelSelector) {
+	public StreamOutputGate(final OutputGate<T> wrappedOutputGate,
+			StreamChannelSelector<T> streamChannelSelector) {
 		super(wrappedOutputGate);
 		this.outputChannels = new HashMap<ChannelID, AbstractOutputChannel<T>>();
 		this.streamChannelSelector = streamChannelSelector;
@@ -95,11 +96,11 @@ public final class StreamOutputGate<T extends Record> extends
 
 		this.handlePendingQosActions();
 	}
-	
+
 	public void enqueueQosAction(AbstractQosAction qosAction) {
 		this.qosActionQueue.add(qosAction);
 	}
-	 
+
 	private void handlePendingQosActions() throws InterruptedException {
 		AbstractQosAction action;
 		while ((action = this.qosActionQueue.poll()) != null) {
@@ -110,7 +111,7 @@ public final class StreamOutputGate<T extends Record> extends
 			}
 		}
 	}
-	
+
 	public AbstractOutputChannel<T> getOutputChannel(ChannelID channelID) {
 		return this.outputChannels.get(channelID);
 	}
@@ -119,16 +120,16 @@ public final class StreamOutputGate<T extends Record> extends
 			throws InterruptedException {
 
 		// FIXME
-//		StreamChain streamChain = this.chainCoordinator
-//				.constructStreamChain(csca.getVertexIDs());
-//		streamChain.waitUntilFlushed();
+		// StreamChain streamChain = this.chainCoordinator
+		// .constructStreamChain(csca.getVertexIDs());
+		// streamChain.waitUntilFlushed();
 	}
 
 	private void limitBufferSize(LimitBufferSizeAction lbsa) {
 		ChannelID channelID = lbsa.getSourceChannelID();
 
 		AbstractByteBufferedOutputChannel<T> channel = (AbstractByteBufferedOutputChannel<T>) this.outputChannels
-				.get(channelID); 
+				.get(channelID);
 
 		if (channel == null) {
 			LOG.error("Cannot find output channel with ID " + channelID);
@@ -141,7 +142,7 @@ public final class StreamOutputGate<T extends Record> extends
 	public void reportRecordEmitted(final T record) {
 		int outputChannel = this.streamChannelSelector
 				.invokeWrappedChannelSelector(record,
-						getNumberOfOutputChannels())[0];
+						this.getNumberOfOutputChannels())[0];
 
 		if (this.qosCallback != null) {
 			AbstractTaggableRecord taggableRecord = (AbstractTaggableRecord) record;

@@ -82,8 +82,9 @@ public class QosManagerRole {
 	 *            the constraintID to set
 	 */
 	public void setConstraintID(LatencyConstraintID constraintID) {
-		if (constraintID == null)
+		if (constraintID == null) {
 			throw new NullPointerException("constraintID must not be null");
+		}
 
 		this.constraintID = constraintID;
 	}
@@ -104,8 +105,9 @@ public class QosManagerRole {
 	 *            the qosGraph to set
 	 */
 	public void setQosGraph(QosGraph qosGraph) {
-		if (qosGraph == null)
+		if (qosGraph == null) {
 			throw new NullPointerException("qosGraph must not be null");
+		}
 
 		this.qosGraph = qosGraph;
 	}
@@ -126,8 +128,9 @@ public class QosManagerRole {
 	 *            the anchorVertex to set
 	 */
 	public void setAnchorVertex(QosGroupVertex anchorVertex) {
-		if (anchorVertex == null)
+		if (anchorVertex == null) {
 			throw new NullPointerException("anchorVertex must not be null");
+		}
 
 		this.anchorVertex = anchorVertex;
 	}
@@ -148,8 +151,9 @@ public class QosManagerRole {
 	 *            the membersOnInstance to set
 	 */
 	public void setMembersOnInstance(List<QosVertex> membersOnInstance) {
-		if (membersOnInstance == null)
+		if (membersOnInstance == null) {
 			throw new NullPointerException("membersOnInstance must not be null");
+		}
 
 		this.membersOnInstance = membersOnInstance;
 	}
@@ -178,7 +182,7 @@ public class QosManagerRole {
 		if (obj == this) {
 			return true;
 		}
-		if (obj.getClass() != getClass()) {
+		if (obj.getClass() != this.getClass()) {
 			return false;
 		}
 		QosManagerRole rhs = (QosManagerRole) obj;

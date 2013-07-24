@@ -82,16 +82,16 @@ public class TaskManagerQosRoles {
 				jobID, this.taskManagerConnectionInfo);
 
 		if (!this.managerRoles.isEmpty()) {
-			addQosManagerConfig(deploymentAction);
+			this.addQosManagerConfig(deploymentAction);
 		}
 
 		for (QosReporterRole reporterRole : this.reporterRoles.values()) {
 			if (reporterRole.getAction() == ReportingAction.REPORT_CHANNEL_STATS) {
-				deploymentAction
-						.addEdgeQosReporter(toEdgeQosReporterConfig(reporterRole));
+				deploymentAction.addEdgeQosReporter(this
+						.toEdgeQosReporterConfig(reporterRole));
 			} else {
-				deploymentAction
-						.addVertexQosReporter(toVertexQosReporterConfig(reporterRole));
+				deploymentAction.addVertexQosReporter(this
+						.toVertexQosReporterConfig(reporterRole));
 			}
 		}
 
@@ -128,9 +128,9 @@ public class TaskManagerQosRoles {
 		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
 				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
 				vertex.getExecutingInstance(), managers, inputGateIndex,
-				(inputGateIndex != -1) ? vertex.getInputGate(inputGateIndex)
+				inputGateIndex != -1 ? vertex.getInputGate(inputGateIndex)
 						.getGateID() : null, outputGateIndex,
-				(outputGateIndex != -1) ? vertex.getOutputGate(outputGateIndex)
+				outputGateIndex != -1 ? vertex.getOutputGate(outputGateIndex)
 						.getGateID() : null, vertex.getMemberIndex(),
 				vertex.getName());
 

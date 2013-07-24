@@ -99,7 +99,7 @@ public class QosReporterConfigCenter {
 				.get(newReporter.getSourceChannelID());
 
 		if (oldReporter != null) {
-			EdgeQosReporterConfig merged = mergeEdgeQosReporterConfigs(
+			EdgeQosReporterConfig merged = this.mergeEdgeQosReporterConfigs(
 					oldReporter, newReporter);
 			this.reporterConfigsByChannel.put(merged.getSourceChannelID(),
 					merged);
@@ -193,8 +193,8 @@ public class QosReporterConfigCenter {
 
 	public VertexQosReporterConfig getVertexQosReporter(
 			QosReporterID.Vertex reporterID) {
-		Set<VertexQosReporterConfig> configs = getVertexQosReporters(reporterID
-				.getVertexID());
+		Set<VertexQosReporterConfig> configs = this
+				.getVertexQosReporters(reporterID.getVertexID());
 
 		for (VertexQosReporterConfig config : configs) {
 			if (config.getReporterID().equals(reporterID)) {
@@ -206,7 +206,7 @@ public class QosReporterConfigCenter {
 
 	public EdgeQosReporterConfig getEdgeQosReporter(
 			QosReporterID.Edge reporterID) {
-		return getEdgeQosReporter(reporterID.getSourceChannelID());
+		return this.getEdgeQosReporter(reporterID.getSourceChannelID());
 	}
 
 }

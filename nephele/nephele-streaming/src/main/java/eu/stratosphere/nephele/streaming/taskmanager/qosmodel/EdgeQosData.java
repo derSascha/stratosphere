@@ -6,10 +6,11 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSi
 import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
 /**
- * Instances of this class hold Qos data (latency, throughput, ...) of a {@link QosEdge}.
+ * Instances of this class hold Qos data (latency, throughput, ...) of a
+ * {@link QosEdge}.
  * 
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public class EdgeQosData {
 
@@ -20,13 +21,13 @@ public class EdgeQosData {
 	private QosStatistic throughputInMbitStatistic;
 
 	private QosStatistic outputBufferLifetimeStatistic;
-	
+
 	private QosStatistic recordsPerBufferStatistic;
-	
+
 	private QosStatistic recordsPerSecondStatistic;
 
 	private BufferSizeHistory bufferSizeHistory;
-	
+
 	private final static int DEFAULT_NO_OF_STATISTICS_ENTRIES = 4;
 
 	private boolean isInChain;
@@ -36,7 +37,8 @@ public class EdgeQosData {
 		this.isInChain = false;
 		this.latencyInMillisStatistic = new QosStatistic(noOfStatisticsEntries);
 		this.throughputInMbitStatistic = new QosStatistic(noOfStatisticsEntries);
-		this.outputBufferLifetimeStatistic = new QosStatistic(noOfStatisticsEntries);
+		this.outputBufferLifetimeStatistic = new QosStatistic(
+				noOfStatisticsEntries);
 		this.recordsPerBufferStatistic = new QosStatistic(noOfStatisticsEntries);
 		this.recordsPerSecondStatistic = new QosStatistic(noOfStatisticsEntries);
 		this.bufferSizeHistory = new BufferSizeHistory(2);
@@ -45,7 +47,7 @@ public class EdgeQosData {
 						"channel.network.bufferSizeInBytes",
 						GlobalBufferPool.DEFAULT_BUFFER_SIZE_IN_BYTES));
 	}
-	
+
 	public EdgeQosData(QosEdge edge) {
 		this(edge, DEFAULT_NO_OF_STATISTICS_ENTRIES);
 	}
@@ -78,7 +80,7 @@ public class EdgeQosData {
 		}
 		return -1;
 	}
-	
+
 	public double getRecordsPerBuffer() {
 		if (this.recordsPerBufferStatistic.hasValues()) {
 			return this.recordsPerBufferStatistic.getArithmeticMean();
@@ -100,21 +102,20 @@ public class EdgeQosData {
 
 	public void addOutputChannelStatisticsMeasurement(long timestamp,
 			EdgeStatistics stats) {
-		
-		QosValue throughput = new QosValue(stats.getThroughput(),
-				timestamp);
+
+		QosValue throughput = new QosValue(stats.getThroughput(), timestamp);
 		this.throughputInMbitStatistic.addValue(throughput);
 
 		QosValue outputBufferLifetime = new QosValue(
 				stats.getOutputBufferLifetime(), timestamp);
 		this.outputBufferLifetimeStatistic.addValue(outputBufferLifetime);
 
-		QosValue recordsPerBuffer = new QosValue(
-				stats.getRecordsPerBuffer(), timestamp);
+		QosValue recordsPerBuffer = new QosValue(stats.getRecordsPerBuffer(),
+				timestamp);
 		this.recordsPerBufferStatistic.addValue(recordsPerBuffer);
 
-		QosValue recordsPerSecond = new QosValue(
-				stats.getRecordsPerSecond(), timestamp);
+		QosValue recordsPerSecond = new QosValue(stats.getRecordsPerSecond(),
+				timestamp);
 		this.recordsPerSecondStatistic.addValue(recordsPerSecond);
 	}
 

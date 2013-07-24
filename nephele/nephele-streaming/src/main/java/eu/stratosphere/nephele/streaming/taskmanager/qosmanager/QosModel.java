@@ -132,7 +132,7 @@ public class QosModel {
 			this.qosGraph.merge(shallowQosGraph);
 		}
 
-		tryToProcessBufferedAnnouncements();
+		this.tryToProcessBufferedAnnouncements();
 	}
 
 	public boolean isReady() {
@@ -152,15 +152,15 @@ public class QosModel {
 		case READY:
 			if (report.hasAnnouncements()
 					|| this.announcementBuffer.hasAnnouncements()) {
-				bufferAndTryToProcessAnnouncements(report);
+				this.bufferAndTryToProcessAnnouncements(report);
 			}
-			processQosRecords(report);
+			this.processQosRecords(report);
 			break;
 		case SHALLOW:
-			bufferAndTryToProcessAnnouncements(report);
+			this.bufferAndTryToProcessAnnouncements(report);
 			break;
 		case EMPTY:
-			bufferAnnouncements(report);
+			this.bufferAnnouncements(report);
 			break;
 		}
 	}
@@ -193,9 +193,9 @@ public class QosModel {
 
 	private void processQosRecords(QosReport report) {
 		long now = System.currentTimeMillis();
-		processVertexLatencies(report.getVertexLatencies(), now);
-		processEdgeStatistics(report.getEdgeStatistics(), now);
-		processEdgeLatencies(report.getEdgeLatencies(), now);
+		this.processVertexLatencies(report.getVertexLatencies(), now);
+		this.processEdgeStatistics(report.getEdgeStatistics(), now);
+		this.processEdgeLatencies(report.getEdgeLatencies(), now);
 	}
 
 	private void processVertexLatencies(
@@ -248,13 +248,13 @@ public class QosModel {
 	}
 
 	private void bufferAndTryToProcessAnnouncements(QosReport report) {
-		bufferAnnouncements(report);
-		tryToProcessBufferedAnnouncements();
+		this.bufferAnnouncements(report);
+		this.tryToProcessBufferedAnnouncements();
 	}
 
 	private void tryToProcessBufferedAnnouncements() {
-		tryToProcessBufferedVertexReporterAnnouncements();
-		tryToProcessBufferedEdgeReporterAnnouncements();
+		this.tryToProcessBufferedVertexReporterAnnouncements();
+		this.tryToProcessBufferedEdgeReporterAnnouncements();
 
 		if (this.qosGraph.isShallow()) {
 			this.state = State.SHALLOW;
@@ -276,7 +276,7 @@ public class QosModel {
 					.getInputGateID());
 
 			if (inputGate != null && outputGate != null) {
-				assembleQosEdgeFromReporterConfig(toProcess, outputGate,
+				this.assembleQosEdgeFromReporterConfig(toProcess, outputGate,
 						inputGate);
 				vertexIter.remove();
 			}
@@ -307,7 +307,7 @@ public class QosModel {
 					.getGroupVertexByID(toProcess.getGroupVertexID());
 
 			if (groupVertex != null) {
-				assembleQosVertexFromReporterConfig(toProcess, groupVertex);
+				this.assembleQosVertexFromReporterConfig(toProcess, groupVertex);
 				vertexIter.remove();
 			}
 		}
@@ -367,9 +367,9 @@ public class QosModel {
 		// bufferEdgeLatencies(report.getEdgeLatencies());
 		// bufferEdgeStatistics(report.getEdgeStatistics());
 		// bufferVertexLatencies(report.getVertexLatencies());
-		bufferEdgeQosReporterAnnouncements(report
+		this.bufferEdgeQosReporterAnnouncements(report
 				.getEdgeQosReporterAnnouncements());
-		bufferVertexQosReporterAnnouncements(report
+		this.bufferVertexQosReporterAnnouncements(report
 				.getVertexQosReporterAnnouncements());
 	}
 

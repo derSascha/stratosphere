@@ -79,8 +79,9 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	 *            the ID to set
 	 */
 	public void setVertexID(ExecutionVertexID vertexID) {
-		if (vertexID == null)
+		if (vertexID == null) {
 			throw new NullPointerException("vertexID must not be null");
+		}
 
 		this.vertexID = vertexID;
 	}
@@ -145,8 +146,8 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	}
 
 	public StreamInputGate<? extends Record> getInputGate(GateID gateID) {
-		for (int i = 0; i < getNumberOfInputGates(); i++) {
-			StreamInputGate<? extends Record> inputGate = getInputGate(i);
+		for (int i = 0; i < this.getNumberOfInputGates(); i++) {
+			StreamInputGate<? extends Record> inputGate = this.getInputGate(i);
 			if (inputGate.getGateID().equals(gateID)) {
 				return inputGate;
 			}
@@ -156,8 +157,9 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	}
 
 	public StreamOutputGate<? extends Record> getOutputGate(GateID gateID) {
-		for (int i = 0; i < getNumberOfOutputGates(); i++) {
-			StreamOutputGate<? extends Record> outputGate = getOutputGate(i);
+		for (int i = 0; i < this.getNumberOfOutputGates(); i++) {
+			StreamOutputGate<? extends Record> outputGate = this
+					.getOutputGate(i);
 			if (outputGate.getGateID().equals(gateID)) {
 				return outputGate;
 			}

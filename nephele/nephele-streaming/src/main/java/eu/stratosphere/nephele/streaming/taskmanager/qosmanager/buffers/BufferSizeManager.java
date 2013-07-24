@@ -97,7 +97,8 @@ public class BufferSizeManager {
 					List<QosGraphMember> sequenceMembers,
 					double constraintViolatedByMillis) {
 				if (constraintViolatedByMillis > 0) {
-					collectEdgesToAdjust(sequenceMembers, edgesToAdjust);
+					BufferSizeManager.this.collectEdgesToAdjust(
+							sequenceMembers, edgesToAdjust);
 				}
 			}
 		};

@@ -88,7 +88,7 @@ public class QosLogger {
 						.getInputGateIndex();
 			}
 		}
-		resetCounters();
+		this.resetCounters();
 
 		this.loggingInterval = loggingInterval;
 
@@ -98,7 +98,7 @@ public class QosLogger {
 			logFile = String.format(logFile, constraintID.toString());
 		}
 		this.writer = new BufferedWriter(new FileWriter(logFile));
-		writeHeaders(jobGraphSequence, qosGraph);
+		this.writeHeaders(jobGraphSequence, qosGraph);
 	}
 
 	private void resetCounters() {
@@ -165,9 +165,9 @@ public class QosLogger {
 		builder.append(';');
 
 		if (this.activeMemberSequences == 0) {
-			appendDummyLine(builder);
+			this.appendDummyLine(builder);
 		} else {
-			appendSummaryLine(builder);
+			this.appendSummaryLine(builder);
 		}
 
 		builder.append('\n');

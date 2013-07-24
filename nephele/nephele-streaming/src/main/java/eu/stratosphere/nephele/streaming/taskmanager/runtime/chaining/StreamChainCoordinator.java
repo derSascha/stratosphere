@@ -32,35 +32,39 @@ public final class StreamChainCoordinator {
 	/**
 	 * The log object.
 	 */
-	private static final Log LOG = LogFactory.getLog(StreamChainCoordinator.class);
+	private static final Log LOG = LogFactory
+			.getLog(StreamChainCoordinator.class);
 
 	private final ConcurrentMap<ExecutionVertexID, StreamTaskEnvironment> chainLinks = new ConcurrentHashMap<ExecutionVertexID, StreamTaskEnvironment>();
-		
+
 	public void registerMapper(StreamTaskEnvironment taskEnvironment) {
-		LOG.info("Registering stream chain link for vertex ID " + taskEnvironment.getVertexID());
-		this.chainLinks.putIfAbsent(taskEnvironment.getVertexID(), taskEnvironment);
+		LOG.info("Registering stream chain link for vertex ID "
+				+ taskEnvironment.getVertexID());
+		this.chainLinks.putIfAbsent(taskEnvironment.getVertexID(),
+				taskEnvironment);
 	}
 
 	public StreamChain constructStreamChain(List<ExecutionVertexID> vertexIDs) {
 
 		ArrayList<StreamChainLink> chainLinkList = new ArrayList<StreamChainLink>();
-		
-		for(ExecutionVertexID vertexID : vertexIDs) {
-			StreamTaskEnvironment taskEnvironment = this.chainLinks.get(vertexID);
-			
-			if(taskEnvironment == null) {
+
+		for (ExecutionVertexID vertexID : vertexIDs) {
+			StreamTaskEnvironment taskEnvironment = this.chainLinks
+					.get(vertexID);
+
+			if (taskEnvironment == null) {
 				LOG.error("Cannot construct stream chain from "
 						+ vertexIDs.get(0) + " to "
 						+ vertexIDs.get(vertexIDs.size() - 1)
 						+ ": No chain link for vertex ID " + vertexID);
-				return null;				
+				return null;
 			}
-			
+
 			chainLinkList.add(new StreamChainLink(taskEnvironment.getMapper(),
-					taskEnvironment.getInputGate(0),
-					taskEnvironment.getOutputGate(0))); 					
+					taskEnvironment.getInputGate(0), taskEnvironment
+							.getOutputGate(0)));
 		}
-		
+
 		return new StreamChain(Collections.unmodifiableList(chainLinkList));
 	}
 }

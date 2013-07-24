@@ -50,8 +50,7 @@ public final class EdgeLatency extends AbstractQosReportRecord {
 	 * @param channelLatency
 	 *            the channel latency in milliseconds
 	 */
-	public EdgeLatency(QosReporterID.Edge reporterID,
-			double edgeLatency) {
+	public EdgeLatency(QosReporterID.Edge reporterID, double edgeLatency) {
 
 		this.reporterID = reporterID;
 		this.edgeLatency = edgeLatency;
@@ -88,7 +87,7 @@ public final class EdgeLatency extends AbstractQosReportRecord {
 		this.edgeLatency = in.readDouble();
 		this.counter = 1;
 	}
-	
+
 	/**
 	 * Returns the reporterID.
 	 * 
@@ -141,6 +140,7 @@ public final class EdgeLatency extends AbstractQosReportRecord {
 	 */
 	@Override
 	public int hashCode() {
-		return new HashCodeBuilder().append(this.edgeLatency).append(this.reporterID).toHashCode();
+		return new HashCodeBuilder().append(this.edgeLatency)
+				.append(this.reporterID).toHashCode();
 	}
 }

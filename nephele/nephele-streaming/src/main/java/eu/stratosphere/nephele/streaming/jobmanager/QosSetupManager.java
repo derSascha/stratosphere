@@ -60,7 +60,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 			List<JobGraphLatencyConstraint> constraints) {
 		this.jobID = jobID;
 		this.constraints = constraints;
-		this.constrainedJobVertices = computeJobVerticesToRewrite();
+		this.constrainedJobVertices = this.computeJobVerticesToRewrite();
 	}
 
 	public void registerOnExecutionGraph(ExecutionGraph executionGraph) {
@@ -75,7 +75,8 @@ public class QosSetupManager implements VertexAssignmentListener {
 
 		for (int i = 0; i < this.executionGraph.getNumberOfInputVertices(); i++) {
 			ExecutionVertex inputVertex = this.executionGraph.getInputVertex(i);
-			attachAssignmentListenersToReachableVertices(inputVertex, visited);
+			this.attachAssignmentListenersToReachableVertices(inputVertex,
+					visited);
 		}
 	}
 
@@ -98,7 +99,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 			for (int j = 0; j < outputGate.getNumberOfEdges(); j++) {
 				ExecutionVertex nextVertex = outputGate.getEdge(j)
 						.getInputGate().getVertex();
-				attachAssignmentListenersToReachableVertices(nextVertex,
+				this.attachAssignmentListenersToReachableVertices(nextVertex,
 						visited);
 			}
 		}
@@ -127,9 +128,9 @@ public class QosSetupManager implements VertexAssignmentListener {
 	 * @param jobGraph
 	 */
 	public void rewriteJobGraph(JobGraph jobGraph) {
-		rewriteInputVerticesWhereNecessary(jobGraph);
-		rewriteTaskVerticesWhereNecessary(jobGraph);
-		rewriteOutputVerticesWhereNecessary(jobGraph);
+		this.rewriteInputVerticesWhereNecessary(jobGraph);
+		this.rewriteTaskVerticesWhereNecessary(jobGraph);
+		this.rewriteOutputVerticesWhereNecessary(jobGraph);
 	}
 
 	private HashSet<JobVertexID> computeJobVerticesToRewrite() {
@@ -219,7 +220,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 			this.taskManagers.putIfAbsent(instance.getInstanceConnectionInfo(),
 					instance);
 			if (this.verticesWithPendingAllocation.isEmpty()) {
-				computeAndDistributeQosSetup();
+				this.computeAndDistributeQosSetup();
 			}
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);

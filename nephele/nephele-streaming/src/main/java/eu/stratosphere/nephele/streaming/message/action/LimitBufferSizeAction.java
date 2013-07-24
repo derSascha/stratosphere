@@ -36,10 +36,11 @@ public final class LimitBufferSizeAction extends AbstractQosAction {
 	 * The ID of the vertex the initiated action applies to.
 	 */
 	private final ExecutionVertexID vertexID;
-	
+
 	/**
-	 * The ID of the output gate the channel whose buffer size shall be limited belongs to.
-	 */	
+	 * The ID of the output gate the channel whose buffer size shall be limited
+	 * belongs to.
+	 */
 	private final GateID outputGateID;
 
 	/**
@@ -66,17 +67,15 @@ public final class LimitBufferSizeAction extends AbstractQosAction {
 	 *            the new buffer size in bytes
 	 */
 	public LimitBufferSizeAction(final JobID jobID,
-			final ExecutionVertexID vertexID,
-			final GateID outputGateID,
-			final ChannelID sourceChannelID,
-			final int bufferSize) {
+			final ExecutionVertexID vertexID, final GateID outputGateID,
+			final ChannelID sourceChannelID, final int bufferSize) {
 		super(jobID);
 
 		if (vertexID == null) {
 			throw new IllegalArgumentException(
 					"Argument vertexID must not be null");
 		}
-		
+
 		if (outputGateID == null) {
 			throw new IllegalArgumentException(
 					"Argument outputGateID must not be null");
@@ -108,7 +107,7 @@ public final class LimitBufferSizeAction extends AbstractQosAction {
 		this.sourceChannelID = new ChannelID();
 		this.bufferSize = 0;
 	}
-	
+
 	/**
 	 * Returns the ID of the output channel whose buffer size shall be limited.
 	 * 

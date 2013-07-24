@@ -61,7 +61,7 @@ public class VertexLatencyReportManager {
 			this.currentReportingProbeCounter++;
 			if (this.currentReportingProbeCounter >= this.reportingProbeInterval) {
 				this.currentReportingProbeCounter = 0;
-				if (hasData()) {
+				if (this.hasData()) {
 					long now = System.currentTimeMillis();
 
 					if (now >= this.timeOfNextReport) {
@@ -74,7 +74,7 @@ public class VertexLatencyReportManager {
 										this.reporterID,
 										avgLatencyPerReceivedRecord));
 
-						prepareNextReport(now);
+						this.prepareNextReport(now);
 					}
 				}
 			}
@@ -113,10 +113,10 @@ public class VertexLatencyReportManager {
 		this.reportForwarder = qosReporter;
 		this.reportersByInputGate = new AtomicReferenceArray<VertexQosReporter[]>(
 				noOfInputGates);
-		fillWithEmptyArrays(this.reportersByInputGate, noOfInputGates);
+		this.fillWithEmptyArrays(this.reportersByInputGate, noOfInputGates);
 		this.reportersByOutputGate = new AtomicReferenceArray<VertexQosReporter[]>(
 				noOfOutputGates);
-		fillWithEmptyArrays(this.reportersByOutputGate, noOfOutputGates);
+		this.fillWithEmptyArrays(this.reportersByOutputGate, noOfOutputGates);
 		this.reporters = new ConcurrentHashMap<QosReporterID, VertexQosReporter>();
 	}
 
@@ -159,9 +159,9 @@ public class VertexLatencyReportManager {
 
 		this.reporters.put(reporterID, reporter);
 
-		appendReporterToArrayAt(this.reportersByInputGate,
+		this.appendReporterToArrayAt(this.reportersByInputGate,
 				runtimeInputGateIndex, reporter);
-		appendReporterToArrayAt(this.reportersByOutputGate,
+		this.appendReporterToArrayAt(this.reportersByOutputGate,
 				runtimeOutputGateIndex, reporter);
 	}
 

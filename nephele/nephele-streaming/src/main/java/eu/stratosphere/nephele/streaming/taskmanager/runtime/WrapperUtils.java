@@ -44,36 +44,35 @@ public final class WrapperUtils {
 	 */
 	private WrapperUtils() {
 	}
-	
+
 	public static void wrapOutputClass(JobOutputVertex vertex) {
-		vertex.getConfiguration().setString(
-				WrapperUtils.WRAPPED_CLASS_KEY,
+		vertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY,
 				vertex.getOutputClass().getName());
-		vertex.setOutputClass(StreamOutputTaskWrapper.class);		
+		vertex.setOutputClass(StreamOutputTaskWrapper.class);
 	}
-	
+
 	public static void wrapInputClass(JobInputVertex vertex) {
-		vertex.getConfiguration().setString(
-				WrapperUtils.WRAPPED_CLASS_KEY,
+		vertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY,
 				vertex.getInputClass().getName());
-		vertex.setInputClass(StreamInputTaskWrapper.class);		
+		vertex.setInputClass(StreamInputTaskWrapper.class);
 	}
-	
+
 	public static void wrapTaskClass(JobTaskVertex vertex) {
-		vertex.getConfiguration().setString(
-				WrapperUtils.WRAPPED_CLASS_KEY,
+		vertex.getConfiguration().setString(WrapperUtils.WRAPPED_CLASS_KEY,
 				vertex.getTaskClass().getName());
-		vertex.setTaskClass(StreamTaskWrapper.class);		
+		vertex.setTaskClass(StreamTaskWrapper.class);
 	}
 
 	/**
 	 * Retrieves the name of the original class from the task configuration,
 	 * loads the class, creates an instances of it and sets its environment.
+	 * 
 	 * @param environment
 	 *            the environment to set on the new invokable
 	 * @return an instance of the wrapped invokable class
 	 */
-	public static AbstractInvokable getWrappedInvokable(final StreamTaskEnvironment environment) {
+	public static AbstractInvokable getWrappedInvokable(
+			final StreamTaskEnvironment environment) {
 
 		AbstractInvokable wrappedInvokable = null;
 
@@ -103,7 +102,8 @@ public final class WrapperUtils {
 		return wrappedInvokable;
 	}
 
-	public static StreamTaskEnvironment getWrappedEnvironment(RuntimeEnvironment environment) {
+	public static StreamTaskEnvironment getWrappedEnvironment(
+			RuntimeEnvironment environment) {
 		return new StreamTaskEnvironment(environment);
 	}
 

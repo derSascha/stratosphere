@@ -66,7 +66,7 @@ public class QosSetup {
 
 	public QosSetup(ExecutionGraph executionGraph,
 			List<JobGraphLatencyConstraint> constraints) {
-		
+
 		this.executionGraph = executionGraph;
 		this.constraints = constraints;
 		this.qosGraphs = new HashMap<LatencyConstraintID, QosGraph>();
@@ -74,14 +74,14 @@ public class QosSetup {
 	}
 
 	public void computeQosRoles() {
-		createQosGraphs();
-		computeQosManagerRoles();
-		computeQosReporterRoles();
+		this.createQosGraphs();
+		this.computeQosManagerRoles();
+		this.computeQosReporterRoles();
 	}
 
 	private void computeQosReporterRoles() {
-		for (QosManagerRole qosManager : collectAllManagerRoles()) {
-			computeReportersForManager(qosManager);
+		for (QosManagerRole qosManager : this.collectAllManagerRoles()) {
+			this.computeReportersForManager(qosManager);
 		}
 	}
 
@@ -104,13 +104,15 @@ public class QosSetup {
 			@Override
 			public void processQosVertex(QosVertex vertex,
 					SequenceElement<JobVertexID> sequenceElem) {
-				addReporterForQosVertex(qosManager, vertex, sequenceElem);
+				QosSetup.this.addReporterForQosVertex(qosManager, vertex,
+						sequenceElem);
 			}
 
 			@Override
 			public void processQosEdge(QosEdge edge,
 					SequenceElement<JobVertexID> sequenceElem) {
-				addReportersForQosEdge(qosManager, edge, sequence, sequenceElem);
+				QosSetup.this.addReportersForQosEdge(qosManager, edge,
+						sequence, sequenceElem);
 			}
 		};
 
@@ -129,11 +131,10 @@ public class QosSetup {
 
 		QosReporterRole reporterRole = new QosReporterRole(vertex,
 				sequenceElem.getInputGateIndex(),
-				sequenceElem.getOutputGateIndex(),
-				qosManager);
+				sequenceElem.getOutputGateIndex(), qosManager);
 
-		getOrCreateInstanceRoles(reporterInstance)
-				.addReporterRole(reporterRole);
+		this.getOrCreateInstanceRoles(reporterInstance).addReporterRole(
+				reporterRole);
 	}
 
 	private void addReportersForQosEdge(QosManagerRole qosManager,
@@ -145,11 +146,10 @@ public class QosSetup {
 		InstanceConnectionInfo targetReporterInstance = edge.getInputGate()
 				.getVertex().getExecutingInstance();
 
-		QosReporterRole reporterRole = new QosReporterRole(edge,
-				qosManager);
-		getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
+		QosReporterRole reporterRole = new QosReporterRole(edge, qosManager);
+		this.getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
 				reporterRole);
-		getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
+		this.getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
 				reporterRole);
 
 		// corner case: if we have a sequence that starts/ends with an edge
@@ -160,16 +160,14 @@ public class QosSetup {
 		if (sequence.getLast() == sequenceElem) {
 			QosReporterRole dummyVertexReporter = new QosReporterRole(edge
 					.getInputGate().getVertex(),
-					sequenceElem.getInputGateIndex(), -1,
-					qosManager);
-			getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
-					dummyVertexReporter);
+					sequenceElem.getInputGateIndex(), -1, qosManager);
+			this.getOrCreateInstanceRoles(targetReporterInstance)
+					.addReporterRole(dummyVertexReporter);
 		} else if (sequence.getFirst() == sequenceElem) {
 			QosReporterRole dummyVertexReporter = new QosReporterRole(edge
 					.getOutputGate().getVertex(), -1,
-					sequenceElem.getOutputGateIndex(),
-					qosManager);
-			getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
+					sequenceElem.getOutputGateIndex(), qosManager);
+			this.getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
 					dummyVertexReporter);
 		}
 	}
@@ -189,18 +187,20 @@ public class QosSetup {
 	private void computeQosManagerRoles() {
 
 		for (QosGraph qosGraph : this.qosGraphs.values()) {
-			QosGroupVertex anchorVertex = getAnchorVertex(qosGraph);
+			QosGroupVertex anchorVertex = this.getAnchorVertex(qosGraph);
 
-			for (List<QosVertex> membersOnInstance : partitionMembersByInstance(anchorVertex)) {
+			for (List<QosVertex> membersOnInstance : this
+					.partitionMembersByInstance(anchorVertex)) {
 				InstanceConnectionInfo instance = membersOnInstance.get(0)
 						.getExecutingInstance();
 
 				QosManagerRole managerRole = new QosManagerRole(qosGraph,
 						qosGraph.getConstraints().iterator().next().getID(),
 						anchorVertex, membersOnInstance);
-				getOrCreateInstanceRoles(instance).addManagerRole(managerRole);
+				this.getOrCreateInstanceRoles(instance).addManagerRole(
+						managerRole);
 			}
-			
+
 			LOG.info(String
 					.format("Using group vertex %s to run %d QosManagers for constraint %s",
 							anchorVertex.getName(), this.qosRoles.size(),
@@ -251,10 +251,11 @@ public class QosSetup {
 	 * @return The chosen anchor vertex.
 	 */
 	private QosGroupVertex getAnchorVertex(QosGraph qosGraph) {
-		Set<JobVertexID> anchorCandidates = collectAnchorCandidates(qosGraph);
+		Set<JobVertexID> anchorCandidates = this
+				.collectAnchorCandidates(qosGraph);
 
-		retainCandidatesWithMaxInstanceCount(anchorCandidates, qosGraph);
-		retainCandidatesWithMinChannelCountOnSequence(anchorCandidates,
+		this.retainCandidatesWithMaxInstanceCount(anchorCandidates, qosGraph);
+		this.retainCandidatesWithMinChannelCountOnSequence(anchorCandidates,
 				qosGraph);
 
 		return qosGraph.getGroupVertexByID(anchorCandidates.iterator().next());
@@ -264,7 +265,7 @@ public class QosSetup {
 			Set<JobVertexID> anchorCandidates, QosGraph qosGraph) {
 
 		HashMap<JobVertexID, Integer> channelCounts = new HashMap<JobVertexID, Integer>();
-		int minChannelCount = countChannelsOnSequence(qosGraph,
+		int minChannelCount = this.countChannelsOnSequence(qosGraph,
 				anchorCandidates, channelCounts);
 
 		Iterator<JobVertexID> candidateIter = anchorCandidates.iterator();
@@ -307,18 +308,18 @@ public class QosSetup {
 						sequenceElem.getOutputGateIndex())
 						.getDistributionPattern();
 
-				int channelCount = countChannelsBetweenGroupVertices(source,
-						target, distPattern);
+				int channelCount = this.countChannelsBetweenGroupVertices(
+						source, target, distPattern);
 
 				if (anchorCandidates.contains(sourceID)) {
-					int sourceChannelCount = updateMinChannelCount(
+					int sourceChannelCount = this.updateMinChannelCount(
 							channelCounts, sourceID, channelCount);
 					minChannelCount = Math.min(minChannelCount,
 							sourceChannelCount);
 				}
 
 				if (anchorCandidates.contains(targetID)) {
-					int targetChannelCount = updateMinChannelCount(
+					int targetChannelCount = this.updateMinChannelCount(
 							channelCounts, targetID, channelCount);
 					minChannelCount = Math.min(minChannelCount,
 							targetChannelCount);

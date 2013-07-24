@@ -117,7 +117,7 @@ public class QosGraphTraversal {
 	 * .
 	 */
 	public void traverseForward() {
-		traverseForward(true, true);
+		this.traverseForward(true, true);
 	}
 
 	/**
@@ -142,7 +142,8 @@ public class QosGraphTraversal {
 	 */
 	public void traverseForward(boolean includeStartVertex, boolean traverseOnce) {
 
-		Deque<SequenceElement<JobVertexID>> afterDeque = getSequenceAfterIncludingStartVertex(this.sequence);
+		Deque<SequenceElement<JobVertexID>> afterDeque = this
+				.getSequenceAfterIncludingStartVertex(this.sequence);
 
 		if (afterDeque.isEmpty()) {
 			return;
@@ -165,12 +166,13 @@ public class QosGraphTraversal {
 		if (afterDeque.isEmpty()) {
 			return;
 		} else if (afterDeque.getFirst().isVertex()) {
-			traverseForwardVertex(this.startVertex, afterDeque, traverseOnce);
+			this.traverseForwardVertex(this.startVertex, afterDeque,
+					traverseOnce);
 		} else {
 			QosGate outputGate = this.startVertex.getOutputGate(afterDeque
 					.getFirst().getOutputGateIndex());
 			for (QosEdge edge : outputGate.getEdges()) {
-				traverseForwardEdge(edge, afterDeque, traverseOnce);
+				this.traverseForwardEdge(edge, afterDeque, traverseOnce);
 			}
 		}
 
@@ -180,7 +182,8 @@ public class QosGraphTraversal {
 	}
 
 	public void traverseForwardConditional() {
-		Deque<SequenceElement<JobVertexID>> afterDeque = getSequenceAfterIncludingStartVertex(this.sequence);
+		Deque<SequenceElement<JobVertexID>> afterDeque = this
+				.getSequenceAfterIncludingStartVertex(this.sequence);
 
 		if (afterDeque.isEmpty()) {
 			return;
@@ -194,7 +197,7 @@ public class QosGraphTraversal {
 			throw new RuntimeException(
 					"If the start-vertex is not on the sequence it must at least be the source/target of the first/last edge in the sequence.");
 		}
-		
+
 		if (this.traversalCondition == null) {
 			throw new RuntimeException("A traversal condition has to be set.");
 		}
@@ -202,13 +205,13 @@ public class QosGraphTraversal {
 		if (afterDeque.isEmpty()) {
 			return;
 		} else if (afterDeque.getFirst().isVertex()) {
-			traverseForwardConditionalVertex(this.startVertex, afterDeque);
+			this.traverseForwardConditionalVertex(this.startVertex, afterDeque);
 		} else {
 			QosGate outputGate = this.startVertex.getOutputGate(afterDeque
 					.getFirst().getOutputGateIndex());
 
 			for (QosEdge edge : outputGate.getEdges()) {
-				traverseForwardConditionalEdge(edge, afterDeque);
+				this.traverseForwardConditionalEdge(edge, afterDeque);
 			}
 		}
 
@@ -220,7 +223,8 @@ public class QosGraphTraversal {
 	private void traverseForwardConditionalEdge(QosEdge edge,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque) {
 
-		if (!this.traversalCondition.shallTraverseEdge(edge, sequenceDeque.getFirst())) {
+		if (!this.traversalCondition.shallTraverseEdge(edge,
+				sequenceDeque.getFirst())) {
 			return;
 		}
 
@@ -229,7 +233,7 @@ public class QosGraphTraversal {
 		this.listener.processQosEdge(edge, currentElem);
 
 		if (!sequenceDeque.isEmpty()) {
-			traverseForwardConditionalVertex(edge.getInputGate()
+			this.traverseForwardConditionalVertex(edge.getInputGate()
 					.getVertex(), sequenceDeque);
 		}
 
@@ -239,7 +243,8 @@ public class QosGraphTraversal {
 	private void traverseForwardConditionalVertex(QosVertex vertex,
 			Deque<SequenceElement<JobVertexID>> sequenceDeque) {
 
-		if (!this.traversalCondition.shallTraverseVertex(vertex, sequenceDeque.getFirst())) {
+		if (!this.traversalCondition.shallTraverseVertex(vertex,
+				sequenceDeque.getFirst())) {
 			return;
 		}
 
@@ -253,7 +258,7 @@ public class QosGraphTraversal {
 
 			if (outputGate != null) {
 				for (QosEdge edge : outputGate.getEdges()) {
-					traverseForwardConditionalEdge(edge, sequenceDeque);
+					this.traverseForwardConditionalEdge(edge, sequenceDeque);
 				}
 			}
 		}
@@ -281,7 +286,7 @@ public class QosGraphTraversal {
 			QosGate outputGate = vertex.getOutputGate(sequenceDeque.getFirst()
 					.getOutputGateIndex());
 			for (QosEdge edge : outputGate.getEdges()) {
-				traverseForwardEdge(edge, sequenceDeque, traverseOnce);
+				this.traverseForwardEdge(edge, sequenceDeque, traverseOnce);
 			}
 		}
 
@@ -297,7 +302,7 @@ public class QosGraphTraversal {
 		this.listener.processQosEdge(edge, currentElem);
 
 		if (!sequenceDeque.isEmpty()) {
-			traverseForwardVertex(edge.getInputGate().getVertex(),
+			this.traverseForwardVertex(edge.getInputGate().getVertex(),
 					sequenceDeque, traverseOnce);
 		}
 
@@ -336,7 +341,7 @@ public class QosGraphTraversal {
 	 */
 	public void traverseBackward() {
 
-		traverseBackward(true, true);
+		this.traverseBackward(true, true);
 	}
 
 	/**
@@ -366,7 +371,8 @@ public class QosGraphTraversal {
 	public void traverseBackward(boolean includeStartVertex,
 			boolean traverseOnce) {
 
-		LinkedList<SequenceElement<JobVertexID>> elemsBefore = getSequenceBeforeIncludingStartVertex(this.sequence);
+		LinkedList<SequenceElement<JobVertexID>> elemsBefore = this
+				.getSequenceBeforeIncludingStartVertex(this.sequence);
 
 		if (elemsBefore.isEmpty()) {
 			return;
@@ -389,12 +395,13 @@ public class QosGraphTraversal {
 		if (elemsBefore.isEmpty()) {
 			return;
 		} else if (elemsBefore.getLast().isVertex()) {
-			traverseVertexBackward(this.startVertex, elemsBefore, traverseOnce);
+			this.traverseVertexBackward(this.startVertex, elemsBefore,
+					traverseOnce);
 		} else {
 			QosGate inputGate = this.startVertex.getInputGate(elemsBefore
 					.getLast().getInputGateIndex());
 			for (QosEdge edge : inputGate.getEdges()) {
-				traverseEdgeBackward(edge, elemsBefore, traverseOnce);
+				this.traverseEdgeBackward(edge, elemsBefore, traverseOnce);
 			}
 		}
 
@@ -450,7 +457,7 @@ public class QosGraphTraversal {
 			QosGate inputGate = vertex.getInputGate(sequenceDeque.getLast()
 					.getInputGateIndex());
 			for (QosEdge edge : inputGate.getEdges()) {
-				traverseEdgeBackward(edge, sequenceDeque, traverseOnce);
+				this.traverseEdgeBackward(edge, sequenceDeque, traverseOnce);
 			}
 		}
 
@@ -466,7 +473,7 @@ public class QosGraphTraversal {
 		this.listener.processQosEdge(edge, currentElem);
 
 		if (!sequenceDeque.isEmpty()) {
-			traverseVertexBackward(edge.getOutputGate().getVertex(),
+			this.traverseVertexBackward(edge.getOutputGate().getVertex(),
 					sequenceDeque, traverseOnce);
 		}
 

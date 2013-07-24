@@ -66,7 +66,7 @@ public class QosReporterRole {
 		this.targetQosManagers.add(targetQosManager);
 		this.inputGateIndex = inputGateIndex;
 		this.outputGateIndex = outputGateIndex;
-		this.reporterID = createReporterRoleID();
+		this.reporterID = this.createReporterRoleID();
 	}
 
 	/**
@@ -79,7 +79,7 @@ public class QosReporterRole {
 		this.edge = edge;
 		this.targetQosManagers = new HashSet<QosManagerRole>(2);
 		this.targetQosManagers.add(targetQosManager);
-		this.reporterID = createReporterRoleID();
+		this.reporterID = this.createReporterRoleID();
 	}
 
 	private QosReporterID createReporterRoleID() {
@@ -88,9 +88,9 @@ public class QosReporterRole {
 		}
 		return QosReporterID.forVertex(
 				this.vertex.getID(),
-				(this.inputGateIndex != -1) ? this.vertex.getInputGate(
+				this.inputGateIndex != -1 ? this.vertex.getInputGate(
 						this.inputGateIndex).getGateID() : null,
-				(this.outputGateIndex != -1) ? this.vertex.getOutputGate(
+				this.outputGateIndex != -1 ? this.vertex.getOutputGate(
 						this.outputGateIndex).getGateID() : null);
 	}
 

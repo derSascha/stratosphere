@@ -23,46 +23,47 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 
-
 /**
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public class QosReporterIDTest {
-	
+
 	@Test
 	public void testReportIDVertex() {
 		ExecutionVertexID vertexID = new ExecutionVertexID();
 		GateID inGate = new GateID();
 		GateID outGate = new GateID();
-		QosReporterID repID = QosReporterID.forVertex(vertexID, inGate, outGate);
-		
+		QosReporterID repID = QosReporterID
+				.forVertex(vertexID, inGate, outGate);
+
 		ExecutionVertexID otherID = new ExecutionVertexID();
-		QosReporterID otherRepID = QosReporterID.forVertex(otherID, new GateID(), new GateID());
-		
+		QosReporterID otherRepID = QosReporterID.forVertex(otherID,
+				new GateID(), new GateID());
+
 		assertFalse(repID.equals(otherRepID));
-	
+
 		otherID.setID(vertexID);
 		assertFalse(repID.equals(otherRepID));
-		
-		assertTrue(repID.equals(QosReporterID.forVertex(vertexID, inGate, outGate)));
+
+		assertTrue(repID.equals(QosReporterID.forVertex(vertexID, inGate,
+				outGate)));
 	}
-	
+
 	@Test
 	public void testChannelIDVertex() {
 		ChannelID channelID = new ChannelID();
 		QosReporterID repID = QosReporterID.forEdge(channelID);
-		
+
 		ChannelID otherChannelID = new ChannelID();
-		if(channelID.equals(otherChannelID)) {
+		if (channelID.equals(otherChannelID)) {
 			assertTrue(repID.equals(QosReporterID.forEdge(otherChannelID)));
 		} else {
 			assertFalse(repID.equals(QosReporterID.forEdge(otherChannelID)));
 		}
-		
-		otherChannelID.setID(channelID);
-		assertTrue(repID.equals(QosReporterID.forEdge(otherChannelID)));	
-	}
 
+		otherChannelID.setID(channelID);
+		assertTrue(repID.equals(QosReporterID.forEdge(otherChannelID)));
+	}
 
 }

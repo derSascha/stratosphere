@@ -92,7 +92,7 @@ public class StreamJobEnvironment {
 			return;
 		}
 
-		updateAggregationAndTaggingIntervals(streamEnv);
+		this.updateAggregationAndTaggingIntervals(streamEnv);
 
 		synchronized (this.taskQosCoordinators) {
 			if (this.taskQosCoordinators.containsKey(task.getVertexID())) {
@@ -162,7 +162,7 @@ public class StreamJobEnvironment {
 			DeployInstanceQosRolesAction deployRolesAction) {
 
 		if (deployRolesAction.getQosManager() != null) {
-			processQosManagerConfig(deployRolesAction);
+			this.processQosManagerConfig(deployRolesAction);
 		}
 
 		this.qosReportForwarder.configureReporting(deployRolesAction);
@@ -171,18 +171,18 @@ public class StreamJobEnvironment {
 				.format("Deployed %d vertex Qos reporters, %d edge Qos reporters and %d Qos manager roles",
 						deployRolesAction.getVertexQosReporters().size(),
 						deployRolesAction.getEdgeQosReporters().size(),
-						(deployRolesAction.getQosManager() != null) ? 1 : 0));
+						deployRolesAction.getQosManager() != null ? 1 : 0));
 	}
 
 	private void handleQosReport(QosReport data) {
-		ensureQosManagerIsRunning();
+		this.ensureQosManagerIsRunning();
 		this.qosManager.handOffStreamingData(data);
 	}
 
 	private void processQosManagerConfig(
 			DeployInstanceQosRolesAction deployRolesAction) {
 
-		ensureQosManagerIsRunning();
+		this.ensureQosManagerIsRunning();
 		this.qosManager.handOffStreamingData(deployRolesAction);
 	}
 

@@ -22,11 +22,12 @@ import eu.stratosphere.nephele.types.Record;
  * {@link eu.stratosphere.nephele.io.RuntimeOutputGate}. This is necessary
  * because the {@link StreamOutputGate} needs to invoke
  * {@link #selectChannels(Record, int)} once per record before handing the
- * record to Nephele's own {@link eu.stratosphere.nephele.io.RuntimeOutputGate}, which will invoke this method
- * again. Some channel selectors (especially Nephele's default channel selector)
- * react badly to this, because they expect EXACTLY ONE invocation of
- * {@link #selectChannels(Record, int)} per record. Therefore, this wrapper
- * makes sure, that only one invocation occurs and caches the result.
+ * record to Nephele's own {@link eu.stratosphere.nephele.io.RuntimeOutputGate},
+ * which will invoke this method again. Some channel selectors (especially
+ * Nephele's default channel selector) react badly to this, because they expect
+ * EXACTLY ONE invocation of {@link #selectChannels(Record, int)} per record.
+ * Therefore, this wrapper makes sure, that only one invocation occurs and
+ * caches the result.
  * 
  * @author Bjoern Lohrmann
  * 

@@ -90,7 +90,7 @@ public class QosGroupVertex {
 	public void setForwardEdge(QosGroupEdge forwardEdge) {
 		int outputGate = forwardEdge.getOutputGateIndex();
 		if (outputGate >= this.forwardEdges.size()) {
-			fillWithNulls(this.forwardEdges, outputGate + 1);
+			this.fillWithNulls(this.forwardEdges, outputGate + 1);
 		}
 
 		if (this.forwardEdges.get(outputGate) == null) {
@@ -118,7 +118,7 @@ public class QosGroupVertex {
 	public void setBackwardEdge(QosGroupEdge backwardEdge) {
 		int inputGate = backwardEdge.getInputGateIndex();
 		if (inputGate >= this.backwardEdges.size()) {
-			fillWithNulls(this.backwardEdges, inputGate + 1);
+			this.fillWithNulls(this.backwardEdges, inputGate + 1);
 		}
 
 		if (this.backwardEdges.get(inputGate) == null) {
@@ -147,7 +147,7 @@ public class QosGroupVertex {
 
 	public void setGroupMember(int memberIndex, QosVertex groupMember) {
 		if (this.groupMembers.size() <= memberIndex) {
-			fillWithNulls(this.groupMembers, memberIndex + 1);
+			this.fillWithNulls(this.groupMembers, memberIndex + 1);
 		}
 
 		if (groupMember == null) {
@@ -203,12 +203,15 @@ public class QosGroupVertex {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		if (this.getClass() != obj.getClass()) {
 			return false;
+		}
 		QosGroupVertex other = (QosGroupVertex) obj;
 		return this.jobVertexID.equals(other.jobVertexID);
 	}

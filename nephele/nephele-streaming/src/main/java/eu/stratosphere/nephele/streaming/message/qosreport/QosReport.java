@@ -17,11 +17,10 @@ import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
- * Holds Qos report data to be shipped to a specific Qos manager.
- * Instead of sending each {@link AbstractQosReportRecord} individually,
- * they are sent in batch. Most internal fields of this class are initialized in
- * a lazy fashion, thus (empty) instances of this class have a small memory
- * footprint.
+ * Holds Qos report data to be shipped to a specific Qos manager. Instead of
+ * sending each {@link AbstractQosReportRecord} individually, they are sent in
+ * batch. Most internal fields of this class are initialized in a lazy fashion,
+ * thus (empty) instances of this class have a small memory footprint.
  * 
  * @author Bjoern Lohrmann
  */
@@ -79,8 +78,7 @@ public class QosReport extends AbstractStreamMessage {
 	public void addEdgeLatency(EdgeLatency edgeLatency) {
 		QosReporterID.Edge reporterID = edgeLatency.getReporterID();
 
-		EdgeLatency existing = this.getOrCreateEdgeLatencyMap().get(
-				reporterID);
+		EdgeLatency existing = this.getOrCreateEdgeLatencyMap().get(reporterID);
 		if (existing == null) {
 			this.getOrCreateEdgeLatencyMap().put(reporterID, edgeLatency);
 		} else {
@@ -102,7 +100,8 @@ public class QosReport extends AbstractStreamMessage {
 		return this.vertexReporterAnnouncements;
 	}
 
-	public void addEdgeQosReporterAnnouncement(EdgeQosReporterConfig edgeReporter) {
+	public void addEdgeQosReporterAnnouncement(
+			EdgeQosReporterConfig edgeReporter) {
 		if (this.edgeReporterAnnouncements == null) {
 			this.edgeReporterAnnouncements = new LinkedList<EdgeQosReporterConfig>();
 		}
@@ -127,11 +126,10 @@ public class QosReport extends AbstractStreamMessage {
 
 		QosReporterID.Edge reporterID = edgeStats.getReporterID();
 
-		EdgeStatistics existing = this
-				.getOrCreateEdgeStatisticsMap().get(edgeStats);
+		EdgeStatistics existing = this.getOrCreateEdgeStatisticsMap().get(
+				edgeStats);
 		if (existing == null) {
-			this.getOrCreateEdgeStatisticsMap().put(reporterID,
-					edgeStats);
+			this.getOrCreateEdgeStatisticsMap().put(reporterID, edgeStats);
 		} else {
 			existing.add(edgeStats);
 		}
@@ -146,7 +144,8 @@ public class QosReport extends AbstractStreamMessage {
 
 	public void addVertexLatency(VertexLatency vertexLatency) {
 		QosReporterID.Vertex reporterID = vertexLatency.getReporterID();
-		VertexLatency existing = this.getOrCreateVertexLatencyMap().get(reporterID);
+		VertexLatency existing = this.getOrCreateVertexLatencyMap().get(
+				reporterID);
 		if (existing == null) {
 			this.getOrCreateVertexLatencyMap().put(reporterID, vertexLatency);
 		} else {
@@ -211,8 +210,7 @@ public class QosReport extends AbstractStreamMessage {
 		}
 	}
 
-	private void writeEdgeStatistics(DataOutput out)
-			throws IOException {
+	private void writeEdgeStatistics(DataOutput out) throws IOException {
 		if (this.edgeStatistics != null) {
 			out.writeInt(this.edgeStatistics.size());
 			for (Entry<QosReporterID.Edge, EdgeStatistics> entry : this.edgeStatistics
@@ -293,11 +291,10 @@ public class QosReport extends AbstractStreamMessage {
 			QosReporterID.Edge reporterID = new QosReporterID.Edge();
 			reporterID.read(in);
 
-			EdgeStatistics edgeStats = new EdgeStatistics(
-					reporterID, in.readDouble(), in.readDouble(),
-					in.readDouble(), in.readDouble());
-			this.getOrCreateEdgeStatisticsMap().put(reporterID,
-					edgeStats);
+			EdgeStatistics edgeStats = new EdgeStatistics(reporterID,
+					in.readDouble(), in.readDouble(), in.readDouble(),
+					in.readDouble());
+			this.getOrCreateEdgeStatisticsMap().put(reporterID, edgeStats);
 		}
 	}
 

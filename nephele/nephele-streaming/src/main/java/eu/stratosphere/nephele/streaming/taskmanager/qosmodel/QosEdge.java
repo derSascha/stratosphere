@@ -156,12 +156,15 @@ public class QosEdge implements QosGraphMember {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		if (this.getClass() != obj.getClass()) {
 			return false;
+		}
 
 		QosEdge other = (QosEdge) obj;
 		return this.sourceChannelID.equals(other.sourceChannelID);

@@ -30,7 +30,7 @@ import eu.stratosphere.nephele.template.AbstractTask;
 public class StreamTaskWrapper extends AbstractTask {
 
 	private volatile AbstractInvokable wrappedInvokable = null;
-	
+
 	private volatile StreamTaskEnvironment wrappedEnvironment = null;
 
 	/**
@@ -38,14 +38,20 @@ public class StreamTaskWrapper extends AbstractTask {
 	 */
 	@Override
 	public void registerInputOutput() {
-		// registerInputOutput() is called by the RuntimeEnvironment at the time of its
-		// instantiation. Before registerInputOutput() is called the RuntimeEnvironment has set
-		// itself using setEnvironment(). Here we replace the RuntimeEnvironment with its
+		// registerInputOutput() is called by the RuntimeEnvironment at the time
+		// of its
+		// instantiation. Before registerInputOutput() is called the
+		// RuntimeEnvironment has set
+		// itself using setEnvironment(). Here we replace the RuntimeEnvironment
+		// with its
 		// wrapped instance.
-		this.wrappedEnvironment = WrapperUtils.getWrappedEnvironment((RuntimeEnvironment) this.getEnvironment());
+		this.wrappedEnvironment = WrapperUtils
+				.getWrappedEnvironment((RuntimeEnvironment) this
+						.getEnvironment());
 		this.setEnvironment(this.wrappedEnvironment);
-		
-		this.wrappedInvokable = WrapperUtils.getWrappedInvokable(this.wrappedEnvironment);
+
+		this.wrappedInvokable = WrapperUtils
+				.getWrappedInvokable(this.wrappedEnvironment);
 		this.wrappedInvokable.registerInputOutput();
 	}
 
@@ -55,5 +61,5 @@ public class StreamTaskWrapper extends AbstractTask {
 	@Override
 	public void invoke() throws Exception {
 		this.wrappedInvokable.invoke();
-	}	
+	}
 }

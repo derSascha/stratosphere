@@ -3,9 +3,10 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 import eu.stratosphere.nephele.io.DistributionPattern;
 
 /**
- * This class models a Qos group edge as part of a Qos graph. It is equivalent to an
- * {@link eu.stratosphere.nephele.executiongraph.ExecutionGroupEdge}, which in turn is
- * equivalent to a {@link eu.stratosphere.nephele.jobgraph.JobEdge}.
+ * This class models a Qos group edge as part of a Qos graph. It is equivalent
+ * to an {@link eu.stratosphere.nephele.executiongraph.ExecutionGroupEdge},
+ * which in turn is equivalent to a
+ * {@link eu.stratosphere.nephele.jobgraph.JobEdge}.
  * 
  * @author Bjoern Lohrmann
  * 

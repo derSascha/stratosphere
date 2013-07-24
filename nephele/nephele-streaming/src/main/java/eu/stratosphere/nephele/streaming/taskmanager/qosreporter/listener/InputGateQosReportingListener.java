@@ -17,7 +17,8 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 
 /**
- * Callback interface used by the {@link eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate}
+ * Callback interface used by the
+ * {@link eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate}
  * to signal that a new record has been received.
  * 
  * @author Bjoern Lohrmann

@@ -88,11 +88,11 @@ public class QosGate {
 	}
 
 	public void addEdge(QosEdge edge) {
-		int edgeIndex = isOutputGate() ? edge.getOutputGateEdgeIndex() : edge
-				.getInputGateEdgeIndex();
+		int edgeIndex = this.isOutputGate() ? edge.getOutputGateEdgeIndex()
+				: edge.getInputGateEdgeIndex();
 
 		if (edgeIndex >= this.edges.size()) {
-			fillWithNulls(this.edges, edgeIndex + 1);
+			this.fillWithNulls(this.edges, edgeIndex + 1);
 		}
 
 		if (this.edges.get(edgeIndex) == null) {

@@ -66,7 +66,7 @@ public class QosVertex implements QosGraphMember {
 
 	public void setInputGate(QosGate inputGate) {
 		if (inputGate.getGateIndex() >= this.inputGates.size()) {
-			fillWithNulls(this.inputGates, inputGate.getGateIndex() + 1);
+			this.fillWithNulls(this.inputGates, inputGate.getGateIndex() + 1);
 		}
 
 		inputGate.setVertex(this);
@@ -84,7 +84,7 @@ public class QosVertex implements QosGraphMember {
 
 	public void setOutputGate(QosGate outputGate) {
 		if (outputGate.getGateIndex() >= this.outputGates.size()) {
-			fillWithNulls(this.outputGates, outputGate.getGateIndex() + 1);
+			this.fillWithNulls(this.outputGates, outputGate.getGateIndex() + 1);
 		}
 
 		outputGate.setVertex(this);
@@ -166,7 +166,7 @@ public class QosVertex implements QosGraphMember {
 		if (obj == this) {
 			return true;
 		}
-		if (obj.getClass() != getClass()) {
+		if (obj.getClass() != this.getClass()) {
 			return false;
 		}
 		QosVertex rhs = (QosVertex) obj;

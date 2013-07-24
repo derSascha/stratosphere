@@ -38,7 +38,7 @@ public class VertexQosReporterConfig implements IOReadableWritable {
 	private JobVertexID groupVertexID;
 
 	private ExecutionVertexID vertexID;
-	
+
 	private InstanceConnectionInfo reporterInstance;
 
 	private InstanceConnectionInfo[] qosManagers;
@@ -78,16 +78,16 @@ public class VertexQosReporterConfig implements IOReadableWritable {
 	 * @param name
 	 */
 	public VertexQosReporterConfig(JobVertexID groupVertexID,
-			ExecutionVertexID vertexID, 
+			ExecutionVertexID vertexID,
 			InstanceConnectionInfo reporterInstance,
-			InstanceConnectionInfo[] qosManagers,
-			int inputGateIndex, GateID inputGateID, int outputGateIndex,
-			GateID outputGateID, int memberIndex, String name) {
+			InstanceConnectionInfo[] qosManagers, int inputGateIndex,
+			GateID inputGateID, int outputGateIndex, GateID outputGateID,
+			int memberIndex, String name) {
 
-		if ((inputGateIndex == -1 && inputGateID != null)
-				|| (inputGateIndex != -1 && inputGateID == null)
-				|| (outputGateIndex != -1 && outputGateID == null)
-				|| (outputGateIndex != -1 && outputGateID == null)) {
+		if (inputGateIndex == -1 && inputGateID != null || inputGateIndex != -1
+				&& inputGateID == null || outputGateIndex != -1
+				&& outputGateID == null || outputGateIndex != -1
+				&& outputGateID == null) {
 
 			throw new RuntimeException(
 					"If inputGateIndex/outputGateIndex is (not) -1, the respective gate ID must (not) be null. This is a bug.");
@@ -106,7 +106,7 @@ public class VertexQosReporterConfig implements IOReadableWritable {
 	}
 
 	public boolean isDummy() {
-		return getReporterID().isDummy();
+		return this.getReporterID().isDummy();
 	}
 
 	/**
@@ -205,7 +205,8 @@ public class VertexQosReporterConfig implements IOReadableWritable {
 	}
 
 	public QosVertex toQosVertex() {
-		return new QosVertex(this.vertexID, this.name, this.reporterInstance, this.memberIndex);
+		return new QosVertex(this.vertexID, this.name, this.reporterInstance,
+				this.memberIndex);
 	}
 
 	public QosGate toInputGate() {
@@ -227,7 +228,7 @@ public class VertexQosReporterConfig implements IOReadableWritable {
 		this.groupVertexID.write(out);
 		this.vertexID.write(out);
 		this.reporterInstance.write(out);
-		
+
 		out.writeInt(this.qosManagers.length);
 		for (InstanceConnectionInfo qosManager : this.qosManagers) {
 			qosManager.write(out);
@@ -261,7 +262,7 @@ public class VertexQosReporterConfig implements IOReadableWritable {
 		this.vertexID.read(in);
 		this.reporterInstance = new InstanceConnectionInfo();
 		this.reporterInstance.read(in);
-		
+
 		this.qosManagers = new InstanceConnectionInfo[in.readInt()];
 		for (int i = 0; i < this.qosManagers.length; i++) {
 			this.qosManagers[i] = new InstanceConnectionInfo();
