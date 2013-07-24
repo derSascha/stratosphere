@@ -8,6 +8,21 @@ import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 
+/**
+ * A instance of this class keeps track of and reports on the Qos statistics of an
+ * output gate's output channels.
+ * 
+ * This class is thread-safe.
+ * 
+ * An {@link EdgeStatistics} record per output channel will be handed to the
+ * provided {@link QosReportForwarderThread} approximately once per aggregation
+ * interval (see {@link QosReporterConfigCenter}). "Approximately" because if no
+ * records have been received/emitted, nothing will be reported.
+
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class OutputGateReporterManager {
 
 	/**

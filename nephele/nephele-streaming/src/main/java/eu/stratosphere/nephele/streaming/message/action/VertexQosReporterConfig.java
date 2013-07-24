@@ -28,6 +28,8 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
+ * Describes a Qos reporter role for a vertex (task).
+ * 
  * @author Bjoern Lohrmann
  * 
  */

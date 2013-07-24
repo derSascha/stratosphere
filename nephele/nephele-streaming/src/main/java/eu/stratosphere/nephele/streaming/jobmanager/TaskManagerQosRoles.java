@@ -31,25 +31,28 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
+ * Holds a task manager's Qos roles (Qos manager and reporter) while computing a
+ * job's Qos setup on the job manager side.
+ * 
  * @author Bjoern Lohrmann
  * 
  */
-public class InstanceQosRoles {
+public class TaskManagerQosRoles {
 
-	private InstanceConnectionInfo connectionInfo;
+	private InstanceConnectionInfo taskManagerConnectionInfo;
 
 	private HashMap<LatencyConstraintID, QosManagerRole> managerRoles;
 
 	private HashMap<QosReporterID, QosReporterRole> reporterRoles;
 
-	public InstanceQosRoles(InstanceConnectionInfo connectionInfo) {
-		this.connectionInfo = connectionInfo;
+	public TaskManagerQosRoles(InstanceConnectionInfo taskManagerConnectionInfo) {
+		this.taskManagerConnectionInfo = taskManagerConnectionInfo;
 		this.managerRoles = new HashMap<LatencyConstraintID, QosManagerRole>();
 		this.reporterRoles = new HashMap<QosReporterID, QosReporterRole>();
 	}
 
 	public InstanceConnectionInfo getConnectionInfo() {
-		return this.connectionInfo;
+		return this.taskManagerConnectionInfo;
 	}
 
 	public void addManagerRole(QosManagerRole managerRole) {
@@ -64,7 +67,7 @@ public class InstanceQosRoles {
 	public void addReporterRole(QosReporterRole reporterRole) {
 		QosReporterID reporterID = reporterRole.getReporterID();
 		if (this.reporterRoles.containsKey(reporterID)) {
-			this.reporterRoles.get(reporterID).mergeInto(reporterRole);
+			this.reporterRoles.get(reporterID).merge(reporterRole);
 		} else {
 			this.reporterRoles.put(reporterID, reporterRole);
 		}
@@ -76,7 +79,7 @@ public class InstanceQosRoles {
 
 	public DeployInstanceQosRolesAction toDeploymentAction(JobID jobID) {
 		DeployInstanceQosRolesAction deploymentAction = new DeployInstanceQosRolesAction(
-				jobID, this.connectionInfo);
+				jobID, this.taskManagerConnectionInfo);
 
 		if (!this.managerRoles.isEmpty()) {
 			addQosManagerConfig(deploymentAction);
@@ -97,7 +100,7 @@ public class InstanceQosRoles {
 
 	private void addQosManagerConfig(
 			DeployInstanceQosRolesAction deploymentAction) {
-		
+
 		QosGraph shallowQosGraph = null;
 		for (QosManagerRole managerRole : this.managerRoles.values()) {
 			if (shallowQosGraph == null) {

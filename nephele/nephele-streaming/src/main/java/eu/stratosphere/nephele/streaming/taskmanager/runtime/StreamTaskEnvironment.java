@@ -31,10 +31,9 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate
 import eu.stratosphere.nephele.types.Record;
 
 /**
- * A StreamTaskEnvironment has task-scope and wraps the created input and
- * output gates in special {@link StreamingInputGate} and
- * {@link StreamingOutputGate} objects to intercept particular methods calls
- * necessary for statistics collection.
+ * A StreamTaskEnvironment has task-scope and wraps the created input and output
+ * gates in special {@link StreamingInputGate} and {@link StreamingOutputGate}
+ * objects to intercept methods calls necessary for Qos statistics collection.
  * <p>
  * This class is thread-safe.
  * 
@@ -47,7 +46,7 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	 * environment does not have this information.
 	 */
 	private ExecutionVertexID vertexID;
-	
+
 	private Mapper<? extends Record, ? extends Record> mapper;
 
 	/**
@@ -93,23 +92,25 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 	public <T extends Record> OutputGate<T> createOutputGate(
 			final GateID gateID, final Class<T> outputClass,
 			ChannelSelector<T> selector, final boolean isBroadcast) {
-		
+
 		StreamChannelSelector<T> wrappedSelector;
-		if(selector == null) {
-			wrappedSelector = new StreamChannelSelector<T>(new DefaultChannelSelector<T>());
+		if (selector == null) {
+			wrappedSelector = new StreamChannelSelector<T>(
+					new DefaultChannelSelector<T>());
 		} else {
 			wrappedSelector = new StreamChannelSelector<T>(selector);
 		}
 
 		OutputGate<T> outputGate = this.getWrappedEnvironment()
-				.createOutputGate(gateID, outputClass, wrappedSelector, isBroadcast);
+				.createOutputGate(gateID, outputClass, wrappedSelector,
+						isBroadcast);
 		return new StreamOutputGate<T>(outputGate, wrappedSelector);
 	}
-	
+
 	public boolean isMapperTask() {
 		return this.mapper != null;
 	}
-	
+
 	public Mapper<? extends Record, ? extends Record> getMapper() {
 		return this.mapper;
 	}
@@ -164,7 +165,7 @@ public final class StreamTaskEnvironment extends EnvironmentWrapper {
 
 		return null;
 	}
-	
+
 	public StreamInputGate<? extends Record> getInputGate(int gateIndex) {
 		return (StreamInputGate<? extends Record>) ((RuntimeEnvironment) this
 				.getWrappedEnvironment()).getInputGate(gateIndex);

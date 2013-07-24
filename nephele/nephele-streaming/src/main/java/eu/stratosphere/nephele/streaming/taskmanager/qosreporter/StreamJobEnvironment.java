@@ -35,6 +35,8 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChai
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
 /**
+ * This class implements the Qos management and reporting for the vertices and
+ * edges of a specific job on a task manager, while the job is running.
  * 
  * @author Bjoern Lohrmann
  * 
@@ -85,7 +87,6 @@ public class StreamJobEnvironment {
 		return this.jobID;
 	}
 
-	
 	public void registerTask(RuntimeTask task, StreamTaskEnvironment streamEnv) {
 		if (this.environmentIsShutDown) {
 			return;
@@ -106,7 +107,8 @@ public class StreamJobEnvironment {
 		}
 	}
 
-	private void updateAggregationAndTaggingIntervals(Environment taskEnvironment) {
+	private void updateAggregationAndTaggingIntervals(
+			Environment taskEnvironment) {
 		long aggregationInterval = taskEnvironment
 				.getJobConfiguration()
 				.getLong(StreamTaskManagerPlugin.AGGREGATION_INTERVAL_KEY,
@@ -207,17 +209,17 @@ public class StreamJobEnvironment {
 
 	private void handleConstructStreamChainAction(
 			ConstructStreamChainAction action) {
-		
-		//FIXME
-//		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
-//				.get(action.getVertexID());
-//
-//		if (qosCoordinator != null) {
-//			qosCoordinator.handleLimitBufferSizeAction(action);
-//		} else {
-//			LOG.error("Cannot find QoS coordinator for vertex with ID "
-//					+ action.getVertexID());
-//		}
+
+		// FIXME
+		// StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
+		// .get(action.getVertexID());
+		//
+		// if (qosCoordinator != null) {
+		// qosCoordinator.handleLimitBufferSizeAction(action);
+		// } else {
+		// LOG.error("Cannot find QoS coordinator for vertex with ID "
+		// + action.getVertexID());
+		// }
 	}
 
 	public void unregisterTask(ExecutionVertexID vertexID,

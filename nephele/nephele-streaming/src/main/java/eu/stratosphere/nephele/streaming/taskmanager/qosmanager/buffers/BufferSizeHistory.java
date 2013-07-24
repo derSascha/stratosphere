@@ -1,5 +1,12 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers;
 
+/**
+ * Stores a time-series of output buffer sizes (represented as ints). Instances
+ * of this class are usually associated by the Qos data of a Qos edge.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class BufferSizeHistory {
 
 	private BufferSizeHistoryEntry[] entries;

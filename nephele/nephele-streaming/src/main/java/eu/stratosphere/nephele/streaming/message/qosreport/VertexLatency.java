@@ -21,7 +21,11 @@ import java.io.IOException;
 
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
-
+/**
+ * This class stores information about the latency of a vertex (task).
+ * 
+ * @author warneke, Bjoern Lohrmann
+ */
 public final class VertexLatency extends AbstractQosReportRecord {
 
 	private QosReporterID.Vertex reporterID;

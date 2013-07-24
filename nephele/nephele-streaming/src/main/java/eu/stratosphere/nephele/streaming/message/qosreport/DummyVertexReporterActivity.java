@@ -23,8 +23,9 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 /**
  * Indicates that a dummy Qos reporter (a vertex Qos reporter where either input
  * gate or output gate is not set) has become active. The purpose of this
- * message is to trigger a Qos reporter announce in the QosReportForwarder to be
- * sent to the Qos manager.
+ * message is to trigger a Qos reporter announcement in the QosReportForwarder
+ * to be sent to the Qos manager. Using the information in the announcement the
+ * Qos manager can complete its Qos graph model.
  * 
  * @author Bjoern Lohrmann
  * 

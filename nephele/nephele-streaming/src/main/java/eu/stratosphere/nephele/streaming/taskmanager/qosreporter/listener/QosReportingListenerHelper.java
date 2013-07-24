@@ -24,6 +24,10 @@ import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
 
 /**
+ * Utility class that creates {@link InputGateQosReportingListener}
+ * {@link OutputGateQosReportingListener} and adds them to the respective
+ * input/output gates.
+ * 
  * @author Bjoern Lohrmann
  * 
  */
@@ -128,7 +132,8 @@ public class QosReportingListenerHelper {
 			@Override
 			public void recordEmitted(int runtimeGateChannelIndex,
 					AbstractTaggableRecord record) {
-				gateReporterManager.recordEmitted(runtimeGateChannelIndex, record);
+				gateReporterManager.recordEmitted(runtimeGateChannelIndex,
+						record);
 			}
 		};
 

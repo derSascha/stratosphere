@@ -62,12 +62,15 @@ public class QosSetup {
 
 	private HashMap<LatencyConstraintID, QosGraph> qosGraphs;
 
-	private HashMap<InstanceConnectionInfo, InstanceQosRoles> qosRoles;
+	private HashMap<InstanceConnectionInfo, TaskManagerQosRoles> qosRoles;
 
 	public QosSetup(ExecutionGraph executionGraph,
 			List<JobGraphLatencyConstraint> constraints) {
+		
 		this.executionGraph = executionGraph;
 		this.constraints = constraints;
+		this.qosGraphs = new HashMap<LatencyConstraintID, QosGraph>();
+		this.qosRoles = new HashMap<InstanceConnectionInfo, TaskManagerQosRoles>();
 	}
 
 	public void computeQosRoles() {
@@ -85,8 +88,8 @@ public class QosSetup {
 	private LinkedList<QosManagerRole> collectAllManagerRoles() {
 		LinkedList<QosManagerRole> managers = new LinkedList<QosManagerRole>();
 
-		for (InstanceQosRoles instanceRoles : this.qosRoles.values()) {
-			managers.addAll(instanceRoles.getManagerRoles());
+		for (TaskManagerQosRoles tmRoles : this.qosRoles.values()) {
+			managers.addAll(tmRoles.getManagerRoles());
 		}
 
 		return managers;
@@ -127,7 +130,7 @@ public class QosSetup {
 		QosReporterRole reporterRole = new QosReporterRole(vertex,
 				sequenceElem.getInputGateIndex(),
 				sequenceElem.getOutputGateIndex(),
-				qosManager.getManagerInstance());
+				qosManager);
 
 		getOrCreateInstanceRoles(reporterInstance)
 				.addReporterRole(reporterRole);
@@ -143,7 +146,7 @@ public class QosSetup {
 				.getVertex().getExecutingInstance();
 
 		QosReporterRole reporterRole = new QosReporterRole(edge,
-				qosManager.getManagerInstance());
+				qosManager);
 		getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
 				reporterRole);
 		getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
@@ -158,22 +161,20 @@ public class QosSetup {
 			QosReporterRole dummyVertexReporter = new QosReporterRole(edge
 					.getInputGate().getVertex(),
 					sequenceElem.getInputGateIndex(), -1,
-					qosManager.getManagerInstance());
+					qosManager);
 			getOrCreateInstanceRoles(targetReporterInstance).addReporterRole(
 					dummyVertexReporter);
 		} else if (sequence.getFirst() == sequenceElem) {
 			QosReporterRole dummyVertexReporter = new QosReporterRole(edge
 					.getOutputGate().getVertex(), -1,
 					sequenceElem.getOutputGateIndex(),
-					qosManager.getManagerInstance());
+					qosManager);
 			getOrCreateInstanceRoles(srcReporterInstance).addReporterRole(
 					dummyVertexReporter);
 		}
 	}
 
 	private void createQosGraphs() {
-		this.qosGraphs = new HashMap<LatencyConstraintID, QosGraph>();
-
 		for (JobGraphLatencyConstraint constraint : this.constraints) {
 			this.qosGraphs
 					.put(constraint.getID(), QosGraphFactory
@@ -186,7 +187,6 @@ public class QosSetup {
 	 * Computes which instances shall run QosManagers.
 	 */
 	private void computeQosManagerRoles() {
-		this.qosRoles = new HashMap<InstanceConnectionInfo, InstanceQosRoles>();
 
 		for (QosGraph qosGraph : this.qosGraphs.values()) {
 			QosGroupVertex anchorVertex = getAnchorVertex(qosGraph);
@@ -209,12 +209,12 @@ public class QosSetup {
 		}
 	}
 
-	private InstanceQosRoles getOrCreateInstanceRoles(
+	private TaskManagerQosRoles getOrCreateInstanceRoles(
 			InstanceConnectionInfo instance) {
 
-		InstanceQosRoles instanceRoles = this.qosRoles.get(instance);
+		TaskManagerQosRoles instanceRoles = this.qosRoles.get(instance);
 		if (instanceRoles == null) {
-			instanceRoles = new InstanceQosRoles(instance);
+			instanceRoles = new TaskManagerQosRoles(instance);
 			this.qosRoles.put(instance, instanceRoles);
 		}
 
@@ -396,7 +396,7 @@ public class QosSetup {
 	}
 
 	public void attachRolesToExecutionGraph() {
-		for (InstanceQosRoles instanceQosRoles : this.qosRoles.values()) {
+		for (TaskManagerQosRoles instanceQosRoles : this.qosRoles.values()) {
 			DeployInstanceQosRolesAction rolesDeployment = instanceQosRoles
 					.toDeploymentAction(this.executionGraph.getJobID());
 

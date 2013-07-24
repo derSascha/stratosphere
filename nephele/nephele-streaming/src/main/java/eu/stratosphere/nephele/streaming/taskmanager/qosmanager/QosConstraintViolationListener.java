@@ -19,11 +19,16 @@ import java.util.List;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember;
 
 /**
+ * Callback interface used by {@link QosConstraintViolationFinder} to signal
+ * sequences that violate a Qos constraint.
+ * 
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public interface QosConstraintViolationListener {
 
-	public void handleViolatedConstraint(List<QosGraphMember> currentSequenceMembers, double constraintViolatedByMillis);
+	public void handleViolatedConstraint(
+			List<QosGraphMember> currentSequenceMembers,
+			double constraintViolatedByMillis);
 
 }

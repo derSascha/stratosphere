@@ -17,10 +17,9 @@ package eu.stratosphere.nephele.streaming.util;
 import java.util.Iterator;
 
 /**
- * Convenient utility class to create a non-sparse iterable (which can be
- * for-looped, unlike an iterator) based on a sparse iterator i.e. an iterator
- * that returns null values. This is achieved by skipping the null values of the
- * underlying iterator.
+ * Convenient utility class to create a non-sparse iterable based on a sparse
+ * iterator. A sparse iterator may return null values. This is achieved by
+ * skipping the null values of the underlying iterator.
  * 
  * @author Bjoern Lohrmann
  * 

@@ -33,8 +33,8 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
  * on a task manager. This consists of things like the aggregation interval but
  * also which vertices/edges to monitor and report on. Since the Qos reporter
  * configuration for a particular vertex (channel) can arrive before or after
- * the vertex is started (the edge ships the first records), listeners can be
- * set that are called upon configuration data arrival.
+ * the vertex is started or the edge ships the first records, listeners can be
+ * set that are when new Qos reporter configuration arrives.
  * 
  * All methods of this class are thread-safe, but if you need to do things like
  * "check for configuration and if none exists, install a listener" which
@@ -131,11 +131,9 @@ public class QosReporterConfigCenter {
 		return new EdgeQosReporterConfig(oldReporter.getSourceChannelID(),
 				oldReporter.getTargetChannelID(),
 				qosManagers.toArray(new InstanceConnectionInfo[0]),
-				oldReporter.getOutputGateID(),
-				oldReporter.getInputGateID(),
+				oldReporter.getOutputGateID(), oldReporter.getInputGateID(),
 				oldReporter.getOutputGateEdgeIndex(),
-				oldReporter.getInputGateEdgeIndex(),
-				oldReporter.getName());
+				oldReporter.getInputGateEdgeIndex(), oldReporter.getName());
 	}
 
 	public synchronized Set<VertexQosReporterConfig> getVertexQosReporters(

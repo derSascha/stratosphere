@@ -35,6 +35,13 @@ import eu.stratosphere.nephele.profiling.ProfilingListener;
 import eu.stratosphere.nephele.streaming.ConstraintUtil;
 import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
 
+/**
+ * Job manager plugin that analyzes the constraints attached to a Nephele job
+ * and sets up Qos reporting and management.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class StreamJobManagerPlugin implements JobManagerPlugin,
 		JobStatusListener {
 
@@ -66,7 +73,7 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 				QosSetupManager qosSetupManager = new QosSetupManager(
 						jobGraph.getJobID(), constraints);
 				this.qosSetupManagers.put(jobGraph.getJobID(), qosSetupManager);
-				
+
 				qosSetupManager.rewriteJobGraph(jobGraph);
 			}
 		} catch (IOException e) {
@@ -78,16 +85,17 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 		return jobGraph;
 	}
 
-
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
-	public ExecutionGraph rewriteExecutionGraph(final ExecutionGraph executionGraph) {
-		
+	public ExecutionGraph rewriteExecutionGraph(
+			final ExecutionGraph executionGraph) {
+
 		JobID jobId = executionGraph.getJobID();
 		if (this.qosSetupManagers.containsKey(jobId)) {
-			this.qosSetupManagers.get(jobId).registerOnExecutionGraph(executionGraph);
+			this.qosSetupManagers.get(jobId).registerOnExecutionGraph(
+					executionGraph);
 		}
 
 		return executionGraph;
@@ -98,8 +106,7 @@ public class StreamJobManagerPlugin implements JobManagerPlugin,
 	 */
 	@Override
 	public void shutdown() {
-		for (QosSetupManager qosSetupManager : this.qosSetupManagers
-				.values()) {
+		for (QosSetupManager qosSetupManager : this.qosSetupManagers.values()) {
 			qosSetupManager.shutdown();
 		}
 		this.qosSetupManagers.clear();

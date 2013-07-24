@@ -7,6 +7,19 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGate.GateType;
 
+/**
+ * This class models a Qos vertex as part of a Qos graph. It is equivalent to an
+ * {@link eu.stratosphere.nephele.executiongraph.ExecutionVertex}.
+ * 
+ * Instances of this class contain sparse lists of input and output gates.
+ * Sparseness means that, for example if the vertex has an output gate with
+ * index 1 it may not have an output gate with index 0. This stems from the
+ * fact, that the Qos graph itself only contains those group vertices and group
+ * edges from the execution graph, that are covered by a constraint.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class QosVertex implements QosGraphMember {
 
 	private QosGroupVertex groupVertex;
@@ -137,11 +150,7 @@ public class QosVertex implements QosGraphMember {
 	 */
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((vertexID == null) ? 0 : vertexID.hashCode());
-		return result;
+		return this.vertexID.hashCode();
 	}
 
 	/*
@@ -151,19 +160,17 @@ public class QosVertex implements QosGraphMember {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (obj == null) {
+			return false;
+		}
+		if (obj == this) {
 			return true;
-		if (obj == null)
+		}
+		if (obj.getClass() != getClass()) {
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		QosVertex other = (QosVertex) obj;
-		if (vertexID == null) {
-			if (other.vertexID != null)
-				return false;
-		} else if (!vertexID.equals(other.vertexID))
-			return false;
-		return true;
+		}
+		QosVertex rhs = (QosVertex) obj;
+		return this.vertexID.equals(rhs.vertexID);
 	}
 
 	public static QosVertex fromExecutionVertex(ExecutionVertex executionVertex) {
@@ -174,16 +181,24 @@ public class QosVertex implements QosGraphMember {
 				executionVertex.getIndexInVertexGroup());
 	}
 
-	/* (non-Javadoc)
-	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isVertex()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember
+	 * #isVertex()
 	 */
 	@Override
 	public boolean isVertex() {
 		return true;
 	}
 
-	/* (non-Javadoc)
-	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isEdge()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember
+	 * #isEdge()
 	 */
 	@Override
 	public boolean isEdge() {

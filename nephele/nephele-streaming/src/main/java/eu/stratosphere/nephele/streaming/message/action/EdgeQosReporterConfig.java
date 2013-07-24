@@ -26,6 +26,8 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
+ * Describes a Qos reporter role for an edge (channel).
+ * 
  * @author Bjoern Lohrmann
  * 
  */
@@ -44,7 +46,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	private int outputGateEdgeIndex;
 
 	private int inputGateEdgeIndex;
-	
+
 	private String name;
 
 	public EdgeQosReporterConfig() {
@@ -64,9 +66,8 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	 */
 	public EdgeQosReporterConfig(ChannelID sourceChannelID,
 			ChannelID targetChannelID, InstanceConnectionInfo[] qosManagers,
-			GateID outputGateID,
-			GateID inputGateID, int outputGateEdgeIndex, int inputGateEdgeIndex,
-			String name) {
+			GateID outputGateID, GateID inputGateID, int outputGateEdgeIndex,
+			int inputGateEdgeIndex, String name) {
 
 		this.sourceChannelID = sourceChannelID;
 		this.targetChannelID = targetChannelID;
@@ -140,7 +141,7 @@ public class EdgeQosReporterConfig implements IOReadableWritable {
 	public int getInputGateEdgeIndex() {
 		return this.inputGateEdgeIndex;
 	}
-	
+
 	/**
 	 * Returns the name.
 	 * 

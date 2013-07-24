@@ -31,12 +31,12 @@ import eu.stratosphere.nephele.util.StringUtils;
 /**
  * For a given Nephele job, this class aggregates and forwards stream QoS report
  * data (latencies, throughput, etc) of the tasks running within the task
- * manager. Profiling data is aggregated for every QoS manager and shipped in a
+ * manager. Qos report data is pre-aggregated by QoS manager and shipped in a
  * single message to the Qos manager once every {@link #aggregationInterval}. If
- * no QoS data has been received, messages will be skipped. This class starts
- * its own thread as soon as there is at least on registered task and can be
- * shut down by invoking {@link #shutdown()}. This class is threadsafe. Any QoS
- * data added after shutdown will be ignored.
+ * no QoS data for a Qos manager has been received, messages will be skipped.
+ * This class starts its own thread as soon as there is at least on registered
+ * task and can be shut down by invoking {@link #shutdown()}. This class is
+ * threadsafe. Any QoS data added after shutdown will be ignored.
  * 
  * FIXME: lifecycle. When does does thread get stopped?
  * 
@@ -151,13 +151,14 @@ public class QosReportForwarderThread extends Thread {
 
 		// concurrent maps are necessary here because THIS thread and and
 		// another thread registering/unregistering
-		// profiling infos may access the maps concurrently
+		// Qos reporter configs may access the maps concurrently
 		this.reportByQosManager = new ConcurrentHashMap<InstanceConnectionInfo, AggregatedReport>();
 		this.reportsByReporter = new ConcurrentHashMap<QosReporterID, Set<AggregatedReport>>();
 		this.reporterActivityMap = new ConcurrentHashMap<QosReporterID, Boolean>();
 		this.pendingReportRecords = new LinkedBlockingQueue<AbstractQosReportRecord>();
 		this.started = false;
-		this.setName(String.format("QosReporterForwarderThread (JobID: %s)", jobID.toString()));
+		this.setName(String.format("QosReporterForwarderThread (JobID: %s)",
+				jobID.toString()));
 	}
 
 	@Override
@@ -255,7 +256,7 @@ public class QosReportForwarderThread extends Thread {
 
 	private void processDummyVertexReporterActivity(
 			DummyVertexReporterActivity record) {
-		
+
 		QosReporterID.Vertex reporterID = record.getReporterID();
 
 		if (this.reporterActivityMap.get(reporterID) != Boolean.TRUE) {
@@ -300,8 +301,7 @@ public class QosReportForwarderThread extends Thread {
 		}
 	}
 
-	private void processEdgeStatistics(
-			EdgeStatistics channelStats) {
+	private void processEdgeStatistics(EdgeStatistics channelStats) {
 
 		QosReporterID.Edge reporterID = channelStats.getReporterID();
 

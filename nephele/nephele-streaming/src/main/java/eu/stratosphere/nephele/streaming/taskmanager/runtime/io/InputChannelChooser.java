@@ -2,6 +2,15 @@ package eu.stratosphere.nephele.streaming.taskmanager.runtime.io;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
+/**
+ * This class is used by the {@link StreamInputGate} to efficiently determine in
+ * which order to read from the input channels that currently have input data
+ * available. It implements a round-robin schedule over a permanently changing
+ * set of available input channels.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class InputChannelChooser {
 
 	private final LinkedBlockingQueue<Integer> incomingAvailableChannels = new LinkedBlockingQueue<Integer>();

@@ -8,16 +8,17 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
  * Handles the measurement and reporting of latencies for a particular vertex.
- * Such a latency is defined as the timespan between record receives and emits
+ * Such a latency is defined as the timespan between record receptions and emits
  * on a particular input/output gate combination of the vertex. Thus one vertex
  * may have multiple associated latencies, one for each input/output gate
  * combination. Which gate combination is measured and reported on must be
- * configured by calling
- * {@link #addReporterConfig(int, int, QosReporterID)}.
+ * configured by calling {@link #addReporterConfig(int, int, QosReporterID)}.
  * 
- * A report will be sent per gate combination approximately once per aggregation
- * interval (see {@link QosReporterConfigCenter}). "Approximately" because if no
- * records have been received/emitted, nothing will be reported.
+ * An {@link VertexLatency} record per configured input/output gate combination
+ * will be handed to the provided {@link QosReportForwarderThread} approximately
+ * once per aggregation interval (see {@link QosReporterConfigCenter}).
+ * "Approximately" because if no records have been received/emitted, nothing
+ * will be reported.
  * 
  * @author Bjoern Lohrmann
  */
@@ -69,7 +70,8 @@ public class VertexLatencyReportManager {
 								/ (1.0 * this.inputGateReceiveCounter);
 
 						VertexLatencyReportManager.this.reportForwarder
-								.addToNextReport(new VertexLatency(this.reporterID,
+								.addToNextReport(new VertexLatency(
+										this.reporterID,
 										avgLatencyPerReceivedRecord));
 
 						prepareNextReport(now);
@@ -93,7 +95,7 @@ public class VertexLatencyReportManager {
 		}
 
 		public void recordReceived() {
-			if(this.inputGateReceiveCounter == 0) {
+			if (this.inputGateReceiveCounter == 0) {
 				this.inputGateTimeOfFirstReceive = System.currentTimeMillis();
 			}
 			this.inputGateReceiveCounter++;
@@ -141,7 +143,7 @@ public class VertexLatencyReportManager {
 			reporter.recordEmitted();
 		}
 	}
-	
+
 	public boolean containsReporter(QosReporterID.Vertex reporterID) {
 		return this.reporters.containsKey(reporterID);
 	}

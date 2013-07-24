@@ -39,6 +39,14 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChai
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
 
+/**
+ * Wraps Nephele's {@link eu.stratosphere.nephele.io.RuntimeOutputGate} to
+ * intercept methods calls necessary for Qos statistics collection.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ * @param <T>
+ */
 public final class StreamOutputGate<T extends Record> extends
 		AbstractOutputGateWrapper<T> {
 	

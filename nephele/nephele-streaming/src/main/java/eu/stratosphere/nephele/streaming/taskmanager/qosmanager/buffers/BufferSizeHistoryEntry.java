@@ -1,5 +1,11 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers;
 
+/**
+ * Models an entry in the time-series of buffer sizes in a Qos edge.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class BufferSizeHistoryEntry {
 	private int entryIndex;
 

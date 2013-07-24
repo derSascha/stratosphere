@@ -14,15 +14,22 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.jobmanager;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
-import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
+ * Models a Qos reporter role while computing the Qos setup on the job manager
+ * side. A Qos reporter role is defined by a reporting action (REPORT_TASK_STATS
+ * or REPORT_CHANNEL_STATS), the affected QosVertex/gate combination or QosEdge
+ * and the set of task managers that have QosManager roles. A Qos reporter is
+ * not directly associated with a constraint (only indirectly via the Qos
+ * managers).
+ * 
+ * 
  * @author Bjoern Lohrmann
  * 
  */
@@ -32,7 +39,7 @@ public class QosReporterRole {
 		REPORT_TASK_STATS, REPORT_CHANNEL_STATS
 	};
 
-	private TreeSet<InstanceConnectionInfo> targetQosManagers = new TreeSet<InstanceConnectionInfo>();
+	private HashSet<QosManagerRole> targetQosManagers;
 
 	private ReportingAction action;
 
@@ -43,28 +50,38 @@ public class QosReporterRole {
 	private int outputGateIndex;
 
 	private QosEdge edge;
-	
+
 	private QosReporterID reporterID;
 
+	/**
+	 * Creates a new Qos reporter role for a vertex, that reports to a single
+	 * Qos manager.
+	 */
 	public QosReporterRole(QosVertex vertex, int inputGateIndex,
-			int outputGateIndex, InstanceConnectionInfo targetQosManager) {
+			int outputGateIndex, QosManagerRole targetQosManager) {
 
 		this.action = ReportingAction.REPORT_TASK_STATS;
 		this.vertex = vertex;
+		this.targetQosManagers = new HashSet<QosManagerRole>(2);
 		this.targetQosManagers.add(targetQosManager);
 		this.inputGateIndex = inputGateIndex;
 		this.outputGateIndex = outputGateIndex;
 		this.reporterID = createReporterRoleID();
 	}
 
-	public QosReporterRole(QosEdge edge, InstanceConnectionInfo targetQosManager) {
+	/**
+	 * Creates a new Qos reporter role for an edge, that reports to a single Qos
+	 * manager.
+	 */
+	public QosReporterRole(QosEdge edge, QosManagerRole targetQosManager) {
 
 		this.action = ReportingAction.REPORT_CHANNEL_STATS;
 		this.edge = edge;
+		this.targetQosManagers = new HashSet<QosManagerRole>(2);
 		this.targetQosManagers.add(targetQosManager);
 		this.reporterID = createReporterRoleID();
 	}
-	
+
 	private QosReporterID createReporterRoleID() {
 		if (this.action == ReportingAction.REPORT_CHANNEL_STATS) {
 			return QosReporterID.forEdge(this.edge.getSourceChannelID());
@@ -77,8 +94,7 @@ public class QosReporterRole {
 						this.outputGateIndex).getGateID() : null);
 	}
 
-
-	public void mergeInto(QosReporterRole otherRole) {
+	public void merge(QosReporterRole otherRole) {
 		if (!this.reporterID.equals(otherRole.reporterID)) {
 			throw new RuntimeException("Cannot merge unequal QosReporter roles");
 		}
@@ -90,7 +106,7 @@ public class QosReporterRole {
 	 * 
 	 * @return the targetQosManagers
 	 */
-	public Set<InstanceConnectionInfo> getTargetQosManagers() {
+	public Set<QosManagerRole> getTargetQosManagers() {
 		return this.targetQosManagers;
 	}
 

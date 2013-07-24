@@ -22,6 +22,8 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
 
 /**
+ * Describes a Qos manager role.
+ * 
  * @author Bjoern Lohrmann
  * 
  */

@@ -32,22 +32,24 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexQosData;
 
 /**
- * @author Bjoern Lohrmann
+ * This class is used by Qos managers to log aggregated Qos report data for a
+ * given Qos constraint.
  * 
+ * @author Bjoern Lohrmann
  */
 public class QosLogger {
 	/**
 	 * Provides access to the configuration entry which defines the log file
 	 * location.
 	 */
-	private static final String PROFILING_LOGFILE_KEY = "streaming.qosmanager.logging.qos_statistics_filepattern";
+	private static final String LOGFILE_PATTERN_KEY = "streaming.qosmanager.logging.qos_statistics_filepattern";
 
 	private static final String DEFAULT_LOGFILE_PATTERN = "/tmp/qos_statistics_%s";
 
 	private BufferedWriter writer;
 
 	private double[][] aggregatedMemberLatencies;
-	
+
 	private int[][] inputOutputGateCombinations;
 
 	private double minTotalLatency;
@@ -70,16 +72,20 @@ public class QosLogger {
 		this.inputOutputGateCombinations = new int[jobGraphSequence.size()][];
 		for (SequenceElement<JobVertexID> sequenceElement : jobGraphSequence) {
 			int index = sequenceElement.getIndexInSequence();
-			
+
 			this.inputOutputGateCombinations[index] = new int[2];
 			if (sequenceElement.isVertex()) {
 				this.aggregatedMemberLatencies[index] = new double[1];
-				this.inputOutputGateCombinations[index][0] = sequenceElement.getInputGateIndex();
-				this.inputOutputGateCombinations[index][1] = sequenceElement.getOutputGateIndex();
+				this.inputOutputGateCombinations[index][0] = sequenceElement
+						.getInputGateIndex();
+				this.inputOutputGateCombinations[index][1] = sequenceElement
+						.getOutputGateIndex();
 			} else {
-				this.aggregatedMemberLatencies[index] = new double[2];				
-				this.inputOutputGateCombinations[index][0] = sequenceElement.getOutputGateIndex();
-				this.inputOutputGateCombinations[index][1] = sequenceElement.getInputGateIndex();
+				this.aggregatedMemberLatencies[index] = new double[2];
+				this.inputOutputGateCombinations[index][0] = sequenceElement
+						.getOutputGateIndex();
+				this.inputOutputGateCombinations[index][1] = sequenceElement
+						.getInputGateIndex();
 			}
 		}
 		resetCounters();
@@ -87,7 +93,7 @@ public class QosLogger {
 		this.loggingInterval = loggingInterval;
 
 		String logFile = StreamTaskManagerPlugin.getPluginConfiguration()
-				.getString(PROFILING_LOGFILE_KEY, DEFAULT_LOGFILE_PATTERN);
+				.getString(LOGFILE_PATTERN_KEY, DEFAULT_LOGFILE_PATTERN);
 		if (logFile.contains("%s")) {
 			logFile = String.format(logFile, constraintID.toString());
 		}
@@ -111,15 +117,16 @@ public class QosLogger {
 	public void addMemberSequenceToLog(List<QosGraphMember> sequenceMembers) {
 		double sequenceLatency = 0;
 		int index = 0;
-		
+
 		for (QosGraphMember member : sequenceMembers) {
 			if (member.isVertex()) {
 				VertexQosData vertexQos = ((QosVertex) member).getQosData();
 
 				int inputGateIndex = this.inputOutputGateCombinations[index][0];
 				int outputGateIndex = this.inputOutputGateCombinations[index][1];
-				
-				double vertexLatency = vertexQos.getLatencyInMillis(inputGateIndex, outputGateIndex);
+
+				double vertexLatency = vertexQos.getLatencyInMillis(
+						inputGateIndex, outputGateIndex);
 				this.aggregatedMemberLatencies[index][0] += vertexLatency;
 				sequenceLatency += vertexLatency;
 			} else {
@@ -166,7 +173,7 @@ public class QosLogger {
 		builder.append('\n');
 		this.writer.write(builder.toString());
 		this.writer.flush();
-		
+
 		this.resetCounters();
 	}
 

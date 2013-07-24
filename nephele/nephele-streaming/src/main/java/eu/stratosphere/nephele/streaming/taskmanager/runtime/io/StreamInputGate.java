@@ -33,6 +33,14 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.InputG
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
 
+/**
+ * Wraps Nephele's {@link eu.stratosphere.nephele.io.RuntimeInputGate} to
+ * intercept methods calls necessary for Qos statistics collection.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ * @param <T>
+ */
 public final class StreamInputGate<T extends Record> extends
 		AbstractInputGateWrapper<T> {
 

@@ -21,6 +21,14 @@ import java.io.IOException;
 
 import eu.stratosphere.nephele.types.Tag;
 
+/**
+ * Instances of this class hold a timestamp tag that can be attached to an
+ * {@link eu.stratosphere.nephele.types.AbstractTaggableRecord}. It is used to
+ * measure the latency of edges (channels) while a job runs.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public final class TimestampTag implements Tag {
 
 	private long timestamp = 0L;

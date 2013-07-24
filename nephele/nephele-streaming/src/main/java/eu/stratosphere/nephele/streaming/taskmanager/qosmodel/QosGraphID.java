@@ -17,8 +17,10 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 import eu.stratosphere.nephele.io.AbstractID;
 
 /**
+ * Uniquely identifies a {@link QosGraph}.
+ * 
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public class QosGraphID extends AbstractID {
 

@@ -1,15 +1,9 @@
 package eu.stratosphere.nephele.streaming.jobmanager;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,19 +25,28 @@ import eu.stratosphere.nephele.jobgraph.JobOutputVertex;
 import eu.stratosphere.nephele.jobgraph.JobTaskVertex;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
 import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
-import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.WrapperUtils;
 import eu.stratosphere.nephele.streaming.util.StreamUtil;
-import eu.stratosphere.nephele.util.StringUtils;
 
+/**
+ * This class coordinates Qos setup computation on the job manager for a given
+ * job. This class receives calls from the job manager directly between job
+ * submission by the client and deployment on the task managers. It analyzes
+ * which constraints have been attached to the job graph and rewrites it
+ * accordingly. Additionally, it waits for a complete allocation of execution
+ * vertices to task managers and then triggers the actual computation of the Qos
+ * setup.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class QosSetupManager implements VertexAssignmentListener {
 
 	private static final Log LOG = LogFactory.getLog(QosSetupManager.class);
 
 	private ExecutionGraph executionGraph;
 
-	private ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance> instances;
+	private ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance> taskManagers;
 
 	private JobID jobID;
 
@@ -62,7 +65,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 
 	public void registerOnExecutionGraph(ExecutionGraph executionGraph) {
 		this.executionGraph = executionGraph;
-		this.instances = new ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance>();
+		this.taskManagers = new ConcurrentHashMap<InstanceConnectionInfo, AbstractInstance>();
 		this.attachAssignmentListenersToExecutionGraph();
 	}
 
@@ -102,7 +105,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 	}
 
 	public void shutdown() {
-		this.instances.clear();
+		this.taskManagers.clear();
 		this.executionGraph = null;
 	}
 
@@ -124,9 +127,9 @@ public class QosSetupManager implements VertexAssignmentListener {
 	 * @param jobGraph
 	 */
 	public void rewriteJobGraph(JobGraph jobGraph) {
-		rewriteInputVertices(jobGraph);
-		rewriteTaskVertices(jobGraph);
-		rewriteOutputVertices(jobGraph);
+		rewriteInputVerticesWhereNecessary(jobGraph);
+		rewriteTaskVerticesWhereNecessary(jobGraph);
+		rewriteOutputVerticesWhereNecessary(jobGraph);
 	}
 
 	private HashSet<JobVertexID> computeJobVerticesToRewrite() {
@@ -150,7 +153,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 		return verticesToRewrite;
 	}
 
-	private void rewriteOutputVertices(JobGraph jobGraph) {
+	private void rewriteOutputVerticesWhereNecessary(JobGraph jobGraph) {
 
 		for (AbstractJobOutputVertex vertex : StreamUtil.toIterable(jobGraph
 				.getOutputVertices())) {
@@ -168,7 +171,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 		}
 	}
 
-	private void rewriteInputVertices(JobGraph jobGraph) {
+	private void rewriteInputVerticesWhereNecessary(JobGraph jobGraph) {
 
 		for (AbstractJobInputVertex inputVertex : StreamUtil
 				.toIterable(jobGraph.getInputVertices())) {
@@ -186,7 +189,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 		}
 	}
 
-	private void rewriteTaskVertices(JobGraph jobGraph) {
+	private void rewriteTaskVerticesWhereNecessary(JobGraph jobGraph) {
 
 		for (JobTaskVertex vertex : StreamUtil.toIterable(jobGraph
 				.getTaskVertices())) {
@@ -213,7 +216,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 		try {
 			this.verticesWithPendingAllocation.remove(id);
 			AbstractInstance instance = newAllocatedResource.getInstance();
-			this.instances.putIfAbsent(instance.getInstanceConnectionInfo(),
+			this.taskManagers.putIfAbsent(instance.getInstanceConnectionInfo(),
 					instance);
 			if (this.verticesWithPendingAllocation.isEmpty()) {
 				computeAndDistributeQosSetup();
@@ -227,7 +230,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 		QosSetup qosSetup = new QosSetup(this.executionGraph, this.constraints);
 		qosSetup.computeQosRoles();
 		qosSetup.attachRolesToExecutionGraph();
-		
+
 		// FIXME: continue here: distribute QoS setup
-	}	
+	}
 }

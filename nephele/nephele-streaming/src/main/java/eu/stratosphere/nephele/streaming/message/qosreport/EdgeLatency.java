@@ -22,7 +22,7 @@ import java.io.IOException;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
- * This class stores information about the latency of a specific channel.
+ * This class stores information about the latency of a specific edge (channel).
  * 
  * @author warneke, Bjoern Lohrmann
  */

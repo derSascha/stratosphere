@@ -13,6 +13,17 @@ import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
 
+/**
+ * Implements a thread that serves as a Qos manager. It is started by invoking
+ * {@link Thread#start()} and can by shut down with {@link #shutdown()}. It
+ * continuously processes {@link AbstractStreamMessage} objects from a
+ * threadsafe queue and triggers Qos actions if necessary.
+ * {@link #handOffStreamingData(AbstractStreamMessage)} can be used to enqueue
+ * data.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class QosManagerThread extends Thread {
 
 	private static final Log LOG = LogFactory.getLog(QosManagerThread.class);
@@ -31,7 +42,8 @@ public class QosManagerThread extends Thread {
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
 		this.bufferSizeManager = new BufferSizeManager(jobID, this.qosModel,
 				this.messagingThread);
-		this.setName(String.format("QosManagerThread (JobID: %s)", jobID.toString()));
+		this.setName(String.format("QosManagerThread (JobID: %s)",
+				jobID.toString()));
 	}
 
 	@Override
@@ -102,7 +114,7 @@ public class QosManagerThread extends Thread {
 		}
 
 		this.cleanUp();
-		LOG.info("Stopped profiling master thread");
+		LOG.info("Stopped Qos Manager thread");
 	}
 
 	private void cleanUp() {

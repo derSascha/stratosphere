@@ -15,13 +15,17 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 /**
+ * Common interface for {@link QosVertex} and {@link QosEdge} objects. This
+ * interface exists to provide a common supertype for these elements as we often
+ * have to deal with sequences that mix vertices and edges.
+ * 
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public interface QosGraphMember {
-	
+
 	public boolean isVertex();
-	
+
 	public boolean isEdge();
 
 }

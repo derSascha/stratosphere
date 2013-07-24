@@ -15,6 +15,12 @@ import eu.stratosphere.nephele.streaming.JobGraphSequence;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 
+/**
+ * This class holds factory methods to build Qos graphs.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class QosGraphFactory {
 
 	/**
@@ -114,8 +120,8 @@ public class QosGraphFactory {
 	}
 
 	/**
-	 * Duplicates the execution edges and gates of the given execution group edge
-	 * and links them to the given QoS group edge.
+	 * Duplicates the execution edges and gates of the given execution group
+	 * edge and links them to the given QoS group edge.
 	 * 
 	 */
 	private static void connectGroupMembers(QosGroupEdge qosGroupEdge,
@@ -132,13 +138,15 @@ public class QosGraphFactory {
 
 			QosVertex sourceVertex = qosGroupEdge.getSourceVertex()
 					.getMember(i);
-			QosGate qosOutputGate = new QosGate(execOutputGate.getGateID(), qosGroupEdge.getOutputGateIndex());
+			QosGate qosOutputGate = new QosGate(execOutputGate.getGateID(),
+					qosGroupEdge.getOutputGateIndex());
 			sourceVertex.setOutputGate(qosOutputGate);
 
 			for (int j = 0; j < execOutputGate.getNumberOfEdges(); j++) {
 				ExecutionEdge executionEdge = execOutputGate.getEdge(j);
 
-				QosEdge qosEdge = new QosEdge(executionEdge.getOutputChannelID(),
+				QosEdge qosEdge = new QosEdge(
+						executionEdge.getOutputChannelID(),
 						executionEdge.getInputChannelID(),
 						executionEdge.getOutputGateIndex(),
 						executionEdge.getInputGateIndex());
@@ -148,11 +156,12 @@ public class QosGraphFactory {
 								executionEdge.getInputGate().getVertex()
 										.getIndexInVertexGroup());
 
-				QosGate qosInputGate = targetVertex.getInputGate(qosGroupEdge.getInputGateIndex());
-				if(qosInputGate == null) {
+				QosGate qosInputGate = targetVertex.getInputGate(qosGroupEdge
+						.getInputGateIndex());
+				if (qosInputGate == null) {
 					qosInputGate = new QosGate(executionEdge.getInputGate()
 							.getGateID(), qosGroupEdge.getInputGateIndex());
-					targetVertex.setInputGate(qosInputGate);					
+					targetVertex.setInputGate(qosInputGate);
 				}
 
 				qosEdge.setOutputGate(qosOutputGate);
@@ -165,8 +174,6 @@ public class QosGraphFactory {
 	 * Populates qosGroupVertex with {@link QosVertex} objects, by duplicating
 	 * the members found in executionGroupVertex.
 	 * 
-	 * @param profilingGroupVertex
-	 * @param executionGroupVertex
 	 */
 	private static void createGroupMembers(QosGroupVertex qosGroupVertex,
 			ExecutionGroupVertex executionGroupVertex) {
@@ -182,12 +189,14 @@ public class QosGraphFactory {
 
 	public static QosGraph createConstrainedSubgraph(QosGraph qosGraph,
 			LatencyConstraintID constraintID, List<QosVertex> anchors) {
-		
-		if(qosGraph.getConstraints().size() > 1) {
-			throw new RuntimeException("This method only works for QosGraphs with one constraint in them");
+
+		if (qosGraph.getConstraints().size() > 1) {
+			throw new RuntimeException(
+					"This method only works for QosGraphs with one constraint in them");
 		}
-				
-		JobGraphSequence sequence = qosGraph.getConstraintByID(constraintID).getSequence();
+
+		JobGraphSequence sequence = qosGraph.getConstraintByID(constraintID)
+				.getSequence();
 		final QosGraph toReturn = qosGraph.cloneWithoutMembers();
 		QosGraphTraversalListener traversalListener = new QosGraphTraversalListener() {
 			@Override
@@ -195,26 +204,28 @@ public class QosGraphFactory {
 					SequenceElement<JobVertexID> sequenceElem) {
 				// do nothing
 			}
-			
+
 			@Override
 			public void processQosEdge(QosEdge edge,
 					SequenceElement<JobVertexID> sequenceElem) {
 				addMembersAndMemberWiring(edge, toReturn);
 			}
 		};
-		
-		QosGraphTraversal traverser = new QosGraphTraversal(null, sequence, traversalListener);
+
+		QosGraphTraversal traverser = new QosGraphTraversal(null, sequence,
+				traversalListener);
 		traverser.setClearTraversedVertices(false);
 		for (QosVertex anchor : anchors) {
 			traverser.setStartVertex(anchor);
 			traverser.traverseForward();
 			traverser.traverseBackward(false, true);
 		}
-		
+
 		return toReturn;
 	}
-	
-	private static void addMembersAndMemberWiring(QosEdge templateEdge, QosGraph clone) {
+
+	private static void addMembersAndMemberWiring(QosEdge templateEdge,
+			QosGraph clone) {
 		// ensure source member vertex and output gate exist
 		QosGate templateOutputGate = templateEdge.getOutputGate();
 		QosVertex templateSourceVertex = templateOutputGate.getVertex();
@@ -254,54 +265,56 @@ public class QosGraphFactory {
 			inputGate = templateInputGate.cloneWithoutEdgesAndVertex();
 			targetVertex.setInputGate(inputGate);
 		}
-		
+
 		QosEdge clonedEdge = templateEdge.cloneWithoutGates();
 		clonedEdge.setOutputGate(outputGate);
 		clonedEdge.setInputGate(inputGate);
 	}
 
-
-//	private static void createSubgraphGroupVertices(QosGraph qosGraph, HashMap<JobVertexID, JobGraphSequence sequence) {
-//		
-//		HashMap<JobVertexID, QosGroupVertex> subgraphGroupVertices = new HashMap<JobVertexID, QosGroupVertex>(
-//				qosGraph.getNumberOfVertices());
-//
-//		for (SequenceElement<JobVertexID> sequenceElem : sequence) {
-//			if (sequenceElem.isVertex()) {
-//				
-//				ensureGroupVertexPresence(sequenceElem.getVertexID(),
-//						subgraphGroupVertices, qosGraph);
-//				
-//			} else {
-//				
-//				QosGroupVertex source = ensureGroupVertexPresence(
-//						sequenceElem.getSourceVertexID(),
-//						subgraphGroupVertices, qosGraph);
-//
-//				QosGroupVertex target = ensureGroupVertexPresence(
-//						sequenceElem.getTargetVertexID(),
-//						subgraphGroupVertices, qosGraph);
-//
-//				QosGroupEdge templateEdge = qosGraph.getGroupVertexByID(
-//						sequenceElem.getSourceVertexID()).getForwardEdge(
-//						sequenceElem.getOutputGateIndex());
-//				source.wireTo(target, templateEdge);
-//
-//			}
-//		}
-//	}
-//
-//	private static QosGroupVertex ensureGroupVertexPresence(JobVertexID vertexID,
-//			HashMap<JobVertexID, QosGroupVertex> subgraphGroupVertices,
-//			QosGraph qosGraph) {
-//
-//		QosGroupVertex toReturn = subgraphGroupVertices.get(vertexID);
-//		
-//		if (toReturn == null) {
-//			QosGroupVertex template = qosGraph.getGroupVertexByID(vertexID);
-//			toReturn = template.cloneWithoutMembersOrEdges();
-//			subgraphGroupVertices.put(vertexID, toReturn);
-//		}
-//		return toReturn;
-//	}
+	// private static void createSubgraphGroupVertices(QosGraph qosGraph,
+	// HashMap<JobVertexID, JobGraphSequence sequence) {
+	//
+	// HashMap<JobVertexID, QosGroupVertex> subgraphGroupVertices = new
+	// HashMap<JobVertexID, QosGroupVertex>(
+	// qosGraph.getNumberOfVertices());
+	//
+	// for (SequenceElement<JobVertexID> sequenceElem : sequence) {
+	// if (sequenceElem.isVertex()) {
+	//
+	// ensureGroupVertexPresence(sequenceElem.getVertexID(),
+	// subgraphGroupVertices, qosGraph);
+	//
+	// } else {
+	//
+	// QosGroupVertex source = ensureGroupVertexPresence(
+	// sequenceElem.getSourceVertexID(),
+	// subgraphGroupVertices, qosGraph);
+	//
+	// QosGroupVertex target = ensureGroupVertexPresence(
+	// sequenceElem.getTargetVertexID(),
+	// subgraphGroupVertices, qosGraph);
+	//
+	// QosGroupEdge templateEdge = qosGraph.getGroupVertexByID(
+	// sequenceElem.getSourceVertexID()).getForwardEdge(
+	// sequenceElem.getOutputGateIndex());
+	// source.wireTo(target, templateEdge);
+	//
+	// }
+	// }
+	// }
+	//
+	// private static QosGroupVertex ensureGroupVertexPresence(JobVertexID
+	// vertexID,
+	// HashMap<JobVertexID, QosGroupVertex> subgraphGroupVertices,
+	// QosGraph qosGraph) {
+	//
+	// QosGroupVertex toReturn = subgraphGroupVertices.get(vertexID);
+	//
+	// if (toReturn == null) {
+	// QosGroupVertex template = qosGraph.getGroupVertexByID(vertexID);
+	// toReturn = template.cloneWithoutMembersOrEdges();
+	// subgraphGroupVertices.put(vertexID, toReturn);
+	// }
+	// return toReturn;
+	// }
 }

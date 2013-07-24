@@ -2,6 +2,13 @@ package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
 import eu.stratosphere.nephele.io.channels.ChannelID;
 
+/**
+ * This class models a Qos edge as part of a Qos graph. It is equivalent to an
+ * {@link eu.stratosphere.nephele.executiongraph.ExecutionEdge}.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class QosEdge implements QosGraphMember {
 
 	private final ChannelID sourceChannelID;
@@ -29,7 +36,7 @@ public class QosEdge implements QosGraphMember {
 
 	public QosEdge(ChannelID sourceChannelID, ChannelID targetChannelID,
 			int outputGateEdgeIndex, int inputGateEdgeIndex) {
-		
+
 		this.sourceChannelID = sourceChannelID;
 		this.targetChannelID = targetChannelID;
 		this.outputGateEdgeIndex = outputGateEdgeIndex;
@@ -122,17 +129,19 @@ public class QosEdge implements QosGraphMember {
 
 	@Override
 	public String toString() {
-		return String.format("%s->%s", this.getOutputGate().getVertex().getName(),
-				this.getInputGate().getVertex().getName());
+		return String.format("%s->%s", this.getOutputGate().getVertex()
+				.getName(), this.getInputGate().getVertex().getName());
 	}
-	
+
 	public QosEdge cloneWithoutGates() {
 		QosEdge clone = new QosEdge(this.sourceChannelID, this.targetChannelID,
 				this.outputGateEdgeIndex, this.inputGateEdgeIndex);
 		return clone;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
@@ -144,7 +153,9 @@ public class QosEdge implements QosGraphMember {
 		return result;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
@@ -164,16 +175,24 @@ public class QosEdge implements QosGraphMember {
 		return true;
 	}
 
-	/* (non-Javadoc)
-	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isVertex()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember
+	 * #isVertex()
 	 */
 	@Override
 	public boolean isVertex() {
 		return false;
 	}
 
-	/* (non-Javadoc)
-	 * @see eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember#isEdge()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember
+	 * #isEdge()
 	 */
 	@Override
 	public boolean isEdge() {

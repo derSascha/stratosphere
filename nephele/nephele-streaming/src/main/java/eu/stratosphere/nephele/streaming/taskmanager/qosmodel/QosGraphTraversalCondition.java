@@ -18,6 +18,11 @@ import eu.stratosphere.nephele.jobgraph.JobVertexID;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 
 /**
+ * Interface to implement traversal conditions for {@link QosGraphTraversal}.
+ * {@link QosGraphTraversal#traverseForwardConditional()} uses an instance of
+ * this class to check whether depth-first graph traversal should continue after
+ * a certain vertex/edge has been reached.
+ * 
  * @author Bjoern Lohrmann
  */
 public interface QosGraphTraversalCondition {

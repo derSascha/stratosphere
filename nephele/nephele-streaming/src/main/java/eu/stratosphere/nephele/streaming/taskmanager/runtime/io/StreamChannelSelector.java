@@ -18,14 +18,15 @@ import eu.stratosphere.nephele.io.ChannelSelector;
 import eu.stratosphere.nephele.types.Record;
 
 /**
- * Wraps the jobs actual channel selector. This is necessary because the
- * StreamOutputGate needs to invoke {@link #selectChannels(Record, int)} once
- * per record before handing the record to Nephele's own RuntimeOutputGate,
- * which will invoke this method again. Some channel selectors (especially
- * Nephele's DefaultChannelSelector) react badly by this, because they expect
- * EXACTLY ONE invocation of {@link #selectChannels(Record, int)} per record.
- * Therefore, this wrapper makes sure, that only one invocation occurs and
- * caches the result.
+ * Wraps the actual channel selector of a
+ * {@link eu.stratosphere.nephele.io.RuntimeOutputGate}. This is necessary
+ * because the {@link StreamOutputGate} needs to invoke
+ * {@link #selectChannels(Record, int)} once per record before handing the
+ * record to Nephele's own {@link eu.stratosphere.nephele.io.RuntimeOutputGate}, which will invoke this method
+ * again. Some channel selectors (especially Nephele's default channel selector)
+ * react badly to this, because they expect EXACTLY ONE invocation of
+ * {@link #selectChannels(Record, int)} per record. Therefore, this wrapper
+ * makes sure, that only one invocation occurs and caches the result.
  * 
  * @author Bjoern Lohrmann
  * 

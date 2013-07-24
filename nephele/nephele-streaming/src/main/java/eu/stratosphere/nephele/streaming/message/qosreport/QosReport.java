@@ -17,7 +17,7 @@ import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
- * Holds a Qos report data to be shipped to a specific Qos manager.
+ * Holds Qos report data to be shipped to a specific Qos manager.
  * Instead of sending each {@link AbstractQosReportRecord} individually,
  * they are sent in batch. Most internal fields of this class are initialized in
  * a lazy fashion, thus (empty) instances of this class have a small memory

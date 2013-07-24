@@ -18,9 +18,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 /**
- * Implements a round robin channel schedule. Channels can added at any time and
- * the current channel can be dropped from the schedule. All operations have
- * O(1) complexity.
+ * Implements a round robin channel schedule. All operations have O(1)
+ * complexity.
  * 
  * @author Bjoern Lohrmann
  * 

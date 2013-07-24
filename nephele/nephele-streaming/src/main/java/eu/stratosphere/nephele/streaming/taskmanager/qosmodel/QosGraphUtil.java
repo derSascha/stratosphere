@@ -18,6 +18,8 @@ import eu.stratosphere.nephele.jobgraph.JobVertexID;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 
 /**
+ * Utility class to work with Qos graphs.
+ * 
  * @author Bjoern Lohrmann
  * 
  */

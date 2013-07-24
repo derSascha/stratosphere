@@ -22,7 +22,7 @@ import java.io.IOException;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
- * This class holds statistical information about a specific output channel,
+ * This class holds statistical information about an edge (output channel side),
  * such as throughput, output buffer lifetime, records per buffer and records
  * per second.
  * 
@@ -41,23 +41,25 @@ public final class EdgeStatistics extends AbstractQosReportRecord {
 	private double throughput;
 
 	/**
-	 * The lifetime of an output buffer on this specific output channel in millis.
+	 * The lifetime of an output buffer on this specific output channel in
+	 * millis.
 	 */
 	private double outputBufferLifetime;
-	
+
 	/**
 	 * The number of records that fit into an output buffer of this channel.
 	 */
 	private double recordsPerBuffer;
-	
+
 	/**
 	 * The number of records per second the task emits on the channel.
 	 */
 	private double recordsPerSecond;
-	
+
 	/**
-	 * Instances of this class may be used for aggregating other instances (see {@see #add(ChannelThroughput)}).
-	 * This counter keeps track of how many other instances have been aggregated.
+	 * Instances of this class may be used for aggregating other instances (see
+	 * {@see #add(ChannelThroughput)}). This counter keeps track of how many
+	 * other instances have been aggregated.
 	 */
 	private int counter;
 
@@ -68,25 +70,24 @@ public final class EdgeStatistics extends AbstractQosReportRecord {
 	}
 
 	/**
-	/**
-	 * Constructs a new channel throughput object.
+	 * /** Constructs a new channel throughput object.
 	 * 
 	 * @param reporterID
 	 *            the ID of the QOs reporter
 	 * @param throughput
 	 *            throughput of the output channel in MBit/s
 	 * @param outputBufferLifetime
-	 * 			  lifetime of an output buffer on this specific output channel in millis
+	 *            lifetime of an output buffer on this specific output channel
+	 *            in millis
 	 * @param recordsPerBuffer
 	 *            number of records per output buffer on this channel
 	 * @param recordsPerSecond
-	 *        number of records that are emitted on this channel each second 
+	 *            number of records that are emitted on this channel each second
 	 */
 	public EdgeStatistics(QosReporterID.Edge reporterID, double throughput,
-			double outputBufferLifetime, 
-			double recordsPerBuffer,
+			double outputBufferLifetime, double recordsPerBuffer,
 			double recordsPerSecond) {
-		
+
 		this.reporterID = reporterID;
 		this.throughput = throughput;
 		this.outputBufferLifetime = outputBufferLifetime;
@@ -96,7 +97,6 @@ public final class EdgeStatistics extends AbstractQosReportRecord {
 
 	}
 
-	
 	/**
 	 * Returns the throughput of the output channel in MBit/s.
 	 * 
@@ -116,16 +116,18 @@ public final class EdgeStatistics extends AbstractQosReportRecord {
 	public double getOutputBufferLifetime() {
 		return this.outputBufferLifetime / this.counter;
 	}
-	
+
 	/**
-	 * Returns the number of records that fit into an output buffer of this channel.
+	 * Returns the number of records that fit into an output buffer of this
+	 * channel.
 	 * 
-	 * @return the number of records that fit into an output buffer of this channel.
+	 * @return the number of records that fit into an output buffer of this
+	 *         channel.
 	 */
 	public double getRecordsPerBuffer() {
 		return this.recordsPerBuffer / this.counter;
 	}
-	
+
 	/**
 	 * Returns the number of records per second the task emits on the channel.
 	 * 
@@ -185,9 +187,12 @@ public final class EdgeStatistics extends AbstractQosReportRecord {
 			EdgeStatistics other = (EdgeStatistics) otherObj;
 			isEqual = other.reporterID.equals(this.reporterID)
 					&& other.getThroughput() == this.getThroughput()
-					&& other.getOutputBufferLifetime() == this.getOutputBufferLifetime()
-					&& other.getRecordsPerBuffer() == this.getRecordsPerBuffer()
-					&& other.getRecordsPerSecond() == this.getRecordsPerSecond();
+					&& other.getOutputBufferLifetime() == this
+							.getOutputBufferLifetime()
+					&& other.getRecordsPerBuffer() == this
+							.getRecordsPerBuffer()
+					&& other.getRecordsPerSecond() == this
+							.getRecordsPerSecond();
 		}
 
 		return isEqual;

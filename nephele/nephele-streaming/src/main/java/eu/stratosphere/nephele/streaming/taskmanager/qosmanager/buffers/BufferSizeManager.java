@@ -22,6 +22,15 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosEdge;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraphMember;
 import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
+/**
+ * Used by the Qos manager to manage the output buffer sizes in a Qos graph. It
+ * uses a Qos model to search for sequences of Qos edges and vertices that
+ * violate a Qos constraint, and then increases/decreases output buffer sizes
+ * accordingly.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class BufferSizeManager {
 
 	private static final Log LOG = LogFactory.getLog(BufferSizeManager.class);
@@ -65,7 +74,8 @@ public class BufferSizeManager {
 				System.currentTimeMillis() + WAIT_BEFORE_FIRST_ADJUSTMENT,
 				this.adjustmentInterval);
 
-		this.maximumBufferSize = GlobalConfiguration.getInteger("channel.network.bufferSizeInBytes",
+		this.maximumBufferSize = GlobalConfiguration.getInteger(
+				"channel.network.bufferSizeInBytes",
 				GlobalBufferPool.DEFAULT_BUFFER_SIZE_IN_BYTES);
 	}
 
@@ -86,7 +96,7 @@ public class BufferSizeManager {
 			public void handleViolatedConstraint(
 					List<QosGraphMember> sequenceMembers,
 					double constraintViolatedByMillis) {
-				if(constraintViolatedByMillis > 0) {
+				if (constraintViolatedByMillis > 0) {
 					collectEdgesToAdjust(sequenceMembers, edgesToAdjust);
 				}
 			}
@@ -222,8 +232,8 @@ public class BufferSizeManager {
 	}
 
 	private boolean hasFreshValues(EdgeQosData qosData) {
-		long freshnessThreshold = qosData.getBufferSizeHistory()
-				.getLastEntry().getTimestamp();
+		long freshnessThreshold = qosData.getBufferSizeHistory().getLastEntry()
+				.getTimestamp();
 
 		return qosData.isChannelLatencyFresherThan(freshnessThreshold)
 				&& qosData

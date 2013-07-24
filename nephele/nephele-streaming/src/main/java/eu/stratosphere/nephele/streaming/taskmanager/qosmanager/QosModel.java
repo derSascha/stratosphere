@@ -46,8 +46,13 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.VertexQosData;
 
 /**
- * @author Bjoern Lohrmann
+ * Wrapper class around a Qos graph used by a Qos manager. A Qos model is a
+ * state machine that first assembles a Qos graph from
+ * {@link EdgeQosReporterConfig} and {@link VertexQosReporterConfig} objects and
+ * then continuously adds Qos report data to the Qos graph. It can then be used
+ * to search for violated Qos constraints inside the Qos graph.
  * 
+ * @author Bjoern Lohrmann
  */
 public class QosModel {
 
@@ -353,7 +358,7 @@ public class QosModel {
 		// only if the reporter has a valid input/output gate combination,
 		// prepare for reports on that combination
 		if (inputGateIndex != -1 && outputGateIndex != -1) {
-			memberVertex.getQosData().prepareForReporsOnGateCombination(
+			memberVertex.getQosData().prepareForReportsOnGateCombination(
 					inputGateIndex, outputGateIndex);
 		}
 	}

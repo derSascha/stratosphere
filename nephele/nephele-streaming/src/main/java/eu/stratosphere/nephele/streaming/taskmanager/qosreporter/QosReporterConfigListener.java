@@ -18,14 +18,15 @@ import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 
 /**
+ * Listener interface used by {@link QosReporterConfigCenter} to signal the
+ * arrival of new Qos reporter configurations.
+ * 
  * @author Bjoern Lohrmann
  */
 public interface QosReporterConfigListener {
 
-	public void newVertexQosReporter(
-			VertexQosReporterConfig vertexReporter);
+	public void newVertexQosReporter(VertexQosReporterConfig vertexReporter);
 
-	public void newEdgeQosReporter(
-			EdgeQosReporterConfig edgeReporter);
+	public void newEdgeQosReporter(EdgeQosReporterConfig edgeReporter);
 
 }

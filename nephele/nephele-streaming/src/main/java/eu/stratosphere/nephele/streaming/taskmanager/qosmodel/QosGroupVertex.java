@@ -8,7 +8,17 @@ import eu.stratosphere.nephele.jobgraph.JobVertexID;
 import eu.stratosphere.nephele.streaming.util.SparseDelegateIterable;
 
 /**
- * TODO document sparseness of this structure (members + gates)
+ * This class models a Qos group vertex as part of a Qos graph. It is equivalent
+ * to an {@link eu.stratosphere.nephele.executiongraph.ExecutionGroupVertex},
+ * which in turn is equivalent to a
+ * {@link eu.stratosphere.nephele.jobgraph.AbstractJobVertex}.
+ * 
+ * Some structures inside the group vertex are sparse. This applies to the lists
+ * of forward and backward group edges as well as the member vertex list.
+ * Sparseness means that, for example if the group vertex has an forward edge
+ * with index 1 it may not have a forward edge with index 0. This stems from the
+ * fact, that the Qos graph itself only contains those group vertices and group
+ * edges from the executiong graph, that are covered by a constraint.
  * 
  * @author Bjoern Lohrmann
  * 
@@ -23,8 +33,8 @@ public class QosGroupVertex {
 	private final JobVertexID jobVertexID;
 
 	/**
-	 * The list of {@link ProfilingVertex} contained in this group vertex. This
-	 * is a sparse list, meaning that entries in this list may be null.
+	 * The list of {@link QosVertex} contained in this group vertex. This is a
+	 * sparse list, meaning that entries in this list may be null.
 	 */
 	private ArrayList<QosVertex> groupMembers;
 
@@ -134,13 +144,13 @@ public class QosGroupVertex {
 	public void setGroupMember(QosVertex groupMember) {
 		this.setGroupMember(groupMember.getMemberIndex(), groupMember);
 	}
-	
+
 	public void setGroupMember(int memberIndex, QosVertex groupMember) {
 		if (this.groupMembers.size() <= memberIndex) {
 			fillWithNulls(this.groupMembers, memberIndex + 1);
 		}
-		
-		if(groupMember == null) {
+
+		if (groupMember == null) {
 			if (this.groupMembers.get(memberIndex) != null) {
 				this.noOfMembers--;
 			}
@@ -152,7 +162,7 @@ public class QosGroupVertex {
 			groupMember.setGroupVertex(this);
 			this.groupMembers.set(groupMember.getMemberIndex(), groupMember);
 		}
-		this.noOfExecutingInstances = -1;		
+		this.noOfExecutingInstances = -1;
 	}
 
 	public int getNumberOfExecutingInstances() {
@@ -249,7 +259,6 @@ public class QosGroupVertex {
 	public int getNumberOfMembers() {
 		return this.noOfMembers;
 	}
-	
 
 	/**
 	 * Clones this group vertex including members but excluding any group edges
@@ -268,9 +277,10 @@ public class QosGroupVertex {
 		}
 		return clone;
 	}
-	
+
 	/**
-	 * Clones this group vertex without forward/backward group edges and without members.
+	 * Clones this group vertex without forward/backward group edges and without
+	 * members.
 	 * 
 	 * @return The cloned object
 	 */
@@ -278,22 +288,21 @@ public class QosGroupVertex {
 		QosGroupVertex clone = new QosGroupVertex(this.jobVertexID, this.name);
 		return clone;
 	}
-	
+
 	public QosGroupEdge wireTo(QosGroupVertex target, QosGroupEdge templateEdge) {
 		// already invokes the setForward/BackwardEdge methods
-		return new QosGroupEdge(
-				templateEdge.getDistributionPattern(), this, target,
-				templateEdge.getOutputGateIndex(),
+		return new QosGroupEdge(templateEdge.getDistributionPattern(), this,
+				target, templateEdge.getOutputGateIndex(),
 				templateEdge.getInputGateIndex());
-		
+
 	}
-	
-	public QosGroupEdge wireFrom(QosGroupVertex source, QosGroupEdge templateEdge) {
+
+	public QosGroupEdge wireFrom(QosGroupVertex source,
+			QosGroupEdge templateEdge) {
 		// already invokes the setForward/BackwardEdge methods
-		return new QosGroupEdge(
-				templateEdge.getDistributionPattern(), source, this,
-				templateEdge.getOutputGateIndex(),
+		return new QosGroupEdge(templateEdge.getDistributionPattern(), source,
+				this, templateEdge.getOutputGateIndex(),
 				templateEdge.getInputGateIndex());
-		
+
 	}
 }

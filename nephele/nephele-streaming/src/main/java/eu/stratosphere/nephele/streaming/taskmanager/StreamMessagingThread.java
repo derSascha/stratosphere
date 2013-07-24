@@ -33,14 +33,13 @@ import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
- * This class implements a communication thread to handle communication from the
- * task manager plugin component to the job manager plugin component in an
- * asynchronous fashion. The main reason for asynchronous communication is not
- * influence the processing delay by the RPC call latency.
+ * This class implements a thread to send messages between Qos managers and
+ * reporters in an asynchronous fashion. The main reason for asynchronous
+ * communication is not to block any threads with RPC call latency.
  * <p>
  * This class is thread-safe.
  * 
- * @author warneke
+ * @author warneke, Bjoern Lohrmann
  */
 public final class StreamMessagingThread extends Thread {
 
@@ -63,7 +62,7 @@ public final class StreamMessagingThread extends Thread {
 	public StreamMessagingThread() {
 		this.setName("StreamMessagingThread");
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */

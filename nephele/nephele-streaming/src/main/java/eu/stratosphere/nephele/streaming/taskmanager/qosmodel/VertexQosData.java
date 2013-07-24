@@ -1,11 +1,21 @@
 package eu.stratosphere.nephele.streaming.taskmanager.qosmodel;
 
+/**
+ * Instances of this class hold Qos data (currently only latency) of a
+ * {@link QosVertex}. Vertex latency is only measured for those input/output
+ * gate combinations that are covered by a Qos constraint.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class VertexQosData {
 
 	private QosVertex vertex;
 
 	/**
-	 * Indexed by (inputGateIndex, outputGateIndex) of the vertex.
+	 * Sparse array indexed by (inputGateIndex, outputGateIndex) of the vertex.
+	 * Sparseness means that some (inputGateIndex, outputGateIndex) of the array
+	 * may be null.
 	 */
 	private QosStatistic[][] qosStatistics;
 
@@ -22,7 +32,7 @@ public class VertexQosData {
 
 	public double getLatencyInMillis(int inputGateIndex, int outputGateIndex) {
 		QosStatistic statistic = this.qosStatistics[inputGateIndex][outputGateIndex];
-		
+
 		if (statistic.hasValues()) {
 			return statistic.getArithmeticMean();
 		}
@@ -33,7 +43,7 @@ public class VertexQosData {
 		return this.qosStatistics[inputGateIndex][outputGateIndex].hasValues();
 	}
 
-	public void prepareForReporsOnGateCombination(int inputGateIndex,
+	public void prepareForReportsOnGateCombination(int inputGateIndex,
 			int outputGateIndex) {
 
 		if (this.qosStatistics.length <= inputGateIndex) {

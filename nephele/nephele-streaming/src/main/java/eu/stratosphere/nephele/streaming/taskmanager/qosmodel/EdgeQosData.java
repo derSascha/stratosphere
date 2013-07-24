@@ -5,6 +5,12 @@ import eu.stratosphere.nephele.streaming.message.qosreport.EdgeStatistics;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeHistory;
 import eu.stratosphere.nephele.taskmanager.bufferprovider.GlobalBufferPool;
 
+/**
+ * Instances of this class hold Qos data (latency, throughput, ...) of a {@link QosEdge}.
+ * 
+ * @author Bjoern Lohrmann
+ *
+ */
 public class EdgeQosData {
 
 	private QosEdge edge;

@@ -20,6 +20,10 @@ import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.streaming.util.SparseDelegateIterable;
 
 /**
+ * This class models an input or output gate of a Qos vertex as part of a Qos
+ * graph. It is equivalent to an
+ * {@link eu.stratosphere.nephele.executiongraph.ExecutionGate}.
+ * 
  * @author Bjoern Lohrmann
  * 
  */

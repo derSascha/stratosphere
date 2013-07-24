@@ -42,7 +42,7 @@ public class QosStatistic {
 		if (!this.sortedById.isEmpty()
 				&& this.sortedById.getLast().getId() >= value.getId()) {
 			throw new IllegalArgumentException(
-					"Trying to add stale profiling values. This should not happen.");
+					"Trying to add stale Qos statistic values. This should not happen.");
 		}
 		this.sortedById.add(value);
 
@@ -67,7 +67,7 @@ public class QosStatistic {
 				.binarySearch(this.sortedByValue, toRemove);
 		if (removeIndex < 0) {
 			throw new IllegalArgumentException(
-					"Trying to drop inexistant profiling value. This should not happen.");
+					"Trying to drop inexistant Qos statistic value. This should not happen.");
 		}
 		this.sortedByValue.remove(removeIndex);
 	}

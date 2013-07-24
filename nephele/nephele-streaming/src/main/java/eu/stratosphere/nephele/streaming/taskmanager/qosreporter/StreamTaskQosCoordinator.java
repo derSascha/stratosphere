@@ -35,6 +35,10 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate
 import eu.stratosphere.nephele.types.Record;
 
 /**
+ * An instance of this class implements Qos data reporting for a specific vertex
+ * and its ingoing/outgoing edges on a task manager while the vertex actually
+ * runs.
+ * 
  * @author Bjoern Lohrmann
  * 
  */

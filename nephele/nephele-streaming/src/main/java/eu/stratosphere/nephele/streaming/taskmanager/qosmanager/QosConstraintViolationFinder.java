@@ -32,6 +32,10 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
+ * Instances of this class can be used by a Qos manager to look for violations of a Qos constraint
+ * inside a Qos graph. Sequences of Qos vertices and edges that violate the Qos constraint are handed
+ * to a  {@link QosConstraintViolationListener}.
+ * 
  * @author Bjoern Lohrmann
  * 
  */

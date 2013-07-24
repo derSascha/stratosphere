@@ -7,6 +7,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
+/**
+ * A instance of this class keeps track of and reports on the latencies of an
+ * input gate's input channels.
+ * 
+ * An {@link EdgeLatency} record per input channel will be handed to the
+ * provided {@link QosReportForwarderThread} approximately once per aggregation
+ * interval (see {@link QosReporterConfigCenter}). "Approximately" because if no
+ * records have been received/emitted, nothing will be reported.
+ * 
+ * 
+ * This class is thread-safe.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class InputGateReporterManager {
 
 	/**
@@ -54,8 +69,8 @@ public class InputGateReporterManager {
 
 		public void reset(long now) {
 			this.timeOfNextReport = now
-					+ InputGateReporterManager.this.reportForwarder.getConfigCenter()
-							.getAggregationInterval();
+					+ InputGateReporterManager.this.reportForwarder
+							.getConfigCenter().getAggregationInterval();
 			this.accumulatedLatency = 0;
 			this.tagsReceived = 0;
 		}
@@ -68,7 +83,7 @@ public class InputGateReporterManager {
 
 	public InputGateReporterManager(QosReportForwarderThread qosReporter,
 			int noOfInputChannels) {
-		
+
 		this.reportForwarder = qosReporter;
 		this.reportersByChannelIndexInRuntimeGate = new CopyOnWriteArrayList<EdgeLatencyReporter>();
 		fillChannelLatenciesWithNulls(noOfInputChannels);
@@ -85,7 +100,7 @@ public class InputGateReporterManager {
 
 		EdgeLatencyReporter info = this.reportersByChannelIndexInRuntimeGate
 				.get(channelIndex);
-		
+
 		if (info != null) {
 			long now = System.currentTimeMillis();
 			info.update(timestampTag, now);
@@ -103,7 +118,7 @@ public class InputGateReporterManager {
 		if (this.reporters.contains(reporterID)) {
 			return;
 		}
-		
+
 		EdgeLatencyReporter info = new EdgeLatencyReporter();
 		info.reporterID = reporterID;
 		info.timeOfNextReport = System.currentTimeMillis();

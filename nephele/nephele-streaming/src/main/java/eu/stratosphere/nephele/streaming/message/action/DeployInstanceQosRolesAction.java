@@ -24,11 +24,13 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 
 /**
+ * Informs a task manager about its Qos reporter and Qos manager roles.
+ * 
  * @author Bjoern Lohrmann
  * 
  */
 public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
-	
+
 	private final InstanceConnectionInfo instanceConnectionInfo;
 
 	private QosManagerConfig qosManager;
@@ -41,7 +43,8 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 		this.instanceConnectionInfo = new InstanceConnectionInfo();
 	}
 
-	public DeployInstanceQosRolesAction(JobID jobID, InstanceConnectionInfo instanceConnectionInfo) {
+	public DeployInstanceQosRolesAction(JobID jobID,
+			InstanceConnectionInfo instanceConnectionInfo) {
 		super(jobID);
 		this.instanceConnectionInfo = instanceConnectionInfo;
 	}
@@ -54,13 +57,11 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 		this.qosManager = qosManager;
 	}
 
-	public void addEdgeQosReporter(
-			EdgeQosReporterConfig edgeQosReporter) {
+	public void addEdgeQosReporter(EdgeQosReporterConfig edgeQosReporter) {
 		this.edgeQosReporters.add(edgeQosReporter);
 	}
 
-	public void addVertexQosReporter(
-			VertexQosReporterConfig vertexQosReporter) {
+	public void addVertexQosReporter(VertexQosReporterConfig vertexQosReporter) {
 		this.vertexQosReporters.add(vertexQosReporter);
 	}
 

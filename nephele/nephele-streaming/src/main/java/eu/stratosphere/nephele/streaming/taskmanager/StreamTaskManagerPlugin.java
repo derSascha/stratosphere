@@ -33,6 +33,12 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironme
 import eu.stratosphere.nephele.taskmanager.Task;
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
+/**
+ * Task manager plugin that implements Qos reporting and management.
+ * 
+ * @author Bjoern Lohrmann
+ * 
+ */
 public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 
 	/**
@@ -142,10 +148,11 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	public void registerTask(final Task task,
 			final Configuration jobConfiguration,
 			final IOReadableWritable pluginData) {
-		
-		if(task instanceof RuntimeTask) {
-			
-			RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) task.getEnvironment();
+
+		if (task instanceof RuntimeTask) {
+
+			RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) task
+					.getEnvironment();
 			if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
 				StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv
 						.getInvokable().getEnvironment();
@@ -153,17 +160,19 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 				// unfortunately, Nephele's runtime environment does not know
 				// its ExecutionVertexID.
 				streamEnv.setVertexID(task.getVertexID());
-				this.getOrCreateJobEnvironment(runtimeEnv.getJobID()).registerTask((RuntimeTask) task, streamEnv);
+				this.getOrCreateJobEnvironment(runtimeEnv.getJobID())
+						.registerTask((RuntimeTask) task, streamEnv);
 			}
 
-			// process attached plugin data, such as Qos manager/reporter configs
+			// process attached plugin data, such as Qos manager/reporter
+			// configs
 			if (pluginData != null) {
 				try {
 					this.sendData(pluginData);
 				} catch (IOException e) {
 					LOG.error("Error when consuming attached plugin data", e);
 				}
-			}	
+			}
 		}
 	}
 
@@ -172,9 +181,10 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void unregisterTask(final Task task) {
-		if(task instanceof RuntimeTask) {
+		if (task instanceof RuntimeTask) {
 			this.getOrCreateJobEnvironment(task.getJobID()).unregisterTask(
-					task.getVertexID(), ((RuntimeTask) task).getRuntimeEnvironment());
+					task.getVertexID(),
+					((RuntimeTask) task).getRuntimeEnvironment());
 		}
 	}
 

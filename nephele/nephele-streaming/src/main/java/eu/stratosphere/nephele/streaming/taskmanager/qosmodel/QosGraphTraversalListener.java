@@ -18,6 +18,9 @@ import eu.stratosphere.nephele.jobgraph.JobVertexID;
 import eu.stratosphere.nephele.streaming.SequenceElement;
 
 /**
+ * Callback interface used by {@link QosGraphTraversal} to signal that a vertex
+ * or edge is being traversed.
+ * 
  * @author Bjoern Lohrmann
  * 
  */

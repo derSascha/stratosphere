@@ -16,6 +16,9 @@ package eu.stratosphere.nephele.streaming.jobmanager;
 
 import java.util.List;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGraph;
@@ -23,6 +26,12 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosGroupVertex;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
 
 /**
+ * Models a Qos manager role while computing the Qos setup on the job manager
+ * side. A Qos manager role is defined by a set of "anchor" Qos vertices within
+ * the same QosGroupVertex (this is the "anchor" group vertex). The anchor Qos
+ * vertices must be executed on the same task manager. A Qos manager role is
+ * always associated with exactly one constraint: QosManagerRole (1..N) <--> (1)
+ * Constraint.
  * 
  * @author Bjoern Lohrmann
  * 
@@ -34,7 +43,7 @@ public class QosManagerRole {
 	private QosGraph qosGraph;
 
 	private QosGroupVertex anchorVertex;
-	
+
 	private List<QosVertex> membersOnInstance;
 
 	/**
@@ -45,14 +54,14 @@ public class QosManagerRole {
 	 * @param anchorVertex
 	 */
 	public QosManagerRole(QosGraph qosGraph, LatencyConstraintID constraintID,
-			QosGroupVertex anchorVertex, List<QosVertex> membersOnInstance) {
+			QosGroupVertex anchorGroupVertex, List<QosVertex> anchorVertices) {
 
 		this.qosGraph = qosGraph;
 		this.constraintID = constraintID;
-		this.anchorVertex = anchorVertex;
-		this.membersOnInstance = membersOnInstance;
+		this.anchorVertex = anchorGroupVertex;
+		this.membersOnInstance = anchorVertices;
 	}
-	
+
 	public InstanceConnectionInfo getManagerInstance() {
 		return this.membersOnInstance.get(0).getExecutingInstance();
 	}
@@ -122,7 +131,7 @@ public class QosManagerRole {
 
 		this.anchorVertex = anchorVertex;
 	}
-	
+
 	/**
 	 * Returns the membersOnInstance.
 	 * 
@@ -134,13 +143,14 @@ public class QosManagerRole {
 
 	/**
 	 * Sets the membersOnInstance to the specified value.
-	 *
-	 * @param membersOnInstance the membersOnInstance to set
+	 * 
+	 * @param membersOnInstance
+	 *            the membersOnInstance to set
 	 */
 	public void setMembersOnInstance(List<QosVertex> membersOnInstance) {
 		if (membersOnInstance == null)
 			throw new NullPointerException("membersOnInstance must not be null");
-	
+
 		this.membersOnInstance = membersOnInstance;
 	}
 
@@ -151,13 +161,8 @@ public class QosManagerRole {
 	 */
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((anchorVertex == null) ? 0 : anchorVertex.hashCode());
-		result = prime * result
-				+ ((constraintID == null) ? 0 : constraintID.hashCode());
-		return result;
+		return new HashCodeBuilder().append(this.constraintID)
+				.append(this.membersOnInstance.get(0).getID()).toHashCode();
 	}
 
 	/*
@@ -167,23 +172,19 @@ public class QosManagerRole {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (obj == null) {
+			return false;
+		}
+		if (obj == this) {
 			return true;
-		if (obj == null)
+		}
+		if (obj.getClass() != getClass()) {
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		QosManagerRole other = (QosManagerRole) obj;
-		if (anchorVertex == null) {
-			if (other.anchorVertex != null)
-				return false;
-		} else if (!anchorVertex.equals(other.anchorVertex))
-			return false;
-		if (constraintID == null) {
-			if (other.constraintID != null)
-				return false;
-		} else if (!constraintID.equals(other.constraintID))
-			return false;
-		return true;
+		}
+		QosManagerRole rhs = (QosManagerRole) obj;
+		return new EqualsBuilder()
+				.append(this.constraintID, rhs.constraintID)
+				.append(this.membersOnInstance.get(0).getID(),
+						rhs.membersOnInstance.get(0).getID()).isEquals();
 	}
 }
