@@ -146,11 +146,7 @@ public class QosEdge implements QosGraphMember {
 	 */
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((sourceChannelID == null) ? 0 : sourceChannelID.hashCode());
-		return result;
+		return this.sourceChannelID.hashCode();
 	}
 
 	/*
@@ -166,13 +162,9 @@ public class QosEdge implements QosGraphMember {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
+
 		QosEdge other = (QosEdge) obj;
-		if (sourceChannelID == null) {
-			if (other.sourceChannelID != null)
-				return false;
-		} else if (!sourceChannelID.equals(other.sourceChannelID))
-			return false;
-		return true;
+		return this.sourceChannelID.equals(other.sourceChannelID);
 	}
 
 	/*

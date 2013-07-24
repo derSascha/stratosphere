@@ -393,11 +393,7 @@ public class QosGraph implements IOReadableWritable {
 	 */
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((qosGraphID == null) ? 0 : qosGraphID.hashCode());
-		return result;
+		return this.qosGraphID.hashCode();
 	}
 
 	/*
@@ -414,12 +410,8 @@ public class QosGraph implements IOReadableWritable {
 		if (getClass() != obj.getClass())
 			return false;
 		QosGraph other = (QosGraph) obj;
-		if (qosGraphID == null) {
-			if (other.qosGraphID != null)
-				return false;
-		} else if (!qosGraphID.equals(other.qosGraphID))
-			return false;
-		return true;
+
+		return this.qosGraphID.equals(other.qosGraphID);
 	}
 
 	/**

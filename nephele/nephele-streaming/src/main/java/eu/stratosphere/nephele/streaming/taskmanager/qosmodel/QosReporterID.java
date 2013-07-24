@@ -279,10 +279,7 @@ public abstract class QosReporterID implements IOReadableWritable {
 				return false;
 			Edge other = (Edge) obj;
 
-			if (this.sourceChannelID.equals(other.sourceChannelID)) {
-				return true;
-			}
-			return false;
+			return this.sourceChannelID.equals(other.sourceChannelID);
 		}
 
 		@Override

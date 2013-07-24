@@ -19,6 +19,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
@@ -139,10 +141,6 @@ public final class EdgeLatency extends AbstractQosReportRecord {
 	 */
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		long temp = Double.doubleToLongBits(this.edgeLatency);
-		int result = prime + (int) (temp ^ temp >>> 32);
-		result = prime * result + this.reporterID.hashCode();
-		return result;
+		return new HashCodeBuilder().append(this.edgeLatency).append(this.reporterID).toHashCode();
 	}
 }

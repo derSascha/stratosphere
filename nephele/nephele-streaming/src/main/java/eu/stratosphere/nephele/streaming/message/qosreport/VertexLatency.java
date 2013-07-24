@@ -19,6 +19,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 
 /**
@@ -29,7 +31,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 public final class VertexLatency extends AbstractQosReportRecord {
 
 	private QosReporterID.Vertex reporterID;
-	
+
 	private int counter;
 
 	private double vertexLatency;
@@ -46,7 +48,6 @@ public final class VertexLatency extends AbstractQosReportRecord {
 	 */
 	public VertexLatency(final QosReporterID.Vertex reporterID,
 			final double vertexLatency) {
-
 
 		this.reporterID = reporterID;
 		this.vertexLatency = vertexLatency;
@@ -96,11 +97,8 @@ public final class VertexLatency extends AbstractQosReportRecord {
 	 */
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		long temp = Double.doubleToLongBits(this.vertexLatency);
-		int result = prime + (int) (temp ^ temp >>> 32);
-		result = prime * result + this.reporterID.hashCode();
-		return result;
+		return new HashCodeBuilder().append(this.vertexLatency)
+				.append(this.reporterID).toHashCode();
 	}
 
 	/**
