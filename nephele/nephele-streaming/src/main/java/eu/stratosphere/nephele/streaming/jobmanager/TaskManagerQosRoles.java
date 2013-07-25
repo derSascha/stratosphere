@@ -119,15 +119,13 @@ public class TaskManagerQosRoles {
 
 		QosVertex vertex = reporterRole.getVertex();
 
-		InstanceConnectionInfo[] managers = reporterRole.getTargetQosManagers()
-				.toArray(new InstanceConnectionInfo[0]);
-
 		int inputGateIndex = reporterRole.getInputGateIndex();
 		int outputGateIndex = reporterRole.getOutputGateIndex();
 
 		VertexQosReporterConfig vertexReporter = new VertexQosReporterConfig(
 				vertex.getGroupVertex().getJobVertexID(), vertex.getID(),
-				vertex.getExecutingInstance(), managers, inputGateIndex,
+				vertex.getExecutingInstance(),
+				getQosManagerConnectionInfos(reporterRole), inputGateIndex,
 				inputGateIndex != -1 ? vertex.getInputGate(inputGateIndex)
 						.getGateID() : null, outputGateIndex,
 				outputGateIndex != -1 ? vertex.getOutputGate(outputGateIndex)
@@ -137,17 +135,27 @@ public class TaskManagerQosRoles {
 		return vertexReporter;
 	}
 
+	private InstanceConnectionInfo[] getQosManagerConnectionInfos(
+			QosReporterRole qosReporterRole) {
+		InstanceConnectionInfo[] managerConnectionInfos = new InstanceConnectionInfo[qosReporterRole
+				.getTargetQosManagers().size()];
+		int index = 0;
+		for (QosManagerRole qosManager : qosReporterRole.getTargetQosManagers()) {
+			managerConnectionInfos[index] = qosManager.getManagerInstance();
+			index++;
+		}
+		return managerConnectionInfos;
+	}
+
 	private EdgeQosReporterConfig toEdgeQosReporterConfig(
 			QosReporterRole reporterRole) {
 
 		QosEdge edge = reporterRole.getEdge();
 
-		InstanceConnectionInfo[] managers = reporterRole.getTargetQosManagers()
-				.toArray(new InstanceConnectionInfo[0]);
-
 		EdgeQosReporterConfig edgeReporter = new EdgeQosReporterConfig(
-				edge.getSourceChannelID(), edge.getTargetChannelID(), managers,
-				edge.getOutputGate().getGateID(), edge.getInputGate()
+				edge.getSourceChannelID(), edge.getTargetChannelID(),
+				getQosManagerConnectionInfos(reporterRole), edge
+						.getOutputGate().getGateID(), edge.getInputGate()
 						.getGateID(), edge.getOutputGateEdgeIndex(),
 				edge.getInputGateEdgeIndex(), edge.toString());
 
