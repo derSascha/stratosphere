@@ -501,13 +501,20 @@ public class QosGraphFixture {
 	}
 
 	private void generateMembers(QosGroupVertex vertex, int memberCount) {
-		for (int i = 0; i < memberCount; i++) {
-			QosVertex member = new QosVertex(new ExecutionVertexID(),
-					vertex.getName() + "_" + i, new InstanceConnectionInfo(
-							InetAddress.getLoopbackAddress(), 1, 1), i);
-			vertex.setGroupMember(member);
+		InetAddress address;
+		try {
+			address = InetAddress.getLocalHost();
+			for (int i = 0; i < memberCount; i++) {
+				QosVertex member = new QosVertex(new ExecutionVertexID(),
+						vertex.getName() + "_" + i, new InstanceConnectionInfo(
+								address, 1, 1), i);
+				vertex.setGroupMember(member);
+			}
+		} catch (UnknownHostException e) {
+			throw new IllegalStateException("Dummy address could not be generated from local host.", e);
 		}
 	}
+
 
 	private void generateMemberWiring(QosGroupEdge groupEdge) {
 		int sourceMembers = groupEdge.getSourceVertex().getNumberOfMembers();
