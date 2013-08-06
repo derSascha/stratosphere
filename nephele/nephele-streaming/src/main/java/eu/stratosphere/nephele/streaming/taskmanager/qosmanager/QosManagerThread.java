@@ -111,9 +111,10 @@ public class QosManagerThread extends Thread {
 			}
 
 		} catch (InterruptedException e) {
+		} finally {
+			this.cleanUp();
 		}
 
-		this.cleanUp();
 		LOG.info("Stopped Qos Manager thread");
 	}
 

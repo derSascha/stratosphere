@@ -39,6 +39,8 @@ import eu.stratosphere.nephele.types.Record;
  * and its ingoing/outgoing edges on a task manager while the vertex actually
  * runs.
  * 
+ * This class is thread-safe.
+ * 
  * @author Bjoern Lohrmann
  * 
  */
@@ -83,6 +85,8 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 
 	private QosReporterConfigCenter reporterConfigCenter;
 
+	private boolean isShutdown;
+
 	public StreamTaskQosCoordinator(ExecutionVertexID vertexID,
 			StreamTaskEnvironment taskEnvironment,
 			QosReportForwarderThread reportForwarder,
@@ -100,6 +104,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 				this.taskEnvironment.getNumberOfOutputGates());
 		this.inputGateReporters = new ArrayList<InputGateReporterManager>();
 		this.outputGateReporters = new ArrayList<OutputGateReporterManager>();
+		this.isShutdown = false;
 
 		this.prepareQosReporting();
 		this.registerTaskAsChainMapperIfNecessary();
@@ -247,8 +252,12 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		}
 	}
 
-	public void handleLimitBufferSizeAction(
+	public synchronized void handleLimitBufferSizeAction(
 			LimitBufferSizeAction limitBufferSizeAction) {
+
+		if (this.isShutdown) {
+			return;
+		}
 
 		StreamOutputGate<?> outputGate = this.taskEnvironment
 				.getOutputGate(limitBufferSizeAction.getOutputGateID());
@@ -278,7 +287,12 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	 * .message.action.VertexQosReporterConfig)
 	 */
 	@Override
-	public void newVertexQosReporter(VertexQosReporterConfig reporterConfig) {
+	public synchronized void newVertexQosReporter(
+			VertexQosReporterConfig reporterConfig) {
+		if (this.isShutdown) {
+			return;
+		}
+
 		if (reporterConfig.isDummy()) {
 			this.announceDummyReporter(reporterConfig.getReporterID());
 		} else {
@@ -295,12 +309,18 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	 * .message.action.EdgeQosReporterConfig)
 	 */
 	@Override
-	public void newEdgeQosReporter(EdgeQosReporterConfig edgeReporter) {
+	public synchronized void newEdgeQosReporter(
+			EdgeQosReporterConfig edgeReporter) {
+		if (this.isShutdown) {
+			return;
+		}
+
 		QosReporterID.Edge reporterID = (QosReporterID.Edge) edgeReporter
 				.getReporterID();
 
 		StreamInputGate<? extends Record> inputGate = this.taskEnvironment
 				.getInputGate(edgeReporter.getInputGateID());
+
 		if (inputGate != null) {
 			int runtimeGateIndex = inputGate.getIndex();
 			int runtimeChannelIndex = inputGate.getInputChannel(
@@ -354,5 +374,33 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 
 		QosReportingListenerHelper.listenToOutputChannelStatisticsOnOutputGate(
 				outputGate, gateReporterManager);
+	}
+
+	public synchronized void shutdownReporting() {
+		this.isShutdown = true;
+		shutdownInputGateReporters();
+		shutdownOutputGateReporters();
+		this.vertexLatencyManager = null;
+		this.reporterConfigCenter.unsetQosReporterConfigListener(this.vertexID);
+	}
+
+	private void shutdownOutputGateReporters() {
+		for (int i = 0; i < this.taskEnvironment.getNumberOfOutputGates(); i++) {
+			StreamOutputGate<? extends Record> outputGate = this.taskEnvironment
+					.getOutputGate(i);
+			outputGate.setQosReportingListener(null);
+			this.reporterConfigCenter.unsetQosReporterConfigListener(outputGate.getGateID());
+		}
+		this.outputGateReporters.clear();
+	}
+
+	private void shutdownInputGateReporters() {
+		for (int i = 0; i < this.taskEnvironment.getNumberOfInputGates(); i++) {
+			StreamInputGate<? extends Record> inputGate = this.taskEnvironment
+					.getInputGate(i);
+			inputGate.setQosReportingListener(null);
+			this.reporterConfigCenter.unsetQosReporterConfigListener(inputGate.getGateID());
+		}
+		this.inputGateReporters.clear();
 	}
 }

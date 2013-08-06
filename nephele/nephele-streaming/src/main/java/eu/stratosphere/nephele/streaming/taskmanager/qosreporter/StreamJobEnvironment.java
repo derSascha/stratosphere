@@ -38,14 +38,13 @@ import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
  * This class implements the Qos management and reporting for the vertices and
  * edges of a specific job on a task manager, while the job is running.
  * 
+ * This class is thread-safe.
+ * 
  * @author Bjoern Lohrmann
  * 
  */
 public class StreamJobEnvironment {
 
-	/**
-	 * The log object.
-	 */
 	private static final Log LOG = LogFactory
 			.getLog(StreamJobEnvironment.class);
 
@@ -53,7 +52,7 @@ public class StreamJobEnvironment {
 
 	private QosReportForwarderThread qosReportForwarder;
 
-	private QosManagerThread qosManager;
+	private volatile QosManagerThread qosManager;
 
 	private StreamChainCoordinator chainCoordinator;
 
@@ -61,7 +60,7 @@ public class StreamJobEnvironment {
 
 	private StreamMessagingThread messagingThread;
 
-	private boolean environmentIsShutDown;
+	private volatile boolean environmentIsShutDown;
 
 	public StreamJobEnvironment(JobID jobID,
 			StreamMessagingThread messagingThread) {
@@ -87,7 +86,9 @@ public class StreamJobEnvironment {
 		return this.jobID;
 	}
 
-	public void registerTask(RuntimeTask task, StreamTaskEnvironment streamEnv) {
+	public synchronized void registerTask(RuntimeTask task,
+			StreamTaskEnvironment streamEnv) {
+
 		if (this.environmentIsShutDown) {
 			return;
 		}
@@ -123,13 +124,9 @@ public class StreamJobEnvironment {
 				taggingInterval);
 	}
 
-	public StreamTaskQosCoordinator getTaskQosCoordinator(
-			ExecutionVertexID vertexID) {
-		return this.taskQosCoordinators.get(vertexID);
-	}
-
-	public void shutdown() {
+	private void shutdownEnvironment() {
 		this.environmentIsShutDown = true;
+
 		if (this.qosManager != null) {
 			this.qosManager.shutdown();
 		}
@@ -137,6 +134,8 @@ public class StreamJobEnvironment {
 
 		this.qosReportForwarder.shutdown();
 		this.qosReportForwarder = null;
+		this.taskQosCoordinators = null;
+		// FIXME stop chaining stuff
 	}
 
 	public void handleStreamMessage(AbstractStreamMessage streamMsg) {
@@ -186,7 +185,17 @@ public class StreamJobEnvironment {
 		this.qosManager.handOffStreamingData(deployRolesAction);
 	}
 
-	private synchronized void ensureQosManagerIsRunning() {
+	private void ensureQosManagerIsRunning() {
+		// this may seem like clunky code, however
+		// this is a highly used code path. Reading a volatile
+		// variable is fairly cheap, whereas obtaining an object
+		// monitor (as done when calling a synchronized method) is not.
+		if (this.qosManager == null) {
+			ensureQosManagerIsRunningSynchronized();
+		}
+	}
+
+	private synchronized void ensureQosManagerIsRunningSynchronized() {
 		if (this.qosManager == null) {
 			this.qosManager = new QosManagerThread(this.jobID,
 					this.messagingThread);
@@ -201,9 +210,6 @@ public class StreamJobEnvironment {
 
 		if (qosCoordinator != null) {
 			qosCoordinator.handleLimitBufferSizeAction(action);
-		} else {
-			LOG.error("Cannot find QoS coordinator for vertex with ID "
-					+ action.getVertexID());
 		}
 	}
 
@@ -222,9 +228,38 @@ public class StreamJobEnvironment {
 		// }
 	}
 
-	public void unregisterTask(ExecutionVertexID vertexID,
+	@SuppressWarnings("unused")
+	public synchronized void unregisterTask(ExecutionVertexID vertexID,
 			Environment environment) {
 
-		// FIXME
+		if (this.environmentIsShutDown) {
+			return;
+		}
+
+		StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
+				.get(vertexID);
+
+		if (qosCoordinator != null) {
+			// shuts down Qos reporting for this vertex
+			qosCoordinator.shutdownReporting();
+			this.taskQosCoordinators.remove(vertexID);
+		}
+
+		if (this.taskQosCoordinators.isEmpty()) {
+			shutdownEnvironment();
+		}
+	}
+	
+	public synchronized void shutdownReportingAndEnvironment() {
+		if (this.environmentIsShutDown) {
+			return;
+		}
+		
+		for(StreamTaskQosCoordinator qosCoordinator : this.taskQosCoordinators.values()) {
+			// shuts down Qos reporting for this vertex
+			qosCoordinator.shutdownReporting();			
+		}
+		this.taskQosCoordinators.clear();
+		shutdownEnvironment();
 	}
 }

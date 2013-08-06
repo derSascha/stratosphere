@@ -67,6 +67,14 @@ public class QosReporterConfigCenter {
 		this.configListeners.put(elementID, listener);
 	}
 
+	public synchronized void unsetQosReporterConfigListener(ExecutionVertexID elementID) {
+		this.configListeners.remove(elementID);		
+	}
+	
+	public synchronized void unsetQosReporterConfigListener(GateID elementID) {
+		this.configListeners.remove(elementID);		
+	}
+
 	public synchronized void setQosReporterConfigListener(GateID gateID,
 			QosReporterConfigListener listener) {
 
@@ -91,7 +99,7 @@ public class QosReporterConfigCenter {
 			listener.newVertexQosReporter(newReporter);
 		}
 	}
-
+	
 	public synchronized void addEdgeQosReporter(
 			EdgeQosReporterConfig newReporter) {
 

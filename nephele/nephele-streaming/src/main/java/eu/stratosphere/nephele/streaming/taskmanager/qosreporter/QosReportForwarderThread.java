@@ -29,16 +29,16 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
- * For a given Nephele job, this class aggregates and forwards stream QoS report
- * data (latencies, throughput, etc) of the tasks running within the task
- * manager. Qos report data is pre-aggregated by QoS manager and shipped in a
- * single message to the Qos manager once every {@link #aggregationInterval}. If
- * no QoS data for a Qos manager has been received, messages will be skipped.
- * This class starts its own thread as soon as there is at least on registered
- * task and can be shut down by invoking {@link #shutdown()}. This class is
- * threadsafe. Any QoS data added after shutdown will be ignored.
+ * This class aggregates and forwards stream QoS report data (latencies,
+ * throughput, etc) of the tasks of a single job running within the same
+ * manager. Each task manager has one instance of this class per job. Qos report
+ * data is pre-aggregated for each QoS manager and shipped in a single message
+ * to the Qos manager once every {@link #aggregationInterval}. If no QoS data
+ * for a Qos manager has been received, messages will be skipped. This class
+ * starts its own thread as soon as there is at least on registered task and can
+ * be shut down by invoking {@link #shutdown()}.
  * 
- * FIXME: lifecycle. When does does thread get stopped?
+ * This class is threadsafe.
  * 
  * @author Bjoern Lohrmann
  */
@@ -61,15 +61,17 @@ public class QosReportForwarderThread extends Thread {
 
 	private int currentReportIndex;
 
-	private final ConcurrentHashMap<InstanceConnectionInfo, AggregatedReport> reportByQosManager;
+	private ConcurrentHashMap<InstanceConnectionInfo, AggregatedReport> reportByQosManager;
 
-	private final ConcurrentHashMap<QosReporterID, Set<AggregatedReport>> reportsByReporter;
+	private ConcurrentHashMap<QosReporterID, Set<AggregatedReport>> reportsByReporter;
 
-	private final ConcurrentHashMap<QosReporterID, Boolean> reporterActivityMap;
+	private ConcurrentHashMap<QosReporterID, Boolean> reporterActivityMap;
 
 	private final LinkedBlockingQueue<AbstractQosReportRecord> pendingReportRecords;
 
-	private volatile boolean started;
+	private volatile boolean isShutDown;
+
+	private boolean threadStarted;
 
 	private InstanceConnectionInfo localhost;
 
@@ -156,7 +158,8 @@ public class QosReportForwarderThread extends Thread {
 		this.reportsByReporter = new ConcurrentHashMap<QosReporterID, Set<AggregatedReport>>();
 		this.reporterActivityMap = new ConcurrentHashMap<QosReporterID, Boolean>();
 		this.pendingReportRecords = new LinkedBlockingQueue<AbstractQosReportRecord>();
-		this.started = false;
+		this.isShutDown = false;
+		this.threadStarted = false;
 		this.setName(String.format("QosReporterForwarderThread (JobID: %s)",
 				jobID.toString()));
 	}
@@ -181,8 +184,9 @@ public class QosReportForwarderThread extends Thread {
 				currentReport.shiftToNextReportingInterval();
 			}
 		} catch (InterruptedException e) {
+		} finally {
+			this.cleanUp();
 		}
-		this.cleanUp();
 	}
 
 	private boolean isLocalReport(AggregatedReport currentReport) {
@@ -207,10 +211,6 @@ public class QosReportForwarderThread extends Thread {
 		}
 	}
 
-	/**
-	 * @param currentReport
-	 * @throws InterruptedException
-	 */
 	private void sleepUntilReportDue(AggregatedReport currentReport)
 			throws InterruptedException {
 		long sleepTime = Math.max(0,
@@ -232,8 +232,18 @@ public class QosReportForwarderThread extends Thread {
 
 	private void cleanUp() {
 		this.pendingReports = null;
+
 		this.reportByQosManager.clear();
+		this.reportByQosManager = null;
+
+		this.reportsByReporter.clear();
+		this.reportsByReporter = null;
+
+		this.reporterActivityMap.clear();
+		this.reporterActivityMap = null;
+
 		this.pendingReportRecords.clear();
+
 	}
 
 	private ArrayList<AbstractQosReportRecord> tmpRecords = new ArrayList<AbstractQosReportRecord>();
@@ -340,6 +350,10 @@ public class QosReportForwarderThread extends Thread {
 
 	public void configureReporting(DeployInstanceQosRolesAction rolesDeployment) {
 
+		if (this.isShutDown) {
+			return;
+		}
+
 		synchronized (this.pendingReports) {
 			if (this.localhost == null) {
 				this.localhost = rolesDeployment.getInstanceConnectionInfo();
@@ -361,9 +375,9 @@ public class QosReportForwarderThread extends Thread {
 							rolesDeployment.getEdgeQosReporters().size(),
 							this.reportByQosManager.size()));
 
-			if (!this.started) {
+			if (!this.threadStarted) {
 				this.start();
-				this.started = true;
+				this.threadStarted = true;
 			}
 		}
 	}
@@ -445,10 +459,14 @@ public class QosReportForwarderThread extends Thread {
 	}
 
 	public void addToNextReport(AbstractQosReportRecord record) {
+		if (this.isShutDown) {
+			return;
+		}
 		this.pendingReportRecords.add(record);
 	}
 
 	public void shutdown() {
+		this.isShutDown = true;
 		this.interrupt();
 	}
 
