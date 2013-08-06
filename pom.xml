@@ -23,7 +23,7 @@
 	</licenses>
 
 	<developers>
-	    <developer>
+		<developer>
 			<id>lohrmann</id>
 			<name>Bjoern Lohrmann</name>
 			<email>bjoern.lohrmann@tu-berlin.de</email>
@@ -33,7 +33,7 @@
 				<role>Lead Developer (Stratosphere-Streaming)</role>
 			</roles>
 		</developer>
-		
+
 		<developer>
 			<id>mjsax</id>
 			<name>Matthias J. Sax</name>
@@ -55,7 +55,7 @@
 				<role>Lead Developer (Stratosphere-Streaming)</role>
 			</roles>
 		</developer>
-	    
+
 		<developer>
 			<id>warneke</id>
 			<name>Daniel Warneke</name>
@@ -92,8 +92,8 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8
-		</project.reporting.outputEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<powermock.version>1.5.1</powermock.version>
 	</properties>
 
 	<pluginRepositories>
@@ -143,23 +143,16 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.8.5</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.powermock</groupId>
 			<artifactId>powermock-module-junit4</artifactId>
-			<version>1.4.9</version>
+			<version>${powermock.version}</version>
 			<type>jar</type>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.powermock</groupId>
 			<artifactId>powermock-api-mockito</artifactId>
-			<version>1.4.9</version>
+			<version>${powermock.version}</version>
 			<type>jar</type>
 			<scope>test</scope>
 		</dependency>
@@ -171,9 +164,9 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
 	<dependencyManagement>
-		<!-- this section defines the module versions that are used if nothing else is specified. -->
+		<!-- this section defines the module versions that are used if nothing 
+			else is specified. -->
 		<dependencies>
 			<dependency>
 				<groupId>org.apache.hadoop</groupId>
@@ -193,8 +186,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.1</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.6</source>
+					<target>1.6</target>
 					<!-- High optimization, no debugging <compilerArgument>-g:none -O</compilerArgument> -->
 					<compilerArgument></compilerArgument>
 				</configuration>
@@ -263,10 +256,10 @@
 			<plugin>
 				<!-- maven source code analysis for frequent bugs -->
 				<groupId>org.apache.maven.plugins</groupId>
-        		<artifactId>maven-pmd-plugin</artifactId>
+				<artifactId>maven-pmd-plugin</artifactId>
 				<version>2.5</version>
 				<configuration>
-					<targetJdk>1.7</targetJdk>
+					<targetJdk>1.6</targetJdk>
 				</configuration>
 				<reportSets>
 					<reportSet>
@@ -340,8 +333,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.1</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.6</source>
+					<target>1.6</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -367,7 +360,7 @@
 				</configuration>
 			</plugin>
 			<plugin>
-			    <groupId>org.apache.maven.plugins</groupId>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<version>2.15</version>
 				<executions>
@@ -466,8 +459,8 @@
 						<artifactId>maven-compiler-plugin</artifactId>
 						<version>3.1</version>
 						<configuration>
-							<source>1.7</source>
-							<target>1.7</target>
+							<source>1.6</source>
+							<target>1.6</target>
 							<compilerArgument>-g</compilerArgument>
 						</configuration>
 					</plugin>
@@ -482,18 +475,18 @@
 							</formats>
 							<instrumentation>
 								<excludes>
-						            <exclude>eu/stratosphere/**/example/**/*.class</exclude>
-							        <exclude>eu/stratosphere/**/examples/**/*.class</exclude>
-							        <exclude>eu/stratosphere/**/*Test.class</exclude>
-					            </excludes>
+									<exclude>eu/stratosphere/**/example/**/*.class</exclude>
+									<exclude>eu/stratosphere/**/examples/**/*.class</exclude>
+									<exclude>eu/stratosphere/**/*Test.class</exclude>
+								</excludes>
 								<ignores>
-								  <ignore>org.apache.log4j.*</ignore>
-								  <ignore>org.apache.commons.logging.*</ignore>
-					              <ignore>eu.stratosphere.*examples.*</ignore>
-					              <ignore>eu.stratosphere.*example.*</ignore>
-						          <ignore>eu.stratosphere.*Test</ignore>
-					            </ignores>
-						    </instrumentation>
+									<ignore>org.apache.log4j.*</ignore>
+									<ignore>org.apache.commons.logging.*</ignore>
+									<ignore>eu.stratosphere.*examples.*</ignore>
+									<ignore>eu.stratosphere.*example.*</ignore>
+									<ignore>eu.stratosphere.*Test</ignore>
+								</ignores>
+							</instrumentation>
 						</configuration>
 						<executions>
 							<execution>
@@ -516,24 +509,24 @@
 			</activation>
 			<build>
 				<finalName>${project.artifactId}-${project.version}-nightly-${BUILD_NUMBER}</finalName>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-install-plugin</artifactId>
-					<version>2.3.1</version>
-					<executions>
-						<execution>
-							<goals>
-								<goal>install-file</goal>
-							</goals>
-							<phase>install</phase>
-							<configuration>
-								<file>${project.build.finalName}</file>
-							</configuration>
-						</execution>
-					</executions>
-				</plugin>
-			</plugins>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-install-plugin</artifactId>
+						<version>2.3.1</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>install-file</goal>
+								</goals>
+								<phase>install</phase>
+								<configuration>
+									<file>${project.build.finalName}</file>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
 			</build>
 		</profile>
 	</profiles>
