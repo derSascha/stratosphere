@@ -1,6 +1,6 @@
-Stratosphere Change Log
+Stratosphere-Streaming Change Log
 
-Release 0.1 - Initial Release
+Release 1 - Initial Release
 
   NEW FEATURES
 

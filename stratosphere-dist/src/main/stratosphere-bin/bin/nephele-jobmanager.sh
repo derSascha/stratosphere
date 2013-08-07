@@ -68,10 +68,6 @@ constructJobManagerClassPath() {
 			add=1
 		elif [[ "$jarfile" =~ 'commons-httpclient' ]]; then
 			add=1
-		elif [[ "$jarfile" =~ 'pact-common' ]]; then
-			add=1
-		elif [[ "$jarfile" =~ 'pact-runtime' ]]; then
-			add=1
 		elif [[ "$jarfile" =~ 'jackson' ]]; then
 			add=1
 		elif [[ "$jarfile" =~ 'commons-cli' ]]; then
@@ -96,7 +92,7 @@ constructJobManagerClassPath() {
 			add=1
 		elif [[ "$jarfile" =~ 'fastutil' ]]; then
 			add=1
-		 elif [[ "$jarfile" =~ 'commons' ]]; then
+		elif [[ "$jarfile" =~ 'commons' ]]; then
                         add=1
 		fi
 

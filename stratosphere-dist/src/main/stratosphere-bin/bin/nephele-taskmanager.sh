@@ -51,10 +51,6 @@ constructTaskManagerClassPath() {
 			add=1
 		elif [[ "$jarfile" =~ 'nephele-streaming' ]]; then
 			add=1
-		elif [[ "$jarfile" =~ 'pact-common' ]]; then
-			add=1
-		elif [[ "$jarfile" =~ 'pact-runtime' ]]; then
-			add=1
 		elif [[ "$jarfile" =~ 'commons-cli' ]]; then
 			add=1
 		elif [[ "$jarfile" =~ 'commons-logging' ]]; then
@@ -77,7 +73,7 @@ constructTaskManagerClassPath() {
 			add=1
 		elif [[ "$jarfile" =~ 'fastutil' ]]; then
 			add=1
-		 elif [[ "$jarfile" =~ 'commons' ]]; then
+		elif [[ "$jarfile" =~ 'commons' ]]; then
                         add=1
 		fi
 
