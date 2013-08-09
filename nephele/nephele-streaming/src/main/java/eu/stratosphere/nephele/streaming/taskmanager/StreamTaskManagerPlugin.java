@@ -135,7 +135,7 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 		for (StreamJobEnvironment jobEnvironment : this.streamJobEnvironments
 				.values()) {
 			
-			jobEnvironment.shutdownReportingAndEnvironment();
+			jobEnvironment.shutdownEnvironment();
 		}
 		this.streamJobEnvironments.clear();
 

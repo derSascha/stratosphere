@@ -20,7 +20,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
@@ -29,9 +28,9 @@ import eu.stratosphere.nephele.streaming.message.qosreport.DummyVertexReporterAc
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.QosReportingListenerHelper;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
+import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 import eu.stratosphere.nephele.types.Record;
 
 /**
@@ -49,11 +48,13 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	private static final Log LOG = LogFactory
 			.getLog(StreamTaskQosCoordinator.class);
 
-	private ExecutionVertexID vertexID;
+	private final RuntimeTask task;
 
-	private StreamTaskEnvironment taskEnvironment;
+	private final StreamTaskEnvironment taskEnvironment;
 
-	private QosReportForwarderThread reporterThread;
+	private final QosReportForwarderThread reporterThread;
+	
+	private final QosReporterConfigCenter reporterConfigCenter;
 
 	/**
 	 * For each input gate of the task for whose channels latency reporting is
@@ -81,21 +82,15 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 	 */
 	private VertexLatencyReportManager vertexLatencyManager;
 
-	private StreamChainCoordinator chainCoordinator;
-
-	private QosReporterConfigCenter reporterConfigCenter;
-
 	private boolean isShutdown;
 
-	public StreamTaskQosCoordinator(ExecutionVertexID vertexID,
+	public StreamTaskQosCoordinator(RuntimeTask task,
 			StreamTaskEnvironment taskEnvironment,
-			QosReportForwarderThread reportForwarder,
-			StreamChainCoordinator chainCoordinator) {
+			QosReportForwarderThread reportForwarder) {
 
-		this.vertexID = vertexID;
+		this.task = task;
 		this.taskEnvironment = taskEnvironment;
 		this.reporterThread = reportForwarder;
-		this.chainCoordinator = chainCoordinator;
 		this.reporterConfigCenter = reportForwarder.getConfigCenter();
 
 		this.vertexLatencyManager = new VertexLatencyReportManager(
@@ -107,13 +102,6 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		this.isShutdown = false;
 
 		this.prepareQosReporting();
-		this.registerTaskAsChainMapperIfNecessary();
-	}
-
-	private void registerTaskAsChainMapperIfNecessary() {
-		if (this.taskEnvironment.isMapperTask()) {
-			this.chainCoordinator.registerMapper(this.taskEnvironment);
-		}
 	}
 
 	private void prepareQosReporting() {
@@ -124,11 +112,11 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 
 	private void installVertexLatencyReporters() {
 		Set<VertexQosReporterConfig> vertexReporterConfigs = this.reporterConfigCenter
-				.getVertexQosReporters(this.vertexID);
+				.getVertexQosReporters(this.task.getVertexID());
 
 		if (vertexReporterConfigs.isEmpty()) {
 			this.reporterConfigCenter.setQosReporterConfigListener(
-					this.vertexID, this);
+					this.task.getVertexID(), this);
 		} else {
 			for (VertexQosReporterConfig reporterConfig : vertexReporterConfigs) {
 				if (reporterConfig.isDummy()) {
@@ -381,7 +369,7 @@ public class StreamTaskQosCoordinator implements QosReporterConfigListener {
 		shutdownInputGateReporters();
 		shutdownOutputGateReporters();
 		this.vertexLatencyManager = null;
-		this.reporterConfigCenter.unsetQosReporterConfigListener(this.vertexID);
+		this.reporterConfigCenter.unsetQosReporterConfigListener(this.task.getVertexID());
 	}
 
 	private void shutdownOutputGateReporters() {

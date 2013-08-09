@@ -39,6 +39,8 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 
 	private final LinkedList<VertexQosReporterConfig> vertexQosReporters = new LinkedList<VertexQosReporterConfig>();
 
+	private final LinkedList<CandidateChainConfig> candidateChains = new LinkedList<CandidateChainConfig>();
+
 	public DeployInstanceQosRolesAction() {
 		this.instanceConnectionInfo = new InstanceConnectionInfo();
 	}
@@ -64,6 +66,10 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 	public void addVertexQosReporter(VertexQosReporterConfig vertexQosReporter) {
 		this.vertexQosReporters.add(vertexQosReporter);
 	}
+	
+	public void addCandidateChain(CandidateChainConfig candidateChain) {
+		this.candidateChains.add(candidateChain);
+	}
 
 	public QosManagerConfig getQosManager() {
 		return this.qosManager;
@@ -75,6 +81,10 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 
 	public LinkedList<VertexQosReporterConfig> getVertexQosReporters() {
 		return this.vertexQosReporters;
+	}
+
+	public LinkedList<CandidateChainConfig> getCandidateChains() {
+		return this.candidateChains;
 	}
 
 	/**
@@ -96,6 +106,10 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 		for (VertexQosReporterConfig vertexQosReporter : this.vertexQosReporters) {
 			vertexQosReporter.write(out);
 		}
+		out.writeInt(this.candidateChains.size());
+		for (CandidateChainConfig candidateChain : this.candidateChains) {
+			candidateChain.write(out);
+		}		
 	}
 
 	/**
@@ -123,5 +137,12 @@ public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
 			vertexQosReporter.read(in);
 			this.vertexQosReporters.add(vertexQosReporter);
 		}
+		
+		int noOfCandidateChains = in.readInt();
+		for (int i = 0; i < noOfCandidateChains; i++) {
+			CandidateChainConfig candidateChain = new CandidateChainConfig();
+			candidateChain.read(in);
+			this.candidateChains.add(candidateChain);
+		}		
 	}
 }
