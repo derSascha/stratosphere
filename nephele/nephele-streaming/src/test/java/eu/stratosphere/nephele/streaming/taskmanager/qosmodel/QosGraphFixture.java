@@ -290,9 +290,9 @@ public class QosGraphFixture {
 			ExecutionVertex vertex = groupVertex.getGroupMember(i);
 
 			try {
-				connectionInfos[i] = new InstanceConnectionInfo(
-						InetAddress.getByName(String.format("10.10.10.%d",
-								i + 1)), 1, 1);
+                connectionInfos[i] = new InstanceConnectionInfo(
+                        InetAddress.getByName(String.format("10.10.10.%d",
+                                i + 1)), "hostname", "domainname", 1, 1);
 
 				AbstractInstance instance = mock(AbstractInstance.class);
 				when(instance.getInstanceConnectionInfo()).thenReturn(
