@@ -250,21 +250,20 @@ public class QosGraphFixture {
 		ExecutionStage stage = this.execGraph.getStage(0);
 		for (int i = 0; i < stage.getNumberOfStageMembers(); i++) {
 			ExecutionGroupVertex execVertex = stage.getStageMember(i);
-			if (execVertex.getJobVertexID().equals(this.jobVertex1.getID())) {
+			if (execVertex.getJobVertexID().equals(this.jobVertex1.getID()))
 				this.execVertex1 = execVertex;
-			} else if (execVertex.getJobVertexID().equals(
-					this.jobVertex2.getID())) {
+			else if (execVertex.getJobVertexID()
+					.equals(this.jobVertex2.getID()))
 				this.execVertex2 = execVertex;
-			} else if (execVertex.getJobVertexID().equals(
-					this.jobVertex3.getID())) {
+			else if (execVertex.getJobVertexID()
+					.equals(this.jobVertex3.getID()))
 				this.execVertex3 = execVertex;
-			} else if (execVertex.getJobVertexID().equals(
-					this.jobVertex4.getID())) {
+			else if (execVertex.getJobVertexID()
+					.equals(this.jobVertex4.getID()))
 				this.execVertex4 = execVertex;
-			} else if (execVertex.getJobVertexID().equals(
-					this.jobVertex5.getID())) {
+			else if (execVertex.getJobVertexID()
+					.equals(this.jobVertex5.getID()))
 				this.execVertex5 = execVertex;
-			}
 		}
 
 		// inject InstanceConnectionInfos
@@ -290,9 +289,9 @@ public class QosGraphFixture {
 			ExecutionVertex vertex = groupVertex.getGroupMember(i);
 
 			try {
-                connectionInfos[i] = new InstanceConnectionInfo(
-                        InetAddress.getByName(String.format("10.10.10.%d",
-                                i + 1)), "hostname", "domainname", 1, 1);
+				connectionInfos[i] = new InstanceConnectionInfo(
+						InetAddress.getByName(String.format("10.10.10.%d",
+								i + 1)), "hostname", "domainname", 1, 1);
 
 				AbstractInstance instance = mock(AbstractInstance.class);
 				when(instance.getInstanceConnectionInfo()).thenReturn(
@@ -318,7 +317,7 @@ public class QosGraphFixture {
 				0);
 		sequence1.addVertex(this.jobVertex3.getID(), 0, 0);
 		sequence1.addEdge(this.jobVertex3.getID(), 0, this.jobVertex4.getID(),
-				0);
+				1);
 		sequence1.addVertex(this.jobVertex4.getID(), 0, 0);
 		sequence1.addEdge(this.jobVertex4.getID(), 0, this.jobVertex5.getID(),
 				0);
@@ -332,7 +331,7 @@ public class QosGraphFixture {
 				0);
 		sequence2.addVertex(this.jobVertex2.getID(), 0, 0);
 		sequence2.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(),
-				1);
+				0);
 		sequence2.addVertex(this.jobVertex4.getID(), 1, 0);
 		this.constraint2 = new JobGraphLatencyConstraint(sequence2, 2000);
 
@@ -342,7 +341,7 @@ public class QosGraphFixture {
 		JobGraphSequence sequence3 = new JobGraphSequence();
 		sequence3.addVertex(this.jobVertex2.getID(), 0, 0);
 		sequence3.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(),
-				1);
+				0);
 		sequence3.addVertex(this.jobVertex4.getID(), 1, 0);
 		sequence3.addEdge(this.jobVertex4.getID(), 0, this.jobVertex5.getID(),
 				0);
@@ -354,7 +353,7 @@ public class QosGraphFixture {
 		JobGraphSequence sequence4 = new JobGraphSequence();
 		sequence4.addVertex(this.jobVertex2.getID(), 0, 0);
 		sequence4.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(),
-				1);
+				0);
 		sequence4.addVertex(this.jobVertex4.getID(), 1, 0);
 		this.constraint4 = new JobGraphLatencyConstraint(sequence4, 2000);
 
@@ -511,10 +510,10 @@ public class QosGraphFixture {
 				vertex.setGroupMember(member);
 			}
 		} catch (UnknownHostException e) {
-			throw new IllegalStateException("Dummy address could not be generated from local host.", e);
+			throw new IllegalStateException(
+					"Dummy address could not be generated from local host.", e);
 		}
 	}
-
 
 	private void generateMemberWiring(QosGroupEdge groupEdge) {
 		int sourceMembers = groupEdge.getSourceVertex().getNumberOfMembers();
@@ -526,7 +525,7 @@ public class QosGraphFixture {
 					groupEdge.getOutputGateIndex());
 			sourceMember.setOutputGate(outputGate);
 
-			for (int j = 0; j < targetMembers; j++) {
+			for (int j = 0; j < targetMembers; j++)
 				if (DistributionPatternProvider.createWire(
 						groupEdge.getDistributionPattern(), i, j,
 						sourceMembers, targetMembers)) {
@@ -548,7 +547,6 @@ public class QosGraphFixture {
 					edge.setInputGate(inputGate);
 					edge.setOutputGate(outputGate);
 				}
-			}
 		}
 	}
 
