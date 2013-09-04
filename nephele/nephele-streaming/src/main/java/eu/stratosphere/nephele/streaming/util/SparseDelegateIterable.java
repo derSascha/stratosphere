@@ -15,6 +15,7 @@
 package eu.stratosphere.nephele.streaming.util;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Convenient utility class to create a non-sparse iterable based on a sparse
@@ -44,25 +45,37 @@ public class SparseDelegateIterable<T> implements Iterable<T> {
 
 			@Override
 			public boolean hasNext() {
-				while (this.current == null
-						&& SparseDelegateIterable.this.sparseIterator.hasNext()) {
-					this.current = SparseDelegateIterable.this.sparseIterator
-							.next();
-				}
+				advanceCurrent();
 				return this.current != null;
 			}
 
 			@Override
 			public T next() {
-				T toReturn = this.current;
-				this.current = null;
-				return toReturn;
+                advanceCurrent();
+                if(this.current != null) {
+                    T cur = this.current;
+                    this.current = null;
+                    return cur;
+                }
+                else {
+                    throw new NoSuchElementException();
+                }
 			}
 
 			@Override
 			public void remove() {
-				SparseDelegateIterable.this.sparseIterator.remove();
+				throw new UnsupportedOperationException();
 			}
+
+            /**
+             * Advances the current element to the next non-null element.
+             */
+            private void advanceCurrent() {
+                while(this.current == null &&
+                        SparseDelegateIterable.this.sparseIterator.hasNext()) {
+                    this.current = SparseDelegateIterable.this.sparseIterator.next();
+                }
+            }
 		};
 	}
 }
