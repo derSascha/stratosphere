@@ -24,7 +24,6 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
 import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
-import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
@@ -64,7 +63,8 @@ public class StreamJobEnvironment {
 	private volatile QosManagerThread qosManager;
 
 	public StreamJobEnvironment(JobID jobID,
-			StreamMessagingThread messagingThread) {
+			StreamMessagingThread messagingThread,
+			ChainManagerThread chainManagerThread) {
 
 		this.jobID = jobID;
 		this.messagingThread = messagingThread;
@@ -78,8 +78,7 @@ public class StreamJobEnvironment {
 
 		this.qosReportForwarder = new QosReportForwarderThread(jobID,
 				messagingThread, reporterConfig);
-
-		this.chainManager = new ChainManagerThread();
+		this.chainManager = chainManagerThread;
 		this.taskQosCoordinators = new HashMap<ExecutionVertexID, StreamTaskQosCoordinator>();
 	}
 
@@ -176,8 +175,9 @@ public class StreamJobEnvironment {
 		}
 
 		this.qosReportForwarder.configureReporting(deployRolesAction);
-		
-		for(CandidateChainConfig chainConfig : deployRolesAction.getCandidateChains()) {
+
+		for (CandidateChainConfig chainConfig : deployRolesAction
+				.getCandidateChains()) {
 			this.chainManager.registerCandidateChain(chainConfig);
 		}
 
@@ -228,21 +228,6 @@ public class StreamJobEnvironment {
 		}
 	}
 
-	private void handleConstructStreamChainAction(
-			ConstructStreamChainAction action) {
-
-		// FIXME
-		// StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
-		// .get(action.getVertexID());
-		//
-		// if (qosCoordinator != null) {
-		// qosCoordinator.handleLimitBufferSizeAction(action);
-		// } else {
-		// LOG.error("Cannot find QoS coordinator for vertex with ID "
-		// + action.getVertexID());
-		// }
-	}
-
 	@SuppressWarnings("unused")
 	public synchronized void unregisterTask(ExecutionVertexID vertexID,
 			Environment environment) {
@@ -258,6 +243,8 @@ public class StreamJobEnvironment {
 			// shuts down Qos reporting for this vertex
 			qosCoordinator.shutdownReporting();
 			this.taskQosCoordinators.remove(vertexID);
+
+			this.chainManager.unregisterMapperTask(vertexID);
 		}
 
 		if (this.taskQosCoordinators.isEmpty()) {

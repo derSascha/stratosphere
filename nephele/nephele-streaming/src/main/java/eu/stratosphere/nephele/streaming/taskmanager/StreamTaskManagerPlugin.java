@@ -27,7 +27,9 @@ import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
+import eu.stratosphere.nephele.profiling.ProfilingException;
 import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.taskmanager.chaining.ChainManagerThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.StreamJobEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.taskmanager.Task;
@@ -93,6 +95,12 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	private final StreamMessagingThread messagingThread;
 
+	/**
+	 * A special thread that chains/unchains "mapper" tasks (special Nephele
+	 * execution vertices that declare themselves as chainable).
+	 */
+	private final ChainManagerThread chainManagerThread;
+
 	private static volatile Configuration PLUGIN_CONFIGURATION;
 
 	public StreamTaskManagerPlugin(final Configuration pluginConfiguration) {
@@ -103,6 +111,15 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 
 		this.messagingThread = new StreamMessagingThread();
 		this.messagingThread.start();
+
+		try {
+			this.chainManagerThread = new ChainManagerThread();
+		} catch (ProfilingException e) {
+			LOG.error(
+					"Failed to initialize chain manager thread due to exception. This is a bug.",
+					e);
+			throw new RuntimeException(e);
+		}
 
 		LOG.info(String
 				.format("Configured tagging interval is every %d records / Aggregation interval is %d millis ",
@@ -134,8 +151,9 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 
 		for (StreamJobEnvironment jobEnvironment : this.streamJobEnvironments
 				.values()) {
-			
+
 			jobEnvironment.shutdownEnvironment();
+
 		}
 		this.streamJobEnvironments.clear();
 
@@ -210,7 +228,7 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 				jobEnvironment = this.streamJobEnvironments.get(jobID);
 			} else {
 				jobEnvironment = new StreamJobEnvironment(jobID,
-						this.messagingThread);
+						this.messagingThread, this.chainManagerThread);
 				this.streamJobEnvironments.put(jobID, jobEnvironment);
 			}
 		}
