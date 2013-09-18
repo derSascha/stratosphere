@@ -16,11 +16,12 @@ package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 
 import java.lang.management.ThreadMXBean;
 
+import eu.stratosphere.nephele.execution.ExecutionListener;
 import eu.stratosphere.nephele.execution.ExecutionState;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.profiling.impl.EnvironmentThreadSet;
 import eu.stratosphere.nephele.profiling.impl.types.InternalExecutionVertexThreadProfilingData;
-import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosStatistic;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosValue;
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
@@ -29,19 +30,21 @@ import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
  * @author Bjoern Lohrmann
  * 
  */
-public class TaskInfo {
+public class TaskInfo implements ExecutionListener {
 
 	private final RuntimeTask task;
 
-	private volatile CandidateChainConfig chainConfig;
+	private final QosStatistic cpuUtilization;
 
+	private final ThreadMXBean tmx;
+	
 	private volatile EnvironmentThreadSet environmentThreadSet;
 
-	private QosStatistic cpuUtilization;
-
-	public TaskInfo(RuntimeTask task) {
+	public TaskInfo(RuntimeTask task, ThreadMXBean tmx) {
 		this.task = task;
+		this.tmx = tmx;
 		this.cpuUtilization = new QosStatistic(5);
+		this.task.registerExecutionListener(this);
 	}
 
 	/**
@@ -54,24 +57,6 @@ public class TaskInfo {
 
 	public ExecutionVertexID getVertexID() {
 		return this.task.getVertexID();
-	}
-
-	/**
-	 * 
-	 * @return the associated chain configuration or null if none was set
-	 */
-	public CandidateChainConfig getChainConfig() {
-		return this.chainConfig;
-	}
-
-	/**
-	 * Sets the chainConfig to the specified value.
-	 * 
-	 * @param chainConfig
-	 *            the chainConfig to set
-	 */
-	public void setChainConfig(CandidateChainConfig chainConfig) {
-		this.chainConfig = chainConfig;
 	}
 
 	/**
@@ -123,8 +108,95 @@ public class TaskInfo {
 					* (this.environmentThreadSet.getNumberOfUserThreads() + 1);
 
 			this.cpuUtilization.addValue(new QosValue(cpuUtilization, now));
-			
-			System.out.printf("Measured %.01f % CPU utilization for vertex %s\n", cpuUtilization);
+
+			System.out.printf(
+					"Measured %.01f % CPU utilization for vertex %s\n",
+					cpuUtilization);
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.execution.ExecutionListener#executionStateChanged
+	 * (eu.stratosphere.nephele.jobgraph.JobID,
+	 * eu.stratosphere.nephele.executiongraph.ExecutionVertexID,
+	 * eu.stratosphere.nephele.execution.ExecutionState, java.lang.String)
+	 */
+	@Override
+	public void executionStateChanged(JobID jobID, ExecutionVertexID vertexID,
+			ExecutionState newExecutionState, String optionalMessage) {
+
+		switch (newExecutionState) {
+		case RUNNING:
+			this.setEnvironmentThreadSet(new EnvironmentThreadSet(this.tmx,
+					getTask().getRuntimeEnvironment().getExecutingThread(),
+					vertexID));
+			break;
+		case FINISHING:
+		case FINISHED:
+		case CANCELING:
+		case CANCELED:
+		case FAILED:
+			setEnvironmentThreadSet(null);
+			break;
+		default:
+			break;
+		}
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.execution.ExecutionListener#userThreadStarted
+	 * (eu.stratosphere.nephele.jobgraph.JobID,
+	 * eu.stratosphere.nephele.executiongraph.ExecutionVertexID,
+	 * java.lang.Thread)
+	 */
+	@Override
+	public void userThreadStarted(JobID jobID, ExecutionVertexID vertexID,
+			Thread userThread) {
+
+		if (this.environmentThreadSet != null) {
+			// threadsafe operation
+			this.environmentThreadSet.addUserThread(this.tmx, userThread);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * eu.stratosphere.nephele.execution.ExecutionListener#userThreadFinished
+	 * (eu.stratosphere.nephele.jobgraph.JobID,
+	 * eu.stratosphere.nephele.executiongraph.ExecutionVertexID,
+	 * java.lang.Thread)
+	 */
+	@Override
+	public void userThreadFinished(JobID jobID, ExecutionVertexID vertexID,
+			Thread userThread) {
+
+		if (this.environmentThreadSet != null) {
+			// threadsafe operation
+			this.environmentThreadSet.removeUserThread(userThread);
+		}
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see eu.stratosphere.nephele.execution.ExecutionListener#getPriority()
+	 */
+	@Override
+	public int getPriority() {
+		return 2;
+	}
+
+	public void cleanUp() {
+		this.task.unregisterExecutionListener(this);
 	}
 }
