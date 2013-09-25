@@ -14,10 +14,35 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
+
 /**
  * @author Bjoern Lohrmann
- *
+ * 
  */
 public class ChainInfo {
 
+	private CandidateChainConfig candidateChainConfig;
+
+	private List<TaskInfo> chainMembers;
+
+	private int indexOfFirstMemberInCandidateChainConfig;
+
+	public ChainInfo(CandidateChainConfig candidateChainConfig,
+			TaskInfo firstMember, int indexOfFirstMemberInCandidateChainConfig) {
+
+		this.candidateChainConfig = candidateChainConfig;
+		this.chainMembers = new ArrayList<TaskInfo>();
+		this.chainMembers.add(firstMember);
+		this.indexOfFirstMemberInCandidateChainConfig = indexOfFirstMemberInCandidateChainConfig;
+		firstMember.chainTask(this);
+	}
+
+	public void appendToChain(TaskInfo taskInfo) {
+		this.chainMembers.add(taskInfo);
+		taskInfo.chainTask(this);
+	}
 }

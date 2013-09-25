@@ -39,6 +39,8 @@ public class TaskInfo implements ExecutionListener {
 	private final ThreadMXBean tmx;
 	
 	private volatile EnvironmentThreadSet environmentThreadSet;
+	
+	private ChainInfo chain;
 
 	public TaskInfo(RuntimeTask task, ThreadMXBean tmx) {
 		this.task = task;
@@ -110,9 +112,17 @@ public class TaskInfo implements ExecutionListener {
 			this.cpuUtilization.addValue(new QosValue(cpuUtilization, now));
 
 			System.out.printf(
-					"Measured %.01f % CPU utilization for vertex %s\n",
-					cpuUtilization);
+					"Measured %.3f %% CPU utilization for vertex %s\n",
+					cpuUtilization, this.task.getEnvironment().getTaskName());
 		}
+	}
+	
+	public boolean hasCPUUtilizationMeasurements() {
+		return this.cpuUtilization.hasValues();
+	}
+	
+	public double getCPUUtilization() {
+		return this.cpuUtilization.getArithmeticMean();
 	}
 
 	/*
@@ -198,5 +208,19 @@ public class TaskInfo implements ExecutionListener {
 
 	public void cleanUp() {
 		this.task.unregisterExecutionListener(this);
+	}
+	
+	public void chainTask(ChainInfo chainInfo) {
+		this.chain = chainInfo;
+		// FIXME do actual chaining
+	}
+	
+	public void unchainTask() {
+		this.chain = null;
+		// FIXME do actual unchaining
+	}	
+
+	public boolean isChained() {
+		return this.chain != null;
 	}
 }

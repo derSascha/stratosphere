@@ -16,6 +16,7 @@ package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -30,13 +31,13 @@ import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
  * @author Bjoern Lohrmann
  * 
  */
-public class ChainManagerThread extends Thread  {
+public class ChainManagerThread extends Thread {
 
 	private final static Logger LOG = Logger
 			.getLogger(ChainManagerThread.class);
 
 	private final ConcurrentHashMap<ExecutionVertexID, TaskInfo> activeMapperTasks;
-	
+
 	private final ConcurrentSkipListSet<CandidateChainConfig> candidateChains;
 
 	private ThreadMXBean tmx;
@@ -81,7 +82,7 @@ public class ChainManagerThread extends Thread  {
 	}
 
 	private void attemptChainConstruction() {
-		for(CandidateChainConfig candidateChain : this.candidateChains) {
+		for (CandidateChainConfig candidateChain : this.candidateChains) {
 			attemptChainConstruction(candidateChain);
 		}
 	}
@@ -91,10 +92,95 @@ public class ChainManagerThread extends Thread  {
 		// FIXME activate chain
 	}
 
-	private ChainInfo findLongestPossibleChain(CandidateChainConfig candidateChain) {
+	private ChainInfo findLongestPossibleChain(
+			CandidateChainConfig candidateChain) {
 
+		ArrayList<TaskInfo> tasks = getTasksReadyForChaining(candidateChain);
+
+		int longestChainStart = -1;
+		int longestChainLength = 0;
+		double longestChainCPUUsage = 0;
+
+		for (int chainStart = 0; chainStart < tasks.size() - 1; chainStart++) {
+
+			double chainCPUUsage = 0;
+
+			int chainEnd;
+
+			for (chainEnd = chainStart; chainEnd < tasks.size(); chainEnd++) {
+				TaskInfo taskInfo = tasks.get(chainEnd);
+
+				if (taskInfo == null) {
+					chainEnd--;
+					break;
+				}
+
+				double taskCPUUtilization = taskInfo.getCPUUtilization();
+				chainCPUUsage += taskCPUUtilization;
+
+				if (chainCPUUsage > 90.0) {
+					chainCPUUsage -= taskCPUUtilization;
+					chainEnd--;
+					break;
+				}
+			}
+
+			int chainLength = chainEnd + 1 - chainStart;
+
+			if (chainLength > 1 && chainCPUUsage > longestChainCPUUsage) {
+				longestChainStart = chainStart;
+				longestChainLength = chainLength;
+				longestChainCPUUsage = chainCPUUsage;
+			}
+		}
+
+		if (longestChainLength > 0) {
+			return createChain(candidateChain, tasks, longestChainStart,
+					longestChainLength);
+		}
 		return null;
+	}
+
+	private ArrayList<TaskInfo> getTasksReadyForChaining(
+			CandidateChainConfig candidateChain) {
+		ArrayList<TaskInfo> tasks = new ArrayList<TaskInfo>();
+
+		for (ExecutionVertexID vertexID : candidateChain
+				.getChainingCandidates()) {
+
+			TaskInfo taskInfo = this.activeMapperTasks.get(vertexID);
+			if (taskInfo != null && taskInfo.hasCPUUtilizationMeasurements()
+					&& !taskInfo.isChained()) {
+				tasks.add(taskInfo);
+			} else {
+				tasks.add(null);
+			}
+		}
+		return tasks;
+	}
+
+	private ChainInfo createChain(CandidateChainConfig candidateChain,
+			ArrayList<TaskInfo> candidateChainMembers, int chainStart,
+			int chainLength) {
+
+		TaskInfo nextToChain = candidateChainMembers.get(chainStart);
+
+		ChainInfo chain = new ChainInfo(candidateChain, nextToChain, chainStart);
+
+		StringBuilder logMessage = new StringBuilder("Created chain with tasks: ");
+		logMessage.append(nextToChain.getTask().getEnvironment().getTaskName());
+
+		for (int i = chainStart + 1; i < chainStart + chainLength; i++) {
+			nextToChain = candidateChainMembers.get(i);
+			logMessage.append(", ");
+			logMessage.append(nextToChain.getTask().getEnvironment().getTaskName());
+			
+			chain.appendToChain(candidateChainMembers.get(i));
+		}
 		
+		LOG.info(logMessage.toString());
+
+		return chain;
 	}
 
 	private void collectThreadProfilingData() {
