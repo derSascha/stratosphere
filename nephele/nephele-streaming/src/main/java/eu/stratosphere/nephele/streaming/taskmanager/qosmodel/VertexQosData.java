@@ -68,6 +68,18 @@ public class VertexQosData {
 		}
 	}
 
+    /**
+     * Adds a latency measurement consisting of a timestamp and the actual latency.
+     *
+     * Please note: Before submitting data to this method
+     * {#prepareForReportsOnGateCombination} has to be called to prepare
+     * internal data structures.
+     *
+     * @param inputGateIndex the input gate index
+     * @param outputGateIndex the output gate index
+     * @param timestamp the current timestamp as a long
+     * @param latencyInMillis the current latency in milliseconds as a double
+     */
 	public void addLatencyMeasurement(int inputGateIndex, int outputGateIndex,
 			long timestamp, double latencyInMillis) {
 
