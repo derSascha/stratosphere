@@ -19,6 +19,7 @@ import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.log4j.Logger;
 
@@ -38,7 +39,9 @@ public class ChainManagerThread extends Thread {
 
 	private final ConcurrentHashMap<ExecutionVertexID, TaskInfo> activeMapperTasks;
 
-	private final ConcurrentSkipListSet<CandidateChainConfig> candidateChains;
+	private final CopyOnWriteArraySet<CandidateChainConfig> candidateChains;
+	
+	
 
 	private ThreadMXBean tmx;
 
@@ -46,7 +49,7 @@ public class ChainManagerThread extends Thread {
 
 	public ChainManagerThread() throws ProfilingException {
 		this.activeMapperTasks = new ConcurrentHashMap<ExecutionVertexID, TaskInfo>();
-		this.candidateChains = new ConcurrentSkipListSet<CandidateChainConfig>();
+		this.candidateChains = new CopyOnWriteArraySet<CandidateChainConfig>();
 
 		// Initialize MX interface and check if thread contention monitoring is
 		// supported

@@ -16,11 +16,14 @@ package eu.stratosphere.nephele.streaming.jobmanager;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 
+import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
 import eu.stratosphere.nephele.streaming.jobmanager.QosReporterRole.ReportingAction;
+import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.QosManagerConfig;
@@ -37,7 +40,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
  * @author Bjoern Lohrmann
  * 
  */
-public class TaskManagerQosRoles {
+public class TaskManagerQosSetup {
 
 	private InstanceConnectionInfo taskManagerConnectionInfo;
 
@@ -45,10 +48,13 @@ public class TaskManagerQosRoles {
 
 	private HashMap<QosReporterID, QosReporterRole> reporterRoles;
 
-	public TaskManagerQosRoles(InstanceConnectionInfo taskManagerConnectionInfo) {
+	private LinkedList<CandidateChainConfig> candidateChains;
+
+	public TaskManagerQosSetup(InstanceConnectionInfo taskManagerConnectionInfo) {
 		this.taskManagerConnectionInfo = taskManagerConnectionInfo;
 		this.managerRoles = new HashMap<LatencyConstraintID, QosManagerRole>();
 		this.reporterRoles = new HashMap<QosReporterID, QosReporterRole>();
+		this.candidateChains = new LinkedList<CandidateChainConfig>();
 	}
 
 	public InstanceConnectionInfo getConnectionInfo() {
@@ -73,6 +79,14 @@ public class TaskManagerQosRoles {
 		}
 	}
 
+	public void addCandidateChain(LinkedList<ExecutionVertexID> candidateChain) {
+		this.candidateChains.add(new CandidateChainConfig(candidateChain));
+	}
+
+	public LinkedList<CandidateChainConfig> getCandidateChains() {
+		return this.candidateChains;
+	}
+
 	public Collection<QosManagerRole> getManagerRoles() {
 		return this.managerRoles.values();
 	}
@@ -92,6 +106,12 @@ public class TaskManagerQosRoles {
 			} else {
 				deploymentAction.addVertexQosReporter(this
 						.toVertexQosReporterConfig(reporterRole));
+			}
+		}
+
+		if (!this.candidateChains.isEmpty()) {
+			for (CandidateChainConfig candidateChain : this.candidateChains) {
+				deploymentAction.addCandidateChain(candidateChain);
 			}
 		}
 
