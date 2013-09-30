@@ -50,6 +50,7 @@ public class VertexQosData {
 			QosStatistic[][] newArray = new QosStatistic[inputGateIndex + 1][];
 			System.arraycopy(this.qosStatistics, 0, newArray, 0,
 					this.qosStatistics.length);
+            this.qosStatistics = newArray;
 		}
 
 		if (this.qosStatistics[inputGateIndex] == null) {
@@ -60,6 +61,7 @@ public class VertexQosData {
 			QosStatistic[] newArray = new QosStatistic[outputGateIndex + 1];
 			System.arraycopy(this.qosStatistics[inputGateIndex], 0, newArray,
 					0, this.qosStatistics[inputGateIndex].length);
+            this.qosStatistics[inputGateIndex] = newArray;
 		}
 
 		if (this.qosStatistics[inputGateIndex][outputGateIndex] == null) {
