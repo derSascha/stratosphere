@@ -61,11 +61,12 @@ public class CandidateChainFinder {
 			int noOfInputGatesInExecutionGraph = CandidateChainFinder.this.executionGraph
 					.getVertexByID(vertex.getID()).getNumberOfInputGates();
 
-			int noOfChannelsOnInputGate = vertex.getInputGate(
-					sequenceElem.getInputGateIndex()).getNumberOfEdges();
+            QosGate inputGate = vertex.getInputGate(
+                    sequenceElem.getInputGateIndex());
 
-			if (noOfInputGatesInExecutionGraph == 1
-					&& noOfChannelsOnInputGate == 1
+            if (    inputGate != null
+                    && noOfInputGatesInExecutionGraph == 1
+					&& inputGate.getNumberOfEdges() == 1 // noOfChannelsOnInputGate
 					&& vertex.getExecutingInstance().equals(
 							this.executingTaskManager)
 					&& this.lastChainElementSequenceIndex < sequenceElem
@@ -85,6 +86,10 @@ public class CandidateChainFinder {
 
 			QosGate outputGate = vertex.getOutputGate(sequenceElem
 					.getOutputGateIndex());
+
+            if(outputGate == null) {
+                return;
+            }
 
 			int noOfEdgesInOutputGate = outputGate.getNumberOfEdges();
 
