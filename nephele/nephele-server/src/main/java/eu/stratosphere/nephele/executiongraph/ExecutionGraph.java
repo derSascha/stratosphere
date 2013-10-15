@@ -339,21 +339,20 @@ public class ExecutionGraph implements ExecutionListener {
 
 					final ChannelID outputChannelID = new ChannelID();
 					final ChannelID inputChannelID = new ChannelID();
-
-					final ExecutionEdge edge = new ExecutionEdge(outputGate, inputGate, groupEdge, outputChannelID,
-						inputChannelID, outputGate.getNumberOfEdges(), inputGate.getNumberOfEdges());
-
-					this.edgeMap.put(outputChannelID, edge);
-					this.edgeMap.put(inputChannelID, edge);
-
-					outputChannels.add(edge);
-
+					
 					List<ExecutionEdge> inputChannels = inputChannelMap.get(inputGate.getGateID());
 					if (inputChannels == null) {
 						inputChannels = new ArrayList<ExecutionEdge>();
 						inputChannelMap.put(inputGate.getGateID(), inputChannels);
 					}
+					
+					final ExecutionEdge edge = new ExecutionEdge(outputGate, inputGate, groupEdge, outputChannelID,
+							inputChannelID, outputChannels.size(), inputChannels.size());
 
+					this.edgeMap.put(outputChannelID, edge);
+					this.edgeMap.put(inputChannelID, edge);
+
+					outputChannels.add(edge);
 					inputChannels.add(edge);
 				}
 			}

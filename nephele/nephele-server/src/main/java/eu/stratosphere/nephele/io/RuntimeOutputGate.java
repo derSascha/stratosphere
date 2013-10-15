@@ -363,4 +363,11 @@ public class RuntimeOutputGate<T extends Record> extends AbstractGate<T> impleme
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void outputBufferSent(final int channelIndex) {
+		// Nothing to do here
+	}
 }

@@ -214,9 +214,9 @@ public class RuntimeInputGate<T extends Record> extends AbstractGate<T> implemen
 		T record = null;
 
 		while (true) {
-			
+
 			if (this.channelToReadFrom == -1) {
-				
+
 				if (this.isClosed()) {
 					return null;
 				}

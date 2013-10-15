@@ -18,15 +18,18 @@ package eu.stratosphere.nephele.deployment;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.HashMap;
 
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.librarycache.LibraryCacheManager;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.template.AbstractInvokable;
 import eu.stratosphere.nephele.types.StringRecord;
 import eu.stratosphere.nephele.util.SerializableArrayList;
+import eu.stratosphere.nephele.util.SerializableHashMap;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
@@ -90,6 +93,11 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 	private final SerializableArrayList<GateDeploymentDescriptor> inputGates;
 
 	/**
+	 * Data attached by plugins on the job manager and to be used by the plugin on the task manager.
+	 */
+	private final SerializableHashMap<PluginID, IOReadableWritable> attachedPluginData;
+
+	/**
 	 * Constructs a task deployment descriptor.
 	 * 
 	 * @param jobID
@@ -118,7 +126,8 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 			final Configuration taskConfiguration, 
 			final Class<? extends AbstractInvokable> invokableClass,
 			final SerializableArrayList<GateDeploymentDescriptor> outputGates,
-			final SerializableArrayList<GateDeploymentDescriptor> inputGates) {
+			final SerializableArrayList<GateDeploymentDescriptor> inputGates,
+			final SerializableHashMap<PluginID, IOReadableWritable> attachedPluginData) {
 
 		if (jobID == null) {
 			throw new IllegalArgumentException("Argument jobID must not be null");
@@ -171,6 +180,12 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 		this.invokableClass = invokableClass;
 		this.outputGates = outputGates;
 		this.inputGates = inputGates;
+
+		if (attachedPluginData != null) {
+			this.attachedPluginData = attachedPluginData;
+		} else {
+			this.attachedPluginData = new SerializableHashMap<PluginID, IOReadableWritable>();
+		}
 	}
 
 	/**
@@ -188,6 +203,7 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 		this.invokableClass = null;
 		this.outputGates = new SerializableArrayList<GateDeploymentDescriptor>();
 		this.inputGates = new SerializableArrayList<GateDeploymentDescriptor>();
+		this.attachedPluginData = new SerializableHashMap<PluginID, IOReadableWritable>();
 	}
 
 	/**
@@ -222,6 +238,7 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 
 		this.outputGates.write(out);
 		this.inputGates.write(out);
+		this.attachedPluginData.write(out);
 	}
 
 	/**
@@ -270,6 +287,7 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 
 		this.outputGates.read(in);
 		this.inputGates.read(in);
+		this.attachedPluginData.read(in);
 	}
 
 	/**
@@ -394,5 +412,14 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 	public GateDeploymentDescriptor getInputGateDescriptor(final int index) {
 
 		return this.inputGates.get(index);
+	}
+
+	/**
+	 * Returns data attached by a on the job manager and to be used by the plugins on the task manager.
+	 * 
+	 * @return the attached plugin data mapped by plugin ID.
+	 */
+	public HashMap<PluginID, IOReadableWritable> getAttachedPluginData() {
+		return this.attachedPluginData;
 	}
 }

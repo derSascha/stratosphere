@@ -6,8 +6,8 @@
 
 	<parent>
 		<groupId>eu.stratosphere</groupId>
-		<artifactId>ozone</artifactId>
-		<version>0.4-ozone-SNAPSHOT</version>
+		<artifactId>stratosphere</artifactId>
+		<version>streaming-git</version>
 		<relativePath>..</relativePath>
 	</parent>
 
@@ -62,36 +62,17 @@
 			<artifactId>nephele-server</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+    	<dependency>
+    		<groupId>eu.stratosphere</groupId>
+    		<artifactId>nephele-streaming</artifactId>
+    		<version>${project.version}</version>
+    	</dependency>
 		<dependency>
 			<groupId>eu.stratosphere</groupId>
 			<artifactId>nephele-visualization</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>eu.stratosphere</groupId>
-			<artifactId>pact-common</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>eu.stratosphere</groupId>
-			<artifactId>pact-compiler</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>eu.stratosphere</groupId>
-			<artifactId>pact-clients</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>eu.stratosphere</groupId>
-			<artifactId>pact-examples</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>eu.stratosphere</groupId>
-			<artifactId>pact-runtime</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+
 	</dependencies>
 
 	<!-- See main pom.xml for explanation of profiles -->
@@ -222,41 +203,11 @@
 									</mapper>
 								</data>
 								<data>
-									<src>${project.build.directory}/${project.artifactId}-${project.version}-bin/stratosphere-${project.version}/examples</src>
-									<type>directory</type>
-									<mapper>
-										<type>perm</type>
-										<prefix>/usr/share/${project.artifactId}/examples</prefix>
-										<user>root</user>
-										<group>root</group>
-									</mapper>
-								</data>
-								<data>
 									<src>${project.build.directory}/${project.artifactId}-${project.version}-bin/stratosphere-${project.version}/lib</src>
 									<type>directory</type>
 									<mapper>
 										<type>perm</type>
 										<prefix>/usr/share/${project.artifactId}/lib</prefix>
-										<user>root</user>
-										<group>root</group>
-									</mapper>
-								</data>
-								<data>
-									<src>${project.build.directory}/${project.artifactId}-${project.version}-bin/stratosphere-${project.version}/lib_clients</src>
-									<type>directory</type>
-									<mapper>
-										<type>perm</type>
-										<prefix>/usr/share/${project.artifactId}/lib_clients</prefix>
-										<user>root</user>
-										<group>root</group>
-									</mapper>
-								</data>
-								<data>
-									<src>${project.build.directory}/${project.artifactId}-${project.version}-bin/stratosphere-${project.version}/resources</src>
-									<type>directory</type>
-									<mapper>
-										<type>perm</type>
-										<prefix>/usr/share/${project.artifactId}/resources</prefix>
 										<user>root</user>
 										<group>root</group>
 									</mapper>

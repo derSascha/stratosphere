@@ -149,4 +149,13 @@ public interface OutputGate<T extends Record> extends Gate<T> {
 	 */
 	InMemoryOutputChannel<T> createInMemoryOutputChannel(OutputGate<T> outputGate, ChannelID channelID,
 			ChannelID connectedChannelID);
+	
+	/**
+	 * This method is called by one of the attached output channels to indicate that the buffer which is internally used
+	 * to store written records has been forwarded to the next step in the processing pipeline.
+	 * 
+	 * @param channelIndex
+	 *        the index of the channel within the gate
+	 */
+	void outputBufferSent(int channelIndex);
 }

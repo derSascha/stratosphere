@@ -6,8 +6,8 @@
 
 	<parent>
 		<groupId>eu.stratosphere</groupId>
-		<artifactId>ozone</artifactId>
-		<version>0.4-ozone-SNAPSHOT</version>
+		<artifactId>stratosphere</artifactId>
+		<version>streaming-git</version>
 		<relativePath>..</relativePath>
 	</parent>
 
@@ -47,6 +47,7 @@
 		<module>nephele-s3</module>
 		<module>nephele-visualization</module>
 		<module>nephele-server</module>
+		<module>nephele-streaming</module>
 		<module>nephele-examples</module>
 	</modules>
 

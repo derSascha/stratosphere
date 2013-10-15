@@ -66,6 +66,11 @@ final class RuntimeOutputChannelBroker extends AbstractOutputChannelForwarder im
 	 * The sequence number for the next {@link TransferEnvelope} to be created.
 	 */
 	private int sequenceNumber = 0;
+	
+	/**
+	 * The size of the buffer that is offered to the assigned output channel in bytes.
+	 */
+	private int bufferSize;
 
 	RuntimeOutputChannelBroker(final RuntimeOutputGateContext outputGateContext,
 			final AbstractByteBufferedOutputChannel<?> byteBufferedOutputChannel,
@@ -80,6 +85,9 @@ final class RuntimeOutputChannelBroker extends AbstractOutputChannelForwarder im
 		this.outputGateContext = outputGateContext;
 		this.byteBufferedOutputChannel = byteBufferedOutputChannel;
 		this.byteBufferedOutputChannel.setByteBufferedOutputChannelBroker(this);
+		
+		// Set the buffer size to the largest possible value by default
+		this.bufferSize = this.outputGateContext.getMaximumBufferSize();
 	}
 
 	public void setForwardingChain(final OutputChannelForwardingChain forwardingChain) {
@@ -158,9 +166,7 @@ final class RuntimeOutputChannelBroker extends AbstractOutputChannelForwarder im
 	 * @return the recommended size of the next buffer in bytes
 	 */
 	private int calculateBufferSize() {
-
-		// TODO: Include latency considerations
-		return this.outputGateContext.getMaximumBufferSize();
+		return this.bufferSize;
 	}
 
 	/**
@@ -216,5 +222,19 @@ final class RuntimeOutputChannelBroker extends AbstractOutputChannelForwarder im
 
 			this.forwardingChain.pushEnvelope(ephemeralTransferEnvelope);
 		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void limitBufferSize(final int bufferSize) {
+
+		if (bufferSize > this.outputGateContext.getMaximumBufferSize()) {
+			throw new IllegalArgumentException("Buffer size limit must not be larger than "
+				+ this.outputGateContext.getMaximumBufferSize() + " bytes");
+		}
+
+		this.bufferSize = bufferSize;
 	}
 }

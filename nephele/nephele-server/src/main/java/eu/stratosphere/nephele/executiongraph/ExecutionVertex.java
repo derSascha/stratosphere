@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -38,6 +39,8 @@ import eu.stratosphere.nephele.execution.ExecutionStateTransition;
 import eu.stratosphere.nephele.instance.AllocatedResource;
 import eu.stratosphere.nephele.instance.AllocationID;
 import eu.stratosphere.nephele.io.GateID;
+import eu.stratosphere.nephele.io.IOReadableWritable;
+import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.taskmanager.AbstractTaskResult;
 import eu.stratosphere.nephele.taskmanager.AbstractTaskResult.ReturnCode;
 import eu.stratosphere.nephele.taskmanager.TaskCancelResult;
@@ -45,6 +48,7 @@ import eu.stratosphere.nephele.taskmanager.TaskKillResult;
 import eu.stratosphere.nephele.taskmanager.TaskSubmissionResult;
 import eu.stratosphere.nephele.util.AtomicEnum;
 import eu.stratosphere.nephele.util.SerializableArrayList;
+import eu.stratosphere.nephele.util.SerializableHashMap;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
@@ -136,6 +140,12 @@ public final class ExecutionVertex {
 	 * Flag to indicate whether the vertex has been requested to cancel while in state STARTING
 	 */
 	private final AtomicBoolean cancelRequested = new AtomicBoolean(false);
+
+	/**
+	 * Holds arbitrary data to be attached by plugins. This data will be sent as part of the
+	 * {@link TaskDeploymentDescriptor} to the task manager.
+	 */
+	private ConcurrentHashMap<PluginID, IOReadableWritable> attachedPluginData = new ConcurrentHashMap<PluginID, IOReadableWritable>();
 
 	/**
 	 * Create a new execution vertex and instantiates its environment.
@@ -951,6 +961,40 @@ public final class ExecutionVertex {
 
 		return this.executionPipeline.get();
 	}
+	
+	/**
+	 * Attaches the given plugin data.
+	 * 
+	 * @param pluginID
+	 *        the plugin's ID under to attach the data.
+	 * @param pluginData
+	 *        the data to attach.
+	 */
+	public void setPluginData(PluginID pluginID, IOReadableWritable pluginData) {
+		this.attachedPluginData.put(pluginID, pluginData);
+	}
+	
+	/**
+	 * Returns previously attached plugin data.
+	 * 
+	 * @param pluginID
+	 *        the plugin's ID under which the data was attached.
+	 * @return the plugin data or null, if no data was previously attached.
+	 */
+	public IOReadableWritable getPluginData(PluginID pluginID) {
+		return this.attachedPluginData.get(pluginID);
+	}
+
+	/**
+	 * Detaches data for the given plugin.
+	 * 
+	 * @param pluginID
+	 *        the plugin's ID under which the data was attached.
+	 * @return the detached plugin data or null, if no data was previously attached.
+	 */
+	public IOReadableWritable removePluginData(PluginID pluginID) {
+		return this.attachedPluginData.remove(pluginID);
+	}
 
 	/**
 	 * Constructs a new task deployment descriptor for this vertex.
@@ -993,11 +1037,14 @@ public final class ExecutionVertex {
 			igd.add(new GateDeploymentDescriptor(eg.getGateID(), eg.getChannelType(), cdd));
 		}
 
+		SerializableHashMap<PluginID, IOReadableWritable> pluginData = new SerializableHashMap<PluginID, IOReadableWritable>();
+		pluginData.putAll(attachedPluginData);
+
 		final TaskDeploymentDescriptor tdd = new TaskDeploymentDescriptor(this.executionGraph.getJobID(),
 			this.vertexID, this.groupVertex.getName(), this.indexInVertexGroup,
 			this.groupVertex.getCurrentNumberOfGroupMembers(), this.executionGraph.getJobConfiguration(),
 			this.groupVertex.getConfiguration(), this.groupVertex.getInvokableClass(), ogd,
-			igd);
+			igd, pluginData);
 
 		return tdd;
 	}

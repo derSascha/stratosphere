@@ -81,14 +81,12 @@ public class RuntimeEnvironment implements Environment, Runnable {
 	private final List<InputGate<? extends Record>> inputGates = new CopyOnWriteArrayList<InputGate<? extends Record>>();
 
 	/**
-	 * Queue of unbound output gate IDs which are required for deserializing an environment in the course of an RPC
-	 * call.
+	 * Queue of unbound output gate IDs which still need to be registered by the user code.
 	 */
 	private final Queue<GateID> unboundOutputGateIDs = new ArrayDeque<GateID>();
 
 	/**
-	 * Queue of unbound input gate IDs which are required for deserializing an environment in the course of an RPC
-	 * call.
+	 * Queue of unbound input gate IDs which still need to be registered by the user code.
 	 */
 	private final Queue<GateID> unboundInputGateIDs = new ArrayDeque<GateID>();
 
@@ -222,6 +220,14 @@ public class RuntimeEnvironment implements Environment, Runnable {
 		this.memoryManager = memoryManager;
 		this.ioManager = ioManager;
 		this.inputSplitProvider = inputSplitProvider;
+
+		for(int i=0; i<tdd.getNumberOfInputGateDescriptors(); i++) {
+			this.unboundInputGateIDs.add(tdd.getInputGateDescriptor(i).getGateID());
+		}
+		
+		for(int i=0; i<tdd.getNumberOfOutputGateDescriptors(); i++) {
+			this.unboundOutputGateIDs.add(tdd.getOutputGateDescriptor(i).getGateID());
+		}
 
 		this.invokable = this.invokableClass.newInstance();
 		this.invokable.setEnvironment(this);
@@ -905,5 +911,10 @@ public class RuntimeEnvironment implements Environment, Runnable {
 		}
 
 		return Collections.unmodifiableSet(inputChannelIDs);
+	}
+
+	@Override
+	public void registerMapper(Mapper<? extends Record, ? extends Record> mapper) {
+		// Nothing to do here
 	}
 }

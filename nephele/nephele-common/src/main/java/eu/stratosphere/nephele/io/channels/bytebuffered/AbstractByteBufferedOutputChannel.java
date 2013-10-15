@@ -58,6 +58,14 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	 */
 	private long amountOfDataTransmitted = 0L;
 
+	/**
+	 * Determines when to release the {@link #dataBuffer}. bufferSizeLimit=0 is
+	 * equivalent to auto-flushing after each record whereas the initial value
+	 * (Integer.MAX_VALUE) implies that we never release the buffer unless it is
+	 * full.
+	 */
+	private int bufferSizeLimit = Integer.MAX_VALUE;
+
 	private static final Log LOG = LogFactory.getLog(AbstractByteBufferedOutputChannel.class);
 
 	/**
@@ -143,6 +151,9 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 
 		this.outputChannelBroker.releaseWriteBuffer(this.dataBuffer);
 		this.dataBuffer = null;
+
+		// Notify the output gate to enable statistics collection by plugins
+		getOutputGate().outputBufferSent(getChannelIndex());
 	}
 
 	/**
@@ -160,10 +171,14 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 			throw new IOException("Channel is aready requested to be closed");
 		}
 
-		// Check if we can accept new records or if there are still old
-		// records to be transmitted
-		while (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
+		if (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
+			throw new IOException(
+					"Serialization buffer is expected to be empty!");
+		}
 
+		this.serializationBuffer.serialize(record);
+
+		while (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
 			this.serializationBuffer.read(this.dataBuffer);
 			if (this.dataBuffer.remaining() == 0) {
 				releaseWriteBuffer();
@@ -171,15 +186,11 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 			}
 		}
 
-		if (this.serializationBuffer.dataLeftFromPreviousSerialization()) {
-			throw new IOException("Serialization buffer is expected to be empty!");
-		}
-
-		this.serializationBuffer.serialize(record);
-
-		this.serializationBuffer.read(this.dataBuffer);
-		if (this.dataBuffer.remaining() == 0) {
+		int bytesInBuffer = this.dataBuffer.size()
+				- this.dataBuffer.remaining();
+		if (bytesInBuffer >= this.bufferSizeLimit) {
 			releaseWriteBuffer();
+			requestWriteBufferFromBroker();
 		}
 	}
 
@@ -271,5 +282,16 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	public long getAmountOfDataTransmitted() {
 
 		return this.amountOfDataTransmitted;
+	}
+
+	/**
+	 * Limits the size of the buffer this channel will write its records to
+	 * before passing them on to the framework.
+	 * 
+	 * @param bufferSize
+	 *            the new limit for the by
+	 */
+	public void limitBufferSize(final int bufferSize) {
+		this.bufferSizeLimit = bufferSize;
 	}
 }

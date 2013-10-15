@@ -132,6 +132,40 @@
 	<property>
 		<key>taskmanager.profiling.classname</key>
 		<value>eu.stratosphere.nephele.profiling.impl.TaskManagerProfilerImpl</value>
-	 </property>
-	 
+	</property>
+
+	<!--  ========================================================================
+	                       Nephele Stream Processing Plugin
+	      ======================================================================== -->
+	      
+	<property>
+		<key>eu.stratosphere.nephele.plugins.streaming.classname</key>
+		<value>eu.stratosphere.nephele.streaming.StreamingPluginLoader</value>
+	</property>
+	     
+	<property>
+		<key>eu.stratosphere.nephele.plugins.streaming.qosreporter.tagginginterval</key>
+		<value>10</value>
+	</property>
+	
+	<property>
+		<key>eu.stratosphere.nephele.plugins.streaming.qosreporter.aggregationinterval</key>
+		<value>1000</value>
+	</property>
+	
+	<property>
+		<key>eu.stratosphere.nephele.plugins.streaming.qosmanager.adjustmentinterval</key>
+		<value>10000</value>
+	</property>
+	
+	<property>
+		<key>eu.stratosphere.nephele.plugins.streaming.qosmanager.logging.buffersfile</key>
+		<value>/tmp/buffersizes.txt</value>
+	</property>
+	
+	<property>
+		<key>eu.stratosphere.nephele.plugins.streaming.qosmanager.logging.qos_statistics_filepattern</key>
+		<value>/tmp/qos_statistics_%s</value>
+	</property>
+	
 </configuration>
