@@ -1,6 +1,10 @@
-# Stratosphere - "Ozone" Distribution
+# Stratosphere - "Streaming" Distribution
 
-Big Data looks tiny from Stratosphere.
+Based on official "Ozone" Distribution from github.com/stratosphere/stratosphere
+
+Stratosphere-Streaming is a modification of the official Stratosphere "Ozone" distribution, optimized for stream processing applications. The goal is to provide and enforce QoS guarantees (latency, throughput) on large scale streaming workflows with hundreds of compute nodes.
+
+Currently, it is implemented as a plugin and patchset inside Stratosphere's Nephele layer. Stratosphere's PACT layer does not suit itself to stream processing and has been removed.
 
 ## Getting Started
 Below are three short tutorials that guide you through the first steps: Building, running and developing.
@@ -16,15 +20,15 @@ This tutorial shows how to build Stratosphere on your own system. Please open a 
 * Java 6 or 7
 
 ```
-git clone https://github.com/stratosphere/stratosphere.git
-cd ozone
+git clone https://github.com/bjoernlohrmann/stratosphere.git
+cd stratosphere
 mvn -DskipTests clean package # this will take up to 5 minutes
 ```
 
-Stratosphere is now installed in `stratosphere-dist/target`
+Stratosphere-Streaming is now installed in `stratosphere-dist/target`
 If you’re a Debian/Ubuntu user, you’ll find a .deb package. We will continue with the generic case.
 
-	cd stratosphere-dist/target/stratosphere-dist-0.4-ozone-SNAPSHOT-bin/stratosphere-0.4-ozone-SNAPSHOT/
+	cd stratosphere-dist/target/stratosphere-dist-streaming-git-bin/stratosphere-streaming-git/
 
 The directory structure here looks like the contents of the official release distribution.
 
@@ -56,47 +60,13 @@ to put a POM file with the right dependencies into your local repository.
 
 ### Run your first program
 
-We will run a simple “Word Count” example. 
-The easiest way to start Stratosphere on your local machine is so-called "local-mode":
-
-	./bin/start-local.sh
-
-Get some test data:
-
-	 wget -O hamlet.txt http://www.gutenberg.org/cache/epub/1787/pg1787.txt
-
-Start the job:
-
-	./bin/pact-client.sh run --jarfile ./examples/pact/pact-examples-0.4-ozone-SNAPSHOT-WordCount.jar --arguments 1 file://`pwd`/hamlet.txt file://`pwd`/wordcount-result.txt
-
-You will find a file called `wordcount-result.txt` in your current directory.
-
-#### Alternative Method: Use the PACT web interface
-(And get a nice execution plan overview for free!)
-
-	./bin/start-local.sh
-	./bin/pact-webfrontend.sh start
-
-Get some test data:
-	 wget -O ~/hamlet.txt http://www.gutenberg.org/cache/epub/1787/pg1787.txt
-
-* Point your browser to to http://localhost:8080/launch.html. Upload the WordCount.jar using the upload form in the lower right box. The jar is located in `./examples/pact/pact-examples-0.2-ozone-WordCount.jar`.
-* Select the WordCount jar from the list of available jars (upper left).
-* Enter the argument line in the lower-left box: `1 file://<path to>/hamlet.txt file://<wherever you want the>/wordcount-result.txt`
-
-* Hit “Run Job”
-
+TODO
 
 ### Eclipse Setup and Debugging
 
 To contribute back to the project or develop your own jobs for Stratosphere, you need a working development environment. We use Eclipse and IntelliJ for development. Here we focus on Eclipse.
 
-If you want to work on the scala code you will need the following plugins:
-  * scala-ide: http://download.scala-ide.org/sdk/e38/scala210/stable/site
-  * m2eclipse-scala: http://alchim31.free.fr/m2e-scala/update-site
-  * build-helper-maven-plugin: https://repository.sonatype.org/content/repositories/forge-sites/m2e-extras/0.15.0/N/0.15.0.201206251206/
-
-When you don't have the plugins your project will have build errors, you can just close the scala projects and ignore them.
+If you want to work on the Stratosphere code you will need maven support inside Eclipse. Just install the m2eclipse plugin: http://www.eclipse.org/m2e/
 
 Import the Stratosphere source code using Maven's Import tool:
   * Select "Import" from the "File"-menu.
@@ -108,48 +78,16 @@ Create a new Eclipse Project that requires Stratosphere in its Build Path!
 
 Use this skeleton as an entry point for your own Jobs: It allows you to hit the “Run as” -> “Java Application” feature of Eclipse. (You have to stop the application manually, because only one instance can run at a time)
 
-```java
-public class Tutorial implements PlanAssembler, PlanAssemblerDescription {
-
-	public static void execute(Plan toExecute) throws Exception {
-		LocalExecutor executor = new LocalExecutor();
-		executor.start();
-		long runtime = executor.executePlan(toExecute);
-		System.out.println("runtime:  " + runtime);
-		executor.stop();
-	}
-
-	@Override
-	public Plan getPlan(String... args) {
-		// your Plan goes here
-	}
-
-	@Override
-	public String getDescription() {
-		return "Usage: …. "; // TODO
-	}
-
-	public static void main(String[] args) throws Exception {
-		Tutorial tut = new Tutorial();
-		Plan toExecute = tut.getPlan( /* Arguments */);
-		execute(toExecute);
-	}
-}
-
-```
 
 ## Support
 Don’t hesitate to ask!
 
-[Open an issue](https://github.com/stratosphere/stratosphere/issues/new) on Github, if you found a bug or need any help.
-We also have a [mailing list](https://groups.google.com/d/forum/stratosphere-dev) for both users and developers.
-
-Some of our colleagues are also in the #dima irc channel on freenode.
+[Open an issue](https://github.com/bjoernlohrmann/stratosphere/issues/new) on Github, if you found a bug or need any help.
 
 ## Documentation
 
-There is our (old) [official Wiki](https://stratosphere.eu/wiki/doku).
-We are in the progress of migrating it to the [GitHub Wiki](https://github.com/stratosphere/stratosphere/wiki/_pages)
+There is the (old) [official Stratosphere Wiki](https://stratosphere.eu/wiki/doku).
+It is in the progress of being migrated to the [GitHub Wiki](https://github.com/stratosphere/stratosphere/wiki/_pages)
 
 Please make edits to the Wiki if you find inconsistencies or [Open an issue](https://github.com/stratosphere/stratosphere/issues/new) 
 
@@ -165,20 +103,17 @@ We use the GitHub Pull Request system for the development of Stratosphere. Just 
 * Bug reports
 * Bug fixes
 * Documentation
-* Tools that ease the use and development of Stratosphere
+* Tools that ease the use and development of Stratosphere Streaming
 * Well-written Stratosphere jobs
 
 
-Let us know if you have created a system that uses Stratosphere, so that we can link to you.
+Let us know if you have created a system that uses Stratosphere-Streaming, so that we can link to you.
 
 ## About
 
-[Stratosphere](www.stratosphere.eu) is a DFG-founded research project. Ozone is the codename of the latest Stratosphere distribution. 
-We combine cutting edge research outcomes with a stable and usable codebase.
-Decisions are not made behind closed doors. We discuss all changes and plans on our Mailinglists and on GitHub.
+[Stratosphere](www.stratosphere.eu) is a DFG-founded research project. Ozone is the codename of the latest Stratosphere distribution. The Stratosphere-Streaming
+distribution is a fork of Ozone. We combine cutting edge research outcomes with a stable and usable codebase.
 
-
-Build Status: [![Build Status](https://travis-ci.org/stratosphere/stratosphere.png)](https://travis-ci.org/stratosphere/stratosphere)
 
 
 
