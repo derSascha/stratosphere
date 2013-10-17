@@ -17,6 +17,7 @@ package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -40,8 +41,6 @@ public class ChainManagerThread extends Thread {
 	private final ConcurrentHashMap<ExecutionVertexID, TaskInfo> activeMapperTasks;
 
 	private final CopyOnWriteArraySet<CandidateChainConfig> candidateChains;
-	
-	
 
 	private ThreadMXBean tmx;
 
@@ -98,7 +97,11 @@ public class ChainManagerThread extends Thread {
 	private ChainInfo findLongestPossibleChain(
 			CandidateChainConfig candidateChain) {
 
-		ArrayList<TaskInfo> tasks = getTasksReadyForChaining(candidateChain);
+		if (!areTasksReadyForChaining(candidateChain)) {
+			return null;
+		}
+
+		ArrayList<TaskInfo> tasks = getSparseListOfTasksReadyForChaining(candidateChain);
 
 		int longestChainStart = -1;
 		int longestChainLength = 0;
@@ -108,27 +111,26 @@ public class ChainManagerThread extends Thread {
 
 			double chainCPUUsage = 0;
 
+			// the index after the last task in the chain
 			int chainEnd;
 
 			for (chainEnd = chainStart; chainEnd < tasks.size(); chainEnd++) {
 				TaskInfo taskInfo = tasks.get(chainEnd);
 
 				if (taskInfo == null) {
-					chainEnd--;
 					break;
 				}
 
 				double taskCPUUtilization = taskInfo.getCPUUtilization();
-				chainCPUUsage += taskCPUUtilization;
 
-				if (chainCPUUsage > 90.0) {
-					chainCPUUsage -= taskCPUUtilization;
-					chainEnd--;
+				if (chainCPUUsage + taskCPUUtilization <= 90.0) {
+					chainCPUUsage += taskCPUUtilization;
+				} else {
 					break;
 				}
 			}
 
-			int chainLength = chainEnd + 1 - chainStart;
+			int chainLength = chainEnd - chainStart;
 
 			if (chainLength > 1 && chainCPUUsage > longestChainCPUUsage) {
 				longestChainStart = chainStart;
@@ -144,19 +146,31 @@ public class ChainManagerThread extends Thread {
 		return null;
 	}
 
-	private ArrayList<TaskInfo> getTasksReadyForChaining(
-			CandidateChainConfig candidateChain) {
-		ArrayList<TaskInfo> tasks = new ArrayList<TaskInfo>();
+	private boolean areTasksReadyForChaining(CandidateChainConfig candidateChain) {
 
 		for (ExecutionVertexID vertexID : candidateChain
 				.getChainingCandidates()) {
 
 			TaskInfo taskInfo = this.activeMapperTasks.get(vertexID);
-			if (taskInfo != null && taskInfo.hasCPUUtilizationMeasurements()
-					&& !taskInfo.isChained()) {
-				tasks.add(taskInfo);
-			} else {
+
+			if (taskInfo == null || !taskInfo.hasCPUUtilizationMeasurements()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private ArrayList<TaskInfo> getSparseListOfTasksReadyForChaining(
+			CandidateChainConfig candidateChain) {
+		ArrayList<TaskInfo> tasks = new ArrayList<TaskInfo>();
+		for (ExecutionVertexID vertexID : candidateChain
+				.getChainingCandidates()) {
+
+			TaskInfo taskInfo = this.activeMapperTasks.get(vertexID);
+			if (taskInfo.isChained()) {
 				tasks.add(null);
+			} else {
+				tasks.add(taskInfo);
 			}
 		}
 		return tasks;
@@ -166,21 +180,22 @@ public class ChainManagerThread extends Thread {
 			ArrayList<TaskInfo> candidateChainMembers, int chainStart,
 			int chainLength) {
 
-		TaskInfo nextToChain = candidateChainMembers.get(chainStart);
+		ChainInfo chain = new ChainInfo(candidateChain);
 
-		ChainInfo chain = new ChainInfo(candidateChain, nextToChain, chainStart);
+		StringBuilder logMessage = new StringBuilder(
+				"Created chain with tasks:");
 
-		StringBuilder logMessage = new StringBuilder("Created chain with tasks: ");
-		logMessage.append(nextToChain.getTask().getEnvironment().getTaskName());
+		for (int i = chainStart; i < chainStart + chainLength; i++) {
+			TaskInfo nextToChain = candidateChainMembers.get(i);
+			logMessage.append(" ");
+			logMessage.append(nextToChain.getTask().getEnvironment()
+					.getTaskName());
+			logMessage.append(nextToChain.getTask().getEnvironment()
+					.getIndexInSubtaskGroup());
 
-		for (int i = chainStart + 1; i < chainStart + chainLength; i++) {
-			nextToChain = candidateChainMembers.get(i);
-			logMessage.append(", ");
-			logMessage.append(nextToChain.getTask().getEnvironment().getTaskName());
-			
-			chain.appendToChain(candidateChainMembers.get(i));
+			chain.appendToChain(candidateChainMembers.get(i), i);
 		}
-		
+
 		LOG.info(logMessage.toString());
 
 		return chain;

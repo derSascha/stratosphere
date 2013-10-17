@@ -110,10 +110,6 @@ public class TaskInfo implements ExecutionListener {
 					* (this.environmentThreadSet.getNumberOfUserThreads() + 1);
 
 			this.cpuUtilization.addValue(new QosValue(cpuUtilization, now));
-
-			System.out.printf(
-					"Measured %.3f %% CPU utilization for vertex %s\n",
-					cpuUtilization, this.task.getEnvironment().getTaskName());
 		}
 	}
 	

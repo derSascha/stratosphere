@@ -31,17 +31,17 @@ public class ChainInfo {
 
 	private int indexOfFirstMemberInCandidateChainConfig;
 
-	public ChainInfo(CandidateChainConfig candidateChainConfig,
-			TaskInfo firstMember, int indexOfFirstMemberInCandidateChainConfig) {
+	public ChainInfo(CandidateChainConfig candidateChainConfig) {
 
 		this.candidateChainConfig = candidateChainConfig;
 		this.chainMembers = new ArrayList<TaskInfo>();
-		this.chainMembers.add(firstMember);
-		this.indexOfFirstMemberInCandidateChainConfig = indexOfFirstMemberInCandidateChainConfig;
-		firstMember.chainTask(this);
 	}
 
-	public void appendToChain(TaskInfo taskInfo) {
+	public void appendToChain(TaskInfo taskInfo, int indexInCandidateChain) {
+		if (this.chainMembers.isEmpty()) {
+			this.indexOfFirstMemberInCandidateChainConfig = indexInCandidateChain;
+		}
+		
 		this.chainMembers.add(taskInfo);
 		taskInfo.chainTask(this);
 	}
