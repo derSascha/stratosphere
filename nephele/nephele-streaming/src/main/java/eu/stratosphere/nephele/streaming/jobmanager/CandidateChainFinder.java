@@ -34,94 +34,13 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosVertex;
  * @author Bjoern Lohrmann
  * 
  */
-public class CandidateChainFinder {
+public class CandidateChainFinder implements QosGraphTraversalListener {
 
-	private QosGraphTraversalListener traversalListener = new QosGraphTraversalListener() {
+	public InstanceConnectionInfo currentChainTaskManager;
 
-		public InstanceConnectionInfo executingTaskManager = null;
+	public LinkedList<ExecutionVertexID> currentChain;
 
-		public LinkedList<ExecutionVertexID> currentChain = new LinkedList<ExecutionVertexID>();
-
-		public int lastChainElementSequenceIndex = -1;
-
-		@Override
-		public void processQosVertex(QosVertex vertex,
-				SequenceElement<JobVertexID> sequenceElem) {
-
-			if (this.currentChain.isEmpty()) {
-				tryToStartChain(vertex, sequenceElem);
-			} else {
-				appendToOrRestartChain(vertex, sequenceElem);
-			}
-		}
-
-		private void appendToOrRestartChain(QosVertex vertex,
-				SequenceElement<JobVertexID> sequenceElem) {
-
-			int noOfInputGatesInExecutionGraph = CandidateChainFinder.this.executionGraph
-					.getVertexByID(vertex.getID()).getNumberOfInputGates();
-
-            QosGate inputGate = vertex.getInputGate(
-                    sequenceElem.getInputGateIndex());
-
-            if (    inputGate != null
-                    && noOfInputGatesInExecutionGraph == 1
-					&& inputGate.getNumberOfEdges() == 1 // noOfChannelsOnInputGate
-					&& vertex.getExecutingInstance().equals(
-							this.executingTaskManager)
-					&& this.lastChainElementSequenceIndex < sequenceElem
-							.getIndexInSequence()) {
-
-				this.currentChain.add(vertex.getID());
-				this.lastChainElementSequenceIndex = sequenceElem
-						.getIndexInSequence();
-			} else {
-				finishChain();
-				tryToStartChain(vertex, sequenceElem);
-			}
-		}
-
-		private void tryToStartChain(QosVertex vertex,
-				SequenceElement<JobVertexID> sequenceElem) {
-
-			QosGate outputGate = vertex.getOutputGate(sequenceElem
-					.getOutputGateIndex());
-
-            if(outputGate == null) {
-                return;
-            }
-
-			int noOfEdgesInOutputGate = outputGate.getNumberOfEdges();
-
-			int noOfOutputGatesInExecutionGraph = CandidateChainFinder.this.executionGraph
-					.getVertexByID(vertex.getID()).getNumberOfOutputGates();
-
-			if (noOfEdgesInOutputGate == 1
-					&& noOfOutputGatesInExecutionGraph == 1) {
-				this.executingTaskManager = vertex.getExecutingInstance();
-				this.currentChain.add(outputGate.getVertex().getID());
-				this.lastChainElementSequenceIndex = sequenceElem
-						.getIndexInSequence();
-			}
-		}
-
-		@Override
-		public void processQosEdge(QosEdge edge,
-				SequenceElement<JobVertexID> sequenceElem) {
-			// do nothing
-		}
-
-		private void finishChain() {
-			if (this.currentChain.size() >= 2) {
-				CandidateChainFinder.this.chainListener.handleCandidateChain(
-						this.executingTaskManager, this.currentChain);
-			}
-
-			this.executingTaskManager = null;
-			this.lastChainElementSequenceIndex = -1;
-			this.currentChain.clear();
-		}
-	};
+	public int currentChainLastElementSequenceIndex;
 
 	private QosGraphTraversal traversal;
 
@@ -131,11 +50,95 @@ public class CandidateChainFinder {
 
 	public CandidateChainFinder(CandidateChainListener chainListener,
 			ExecutionGraph executionGraph) {
+
 		this.executionGraph = executionGraph;
 		this.chainListener = chainListener;
-		this.traversal = new QosGraphTraversal(null, null,
-				this.traversalListener);
+		this.currentChain = new LinkedList<ExecutionVertexID>();
+		this.currentChainLastElementSequenceIndex = -1;
+		this.currentChainTaskManager = null;
+
+		this.traversal = new QosGraphTraversal(null, null, this);
 		this.traversal.setClearTraversedVertices(false);
+	}
+
+	@Override
+	public void processQosVertex(QosVertex vertex,
+			SequenceElement<JobVertexID> sequenceElem) {
+
+		if (this.currentChain.isEmpty()) {
+			tryToStartChain(vertex, sequenceElem);
+		} else {
+			appendToOrRestartChain(vertex, sequenceElem);
+		}
+	}
+
+	private void appendToOrRestartChain(QosVertex vertex,
+			SequenceElement<JobVertexID> sequenceElem) {
+
+		int noOfInputGatesInExecutionGraph = CandidateChainFinder.this.executionGraph
+				.getVertexByID(vertex.getID()).getNumberOfInputGates();
+
+		QosGate inputGate = vertex.getInputGate(sequenceElem
+				.getInputGateIndex());
+
+		if (inputGate != null
+				&& noOfInputGatesInExecutionGraph == 1
+				&& inputGate.getNumberOfEdges() == 1 // noOfChannelsOnInputGate
+				&& vertex.getExecutingInstance().equals(
+						this.currentChainTaskManager)
+				&& this.currentChainLastElementSequenceIndex < sequenceElem
+						.getIndexInSequence()) {
+
+			this.currentChain.add(vertex.getID());
+			this.currentChainLastElementSequenceIndex = sequenceElem
+					.getIndexInSequence();
+		} else {
+			finishCurrentChain();
+			tryToStartChain(vertex, sequenceElem);
+		}
+	}
+
+	private void tryToStartChain(QosVertex vertex,
+			SequenceElement<JobVertexID> sequenceElem) {
+
+		QosGate outputGate = vertex.getOutputGate(sequenceElem
+				.getOutputGateIndex());
+
+		if (outputGate == null) {
+			return;
+		}
+
+		int noOfEdgesInOutputGate = outputGate.getNumberOfEdges();
+
+		int noOfOutputGatesInExecutionGraph = CandidateChainFinder.this.executionGraph
+				.getVertexByID(vertex.getID()).getNumberOfOutputGates();
+
+		if (noOfEdgesInOutputGate == 1 && noOfOutputGatesInExecutionGraph == 1) {
+			this.currentChainTaskManager = vertex.getExecutingInstance();
+			this.currentChain.add(outputGate.getVertex().getID());
+			this.currentChainLastElementSequenceIndex = sequenceElem
+					.getIndexInSequence();
+		}
+	}
+
+	@Override
+	public void processQosEdge(QosEdge edge,
+			SequenceElement<JobVertexID> sequenceElem) {
+		// do nothing
+	}
+
+	private void finishCurrentChain() {
+		if (this.currentChain.size() >= 2) {
+			this.chainListener.handleCandidateChain(this.currentChainTaskManager,
+					this.currentChain);
+			this.currentChain = new LinkedList<ExecutionVertexID>();
+		} else {
+			this.currentChain.clear();
+		}
+
+		this.currentChainTaskManager = null;
+		this.currentChainLastElementSequenceIndex = -1;
+
 	}
 
 	public void findChainsAlongConstraint(LatencyConstraintID constraintID,
@@ -148,6 +151,7 @@ public class CandidateChainFinder {
 			for (QosVertex startVertex : groupStartVertex.getMembers()) {
 				this.traversal.setStartVertex(startVertex);
 				this.traversal.traverseForward();
+				this.finishCurrentChain();
 			}
 		}
 	}
