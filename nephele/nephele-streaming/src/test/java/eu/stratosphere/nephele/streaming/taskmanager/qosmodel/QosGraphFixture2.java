@@ -91,8 +91,6 @@ public class QosGraphFixture2 {
     public JobGraphLatencyConstraint constraintVertexEdgeVertexEdge;
 
     /**
-<<<<<<< HEAD
-=======
      * i -> t1
      */
     public JobGraphLatencyConstraint constraintInputVertexEdgeVertex;
@@ -103,7 +101,6 @@ public class QosGraphFixture2 {
     public JobGraphLatencyConstraint constraintMiddleOfGraph;
 
     /**
->>>>>>> issue1208
      * Creates a new fixture instance.
      */
     public QosGraphFixture2() throws JobGraphDefinitionException, GraphConversionException {
