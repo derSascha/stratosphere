@@ -266,15 +266,15 @@ public class QosGraphFixture {
 
 		// inject InstanceConnectionInfos
 		this.instanceConnectionInfos = new InstanceConnectionInfo[5][];
-		this.instanceConnectionInfos[0] = QosGraphFixtureUtil
+		this.instanceConnectionInfos[0] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex1);
-		this.instanceConnectionInfos[1] = QosGraphFixtureUtil
+		this.instanceConnectionInfos[1] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex2);
-		this.instanceConnectionInfos[2] = QosGraphFixtureUtil
+		this.instanceConnectionInfos[2] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex3);
-		this.instanceConnectionInfos[3] = QosGraphFixtureUtil
+		this.instanceConnectionInfos[3] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex4);
-		this.instanceConnectionInfos[4] = QosGraphFixtureUtil
+		this.instanceConnectionInfos[4] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex5);
 	}
 

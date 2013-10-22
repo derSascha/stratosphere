@@ -57,19 +57,6 @@ public class CandidateChainFinderTest {
         fix2 = new QosGraphFixture2();
     }
 
-    @Test
-    public void testSomething() throws Exception {
-        CandidateChainFinder candidateChainFinder =
-                new CandidateChainFinder(this.listener, this.fix.execGraph);
-        JobGraphLatencyConstraint constraint = this.fix.constraint1;
-        QosGraph constrainedQosGraph =
-                QosGraphFactory.createConstrainedQosGraph(this.fix.execGraph, constraint);
-        candidateChainFinder.findChainsAlongConstraint(constraint.getID(), constrainedQosGraph);
-        verify(this.listener, atLeastOnce()).handleCandidateChain(
-                any(InstanceConnectionInfo.class), any(LinkedList.class)
-        );
-    }
-
     /**
      * TODO callback is not called is that correct for the given
      * constraint?
@@ -83,7 +70,7 @@ public class CandidateChainFinderTest {
                 this.fix.execGraph, this.fix.constraint4);
         CandidateChainFinder f = new CandidateChainFinder(this.listener, this.fix.execGraph);
         f.findChainsAlongConstraint(this.fix.constraint4.getID(), constrainedQosGraph);
-        verify(this.listener, atLeastOnce()).handleCandidateChain(
+        verify(this.listener, never()).handleCandidateChain(
                 any(InstanceConnectionInfo.class), any(LinkedList.class));
     }
 
@@ -99,7 +86,7 @@ public class CandidateChainFinderTest {
         );
         CandidateChainFinder f = new CandidateChainFinder(this.listener, this.fix.execGraph);
         f.findChainsAlongConstraint(this.fix.constraint3.getID(), constrainedQosGraph);
-        verify(this.listener, atLeastOnce()).handleCandidateChain(
+        verify(this.listener, never()).handleCandidateChain(
                 any(InstanceConnectionInfo.class), any(LinkedList.class));
     }
 
@@ -156,5 +143,33 @@ public class CandidateChainFinderTest {
         verify(listener, atLeastOnce()).handleCandidateChain(
                 any(InstanceConnectionInfo.class), any(LinkedList.class)
         );
+    }
+
+    @Test
+    public void testMiddle() throws Exception {
+        QosGraph constrainedQosGraph = QosGraphFactory.createConstrainedQosGraph(
+                fix2.executionGraph, fix2.constraintMiddleOfGraph);
+        new CandidateChainFinder(listener, fix2.executionGraph)
+                .findChainsAlongConstraint(fix2.constraintMiddleOfGraph.getID(), constrainedQosGraph);
+        verify(listener, times(1)).handleCandidateChain(
+                any(InstanceConnectionInfo.class), any(LinkedList.class)
+        );
+
+    }
+
+    /**
+     * There should not be a chain from input to task1
+     * because the edge between is bipartite.
+     *
+     */
+    @Test
+    public void testBipartite() {
+        QosGraph constrainedQosGraph = QosGraphFactory.createConstrainedQosGraph(
+                fix2.executionGraph, fix2.constraintInputVertexEdgeVertex
+        );
+        new CandidateChainFinder(listener, fix2.executionGraph)
+                .findChainsAlongConstraint(fix2.constraintInputVertexEdgeVertex.getID(), constrainedQosGraph);
+        verify(listener, never()).handleCandidateChain(any(InstanceConnectionInfo.class),
+                any(LinkedList.class));
     }
 }

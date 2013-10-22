@@ -91,6 +91,19 @@ public class QosGraphFixture2 {
     public JobGraphLatencyConstraint constraintVertexEdgeVertexEdge;
 
     /**
+<<<<<<< HEAD
+=======
+     * i -> t1
+     */
+    public JobGraphLatencyConstraint constraintInputVertexEdgeVertex;
+
+    /**
+     * t1 -> t2 -> t3
+     */
+    public JobGraphLatencyConstraint constraintMiddleOfGraph;
+
+    /**
+>>>>>>> issue1208
      * Creates a new fixture instance.
      */
     public QosGraphFixture2() throws JobGraphDefinitionException, GraphConversionException {
@@ -194,15 +207,15 @@ public class QosGraphFixture2 {
             }
         }
         instanceConnectionInfos = new InstanceConnectionInfo[5][];
-        instanceConnectionInfos[0] = QosGraphFixtureUtil
+        instanceConnectionInfos[0] = QosGraphTestUtil
                 .generateAndAssignInstances(executionInputVertex);
-        instanceConnectionInfos[1] = QosGraphFixtureUtil
+        instanceConnectionInfos[1] = QosGraphTestUtil
                 .generateAndAssignInstances(executionTaskVertex1);
-        instanceConnectionInfos[2] = QosGraphFixtureUtil
+        instanceConnectionInfos[2] = QosGraphTestUtil
                 .generateAndAssignInstances(executionTaskVertex2);
-        instanceConnectionInfos[3] = QosGraphFixtureUtil
+        instanceConnectionInfos[3] = QosGraphTestUtil
                 .generateAndAssignInstances(executionTaskVertex3);
-        instanceConnectionInfos[4] = QosGraphFixtureUtil
+        instanceConnectionInfos[4] = QosGraphTestUtil
                 .generateAndAssignInstances(executionOutputVertex);
     }
 
@@ -238,6 +251,20 @@ public class QosGraphFixture2 {
         vertexEdgeVertexEdge.addVertex(jobTaskVertex2.getID(), 0, 0);
         vertexEdgeVertexEdge.addEdge(jobTaskVertex2.getID(), 0, jobTaskVertex3.getID(), 0);
         constraintVertexEdgeVertexEdge = new JobGraphLatencyConstraint(vertexEdgeVertexEdge, 2000l);
+
+        JobGraphSequence inputVertexEdgeVertex = new JobGraphSequence();
+        inputVertexEdgeVertex.addVertex(jobInputVertex.getID(), 0, 0);
+        inputVertexEdgeVertex.addEdge(jobInputVertex.getID(), 0, jobTaskVertex1.getID(), 0);
+        inputVertexEdgeVertex.addVertex(jobTaskVertex1.getID(),0, 0);
+        constraintInputVertexEdgeVertex = new JobGraphLatencyConstraint(inputVertexEdgeVertex, 2000l);
+
+        JobGraphSequence middle = new JobGraphSequence();
+        middle.addVertex(jobTaskVertex1.getID(), 0, 0);
+        middle.addEdge(jobTaskVertex1.getID(), 0, jobTaskVertex2.getID(), 0);
+        middle.addVertex(jobTaskVertex2.getID(), 0, 0);
+        middle.addEdge(jobTaskVertex2.getID(), 0, jobTaskVertex3.getID(), 0);
+        middle.addVertex(jobTaskVertex3.getID(), 0, 0);
+        constraintMiddleOfGraph = new JobGraphLatencyConstraint(middle, 2000l);
     }
 
     public static class DummyTask extends AbstractTask {
