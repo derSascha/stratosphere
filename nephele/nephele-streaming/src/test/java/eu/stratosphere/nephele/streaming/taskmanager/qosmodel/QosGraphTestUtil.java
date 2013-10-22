@@ -19,6 +19,11 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
 import eu.stratosphere.nephele.instance.AbstractInstance;
 import eu.stratosphere.nephele.instance.AllocatedResource;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
+import eu.stratosphere.nephele.io.RecordReader;
+import eu.stratosphere.nephele.io.RecordWriter;
+import eu.stratosphere.nephele.template.AbstractGenericInputTask;
+import eu.stratosphere.nephele.template.AbstractOutputTask;
+import eu.stratosphere.nephele.template.AbstractTask;
 import org.powermock.api.mockito.PowerMockito;
 
 import java.net.InetAddress;
@@ -142,5 +147,45 @@ public class QosGraphTestUtil {
             }
         }
         return connectionInfos;
+    }
+
+    public static class DummyTask extends AbstractTask {
+
+        @Override
+        public void registerInputOutput() {
+            new RecordReader<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
+            new RecordWriter<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
+        }
+
+        @Override
+        public void invoke() throws Exception {
+            // nothing
+        }
+    }
+
+    public static class DummyInputTask extends AbstractGenericInputTask {
+
+        @Override
+        public void registerInputOutput() {
+            new RecordWriter<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
+        }
+
+        @Override
+        public void invoke() throws Exception {
+            // nothing
+        }
+    }
+
+    public static class DummyOutputTask extends AbstractOutputTask {
+
+        @Override
+        public void registerInputOutput() {
+            new RecordReader<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
+        }
+
+        @Override
+        public void invoke() throws Exception {
+            // nothing
+        }
     }
 }

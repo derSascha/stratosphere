@@ -19,8 +19,6 @@ import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.instance.InstanceManager;
 import eu.stratosphere.nephele.instance.InstanceType;
 import eu.stratosphere.nephele.io.DistributionPattern;
-import eu.stratosphere.nephele.io.RecordReader;
-import eu.stratosphere.nephele.io.RecordWriter;
 import eu.stratosphere.nephele.io.channels.ChannelType;
 import eu.stratosphere.nephele.io.compression.CompressionLevel;
 import eu.stratosphere.nephele.jobgraph.*;
@@ -123,23 +121,23 @@ public class QosGraphFixture2 {
         jobGraph = new JobGraph();
 
         jobInputVertex = new JobInputVertex("vInput", jobGraph);
-        jobInputVertex.setInputClass(DummyInputTask.class);
+        jobInputVertex.setInputClass(QosGraphTestUtil.DummyInputTask.class);
         jobInputVertex.setNumberOfSubtasks(2);
 
         jobTaskVertex1 = new JobTaskVertex("vTask1", jobGraph);
-        jobTaskVertex1.setTaskClass(DummyTask.class);
+        jobTaskVertex1.setTaskClass(QosGraphTestUtil.DummyTask.class);
         jobTaskVertex1.setNumberOfSubtasks(2);
 
         jobTaskVertex2 = new JobTaskVertex("vTask2", jobGraph);
-        jobTaskVertex2.setTaskClass(DummyTask.class);
+        jobTaskVertex2.setTaskClass(QosGraphTestUtil.DummyTask.class);
         jobTaskVertex2.setNumberOfSubtasks(2);
 
         jobTaskVertex3 = new JobTaskVertex("vTask3", jobGraph);
-        jobTaskVertex3.setTaskClass(DummyTask.class);
+        jobTaskVertex3.setTaskClass(QosGraphTestUtil.DummyTask.class);
         jobTaskVertex3.setNumberOfSubtasks(2);
 
         jobOutputVertex = new JobOutputVertex("vOutput", jobGraph);
-        jobOutputVertex.setOutputClass(DummyOutputTask.class);
+        jobOutputVertex.setOutputClass(QosGraphTestUtil.DummyOutputTask.class);
         jobOutputVertex.setNumberOfSubtasks(2);
 
         jobInputVertex.connectTo(jobTaskVertex1, ChannelType.NETWORK, CompressionLevel.NO_COMPRESSION,
@@ -262,46 +260,6 @@ public class QosGraphFixture2 {
         middle.addEdge(jobTaskVertex2.getID(), 0, jobTaskVertex3.getID(), 0);
         middle.addVertex(jobTaskVertex3.getID(), 0, 0);
         constraintMiddleOfGraph = new JobGraphLatencyConstraint(middle, 2000l);
-    }
-
-    public static class DummyTask extends AbstractTask {
-
-        @Override
-        public void registerInputOutput() {
-            new RecordReader<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
-            new RecordWriter<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
-        }
-
-        @Override
-        public void invoke() throws Exception {
-            // nothing
-        }
-    }
-
-    public static class DummyInputTask extends AbstractGenericInputTask {
-
-        @Override
-        public void registerInputOutput() {
-            new RecordWriter<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
-        }
-
-        @Override
-        public void invoke() throws Exception {
-            // nothing
-        }
-    }
-
-    public static class DummyOutputTask extends AbstractOutputTask {
-
-        @Override
-        public void registerInputOutput() {
-            new RecordReader<QosGraphFixture.DummyRecord>(this, QosGraphFixture.DummyRecord.class);
-        }
-
-        @Override
-        public void invoke() throws Exception {
-            // nothing
-        }
     }
 
 }

@@ -31,7 +31,12 @@ import org.powermock.modules.junit4.PowerMockRunner;
 @RunWith(PowerMockRunner.class)
 public class QosGraphFixture2Test {
     @Test
-    public void testConstruction() throws Exception {
+    public void testConstructionFixture2() throws Exception {
         new QosGraphFixture2();
+    }
+
+    @Test
+    public void testConstructionFixture3() throws Exception {
+        new QosGraphFixture3();
     }
 }
