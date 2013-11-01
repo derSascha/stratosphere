@@ -14,35 +14,41 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
-
 /**
- * @author Bjoern Lohrmann
+ * @author bjoern
  * 
  */
-public class ChainInfo {
+public class ChainingUtil {
 
-	private CandidateChainConfig candidateChainConfig;
+	/**
+	 * @param flowsToChain
+	 *            The sub-dataflows to chain.
+	 */
+	public static void mergeControlFlowsInTasks(TaskChain dataflow) {
+		// FIXME implement
+		// StringBuilder logMessage = new StringBuilder(
+		// "Created chain with tasks:");
+		//
+		// for (int i = chainStart; i < chainStart + chainLength; i++) {
+		// TaskInfo nextToChain = candidateChainMembers.get(i);
+		// logMessage.append(" ");
+		// logMessage.append(nextToChain.getTask().getEnvironment()
+		// .getTaskName());
+		// logMessage.append(nextToChain.getTask().getEnvironment()
+		// .getIndexInSubtaskGroup());
+		//
+		// chain.appendToChain(candidateChainMembers.get(i), i);
+		// }
+		//
+		// LOG.info(logMessage.toString());
 
-	private List<TaskInfo> chainMembers;
-
-	private int indexOfFirstMemberInCandidateChainConfig;
-
-	public ChainInfo(CandidateChainConfig candidateChainConfig) {
-
-		this.candidateChainConfig = candidateChainConfig;
-		this.chainMembers = new ArrayList<TaskInfo>();
 	}
 
-	public void appendToChain(TaskInfo taskInfo, int indexInCandidateChain) {
-		if (this.chainMembers.isEmpty()) {
-			this.indexOfFirstMemberInCandidateChainConfig = indexInCandidateChain;
-		}
-
-		this.chainMembers.add(taskInfo);
-		taskInfo.chainTask(this);
+	/**
+	 * @param newLeftChain
+	 * @param runnable
+	 */
+	public static void splitControlFlowsInTasks(TaskChain leftChain,
+			TaskChain rightChain) {
 	}
 }

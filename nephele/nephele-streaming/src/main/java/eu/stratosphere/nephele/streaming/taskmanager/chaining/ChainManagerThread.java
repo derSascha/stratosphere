@@ -17,10 +17,10 @@ package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.log4j.Logger;
 
@@ -38,17 +38,23 @@ public class ChainManagerThread extends Thread {
 	private final static Logger LOG = Logger
 			.getLogger(ChainManagerThread.class);
 
+	private final ExecutorService backgroundChainingWorkers;
+
 	private final ConcurrentHashMap<ExecutionVertexID, TaskInfo> activeMapperTasks;
 
-	private final CopyOnWriteArraySet<CandidateChainConfig> candidateChains;
+	private final CopyOnWriteArraySet<CandidateChainConfig> pendingCandidateChainConfigs;
+
+	private final ArrayList<TaskChainer> taskChainers;
 
 	private ThreadMXBean tmx;
 
 	private boolean started;
 
 	public ChainManagerThread() throws ProfilingException {
+		this.backgroundChainingWorkers = Executors.newCachedThreadPool();
 		this.activeMapperTasks = new ConcurrentHashMap<ExecutionVertexID, TaskInfo>();
-		this.candidateChains = new CopyOnWriteArraySet<CandidateChainConfig>();
+		this.pendingCandidateChainConfigs = new CopyOnWriteArraySet<CandidateChainConfig>();
+		this.taskChainers = new ArrayList<TaskChainer>();
 
 		// Initialize MX interface and check if thread contention monitoring is
 		// supported
@@ -67,13 +73,15 @@ public class ChainManagerThread extends Thread {
 		int counter = 0;
 		try {
 			while (!interrupted()) {
+				this.processPendingCandidateChainConfigs();
 				this.collectThreadProfilingData();
 
-				if (counter == 0) {
-					this.attemptChainConstruction();
+				if (counter == 5) {
+					this.attemptDynamicChaining();
+					counter = 0;
 				}
 
-				counter = (counter + 1) % 5;
+				counter++;
 				Thread.sleep(1000);
 			}
 		} catch (InterruptedException e) {
@@ -83,127 +91,45 @@ public class ChainManagerThread extends Thread {
 		}
 	}
 
-	private void attemptChainConstruction() {
-		for (CandidateChainConfig candidateChain : this.candidateChains) {
-			attemptChainConstruction(candidateChain);
+	private void attemptDynamicChaining() {
+		for (TaskChainer taskChainer : this.taskChainers) {
+			taskChainer.attemptDynamicChaining();
 		}
 	}
 
-	private void attemptChainConstruction(CandidateChainConfig candidateChain) {
-		ChainInfo longestPossibleChain = findLongestPossibleChain(candidateChain);
-		// FIXME activate chain
-	}
-
-	private ChainInfo findLongestPossibleChain(
-			CandidateChainConfig candidateChain) {
-
-		if (!areTasksReadyForChaining(candidateChain)) {
-			return null;
-		}
-
-		ArrayList<TaskInfo> tasks = getSparseListOfTasksReadyForChaining(candidateChain);
-
-		int longestChainStart = -1;
-		int longestChainLength = 0;
-		double longestChainCPUUsage = 0;
-
-		for (int chainStart = 0; chainStart < tasks.size() - 1; chainStart++) {
-
-			double chainCPUUsage = 0;
-
-			// the index after the last task in the chain
-			int chainEnd;
-
-			for (chainEnd = chainStart; chainEnd < tasks.size(); chainEnd++) {
-				TaskInfo taskInfo = tasks.get(chainEnd);
-
-				if (taskInfo == null) {
-					break;
-				}
-
-				double taskCPUUtilization = taskInfo.getCPUUtilization();
-
-				if (chainCPUUsage + taskCPUUtilization <= 90.0) {
-					chainCPUUsage += taskCPUUtilization;
-				} else {
-					break;
-				}
-			}
-
-			int chainLength = chainEnd - chainStart;
-
-			if (chainLength > 1 && chainCPUUsage > longestChainCPUUsage) {
-				longestChainStart = chainStart;
-				longestChainLength = chainLength;
-				longestChainCPUUsage = chainCPUUsage;
+	private void processPendingCandidateChainConfigs() {
+		for (CandidateChainConfig candidateChainConfig : this.pendingCandidateChainConfigs) {
+			boolean success = tryToCreateTaskChainer(candidateChainConfig);
+			if (success) {
+				this.pendingCandidateChainConfigs.remove(candidateChainConfig);
 			}
 		}
-
-		if (longestChainLength > 0) {
-			return createChain(candidateChain, tasks, longestChainStart,
-					longestChainLength);
-		}
-		return null;
 	}
 
-	private boolean areTasksReadyForChaining(CandidateChainConfig candidateChain) {
+	private boolean tryToCreateTaskChainer(
+			CandidateChainConfig candidateChainConfig) {
 
-		for (ExecutionVertexID vertexID : candidateChain
+		ArrayList<TaskInfo> taskInfos = new ArrayList<TaskInfo>();
+		for (ExecutionVertexID vertexID : candidateChainConfig
 				.getChainingCandidates()) {
 
 			TaskInfo taskInfo = this.activeMapperTasks.get(vertexID);
-
-			if (taskInfo == null || !taskInfo.hasCPUUtilizationMeasurements()) {
+			if (taskInfo == null) {
 				return false;
 			}
+
+			taskInfos.add(taskInfo);
 		}
+
+		this.taskChainers.add(new TaskChainer(taskInfos,
+				this.backgroundChainingWorkers));
+
 		return true;
 	}
 
-	private ArrayList<TaskInfo> getSparseListOfTasksReadyForChaining(
-			CandidateChainConfig candidateChain) {
-		ArrayList<TaskInfo> tasks = new ArrayList<TaskInfo>();
-		for (ExecutionVertexID vertexID : candidateChain
-				.getChainingCandidates()) {
-
-			TaskInfo taskInfo = this.activeMapperTasks.get(vertexID);
-			if (taskInfo.isChained()) {
-				tasks.add(null);
-			} else {
-				tasks.add(taskInfo);
-			}
-		}
-		return tasks;
-	}
-
-	private ChainInfo createChain(CandidateChainConfig candidateChain,
-			ArrayList<TaskInfo> candidateChainMembers, int chainStart,
-			int chainLength) {
-
-		ChainInfo chain = new ChainInfo(candidateChain);
-
-		StringBuilder logMessage = new StringBuilder(
-				"Created chain with tasks:");
-
-		for (int i = chainStart; i < chainStart + chainLength; i++) {
-			TaskInfo nextToChain = candidateChainMembers.get(i);
-			logMessage.append(" ");
-			logMessage.append(nextToChain.getTask().getEnvironment()
-					.getTaskName());
-			logMessage.append(nextToChain.getTask().getEnvironment()
-					.getIndexInSubtaskGroup());
-
-			chain.appendToChain(candidateChainMembers.get(i), i);
-		}
-
-		LOG.info(logMessage.toString());
-
-		return chain;
-	}
-
 	private void collectThreadProfilingData() {
-		for (TaskInfo taskInfo : this.activeMapperTasks.values()) {
-			taskInfo.measureCpuUtilization(this.tmx);
+		for (TaskChainer taskChainer : this.taskChainers) {
+			taskChainer.measureCPUUtilizations();
 		}
 	}
 
@@ -237,6 +163,6 @@ public class ChainManagerThread extends Thread {
 	}
 
 	public void registerCandidateChain(CandidateChainConfig chainConfig) {
-		this.candidateChains.add(chainConfig);
+		this.pendingCandidateChainConfigs.add(chainConfig);
 	}
 }

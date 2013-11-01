@@ -32,25 +32,29 @@ import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
  */
 public class TaskInfo implements ExecutionListener {
 
+	public static final int CPU_STATISTIC_WINDOW_SIZE = 5;
+
 	private final RuntimeTask task;
 
-	private final QosStatistic cpuUtilization;
-
 	private final ThreadMXBean tmx;
-	
+
+	private QosStatistic cpuUtilization;
+
+	private double invalidatedCpuUtilization;
+
 	private volatile EnvironmentThreadSet environmentThreadSet;
-	
+
 	private ChainInfo chain;
 
 	public TaskInfo(RuntimeTask task, ThreadMXBean tmx) {
 		this.task = task;
 		this.tmx = tmx;
-		this.cpuUtilization = new QosStatistic(5);
+		this.cpuUtilization = new QosStatistic(CPU_STATISTIC_WINDOW_SIZE);
+		this.invalidatedCpuUtilization = -1;
 		this.task.registerExecutionListener(this);
 	}
 
 	/**
-	 * 
 	 * @return the runtimetask
 	 */
 	public RuntimeTask getTask() {
@@ -86,13 +90,13 @@ public class TaskInfo implements ExecutionListener {
 		return this.task.getExecutionState();
 	}
 
-	public void measureCpuUtilization(ThreadMXBean tmx) {
+	public void measureCpuUtilization() {
 
 		if (this.environmentThreadSet != null) {
 
 			long now = System.currentTimeMillis();
 			InternalExecutionVertexThreadProfilingData profilingData = this.environmentThreadSet
-					.captureCPUUtilization(this.task.getJobID(), tmx, now);
+					.captureCPUUtilization(this.task.getJobID(), this.tmx, now);
 
 			/**
 			 * cpuUtilization measures in percent, how much of one CPU core's
@@ -112,13 +116,23 @@ public class TaskInfo implements ExecutionListener {
 			this.cpuUtilization.addValue(new QosValue(cpuUtilization, now));
 		}
 	}
-	
+
 	public boolean hasCPUUtilizationMeasurements() {
 		return this.cpuUtilization.hasValues();
 	}
-	
+
 	public double getCPUUtilization() {
 		return this.cpuUtilization.getArithmeticMean();
+	}
+
+	public void invalidateCPUUtilizationMeasurements() {
+		this.invalidatedCpuUtilization = this.cpuUtilization
+				.getArithmeticMean();
+		this.cpuUtilization = new QosStatistic(CPU_STATISTIC_WINDOW_SIZE);
+	}
+
+	public double getInvalidatedCpuUtilization() {
+		return this.invalidatedCpuUtilization;
 	}
 
 	/*
@@ -205,16 +219,16 @@ public class TaskInfo implements ExecutionListener {
 	public void cleanUp() {
 		this.task.unregisterExecutionListener(this);
 	}
-	
+
 	public void chainTask(ChainInfo chainInfo) {
 		this.chain = chainInfo;
 		// FIXME do actual chaining
 	}
-	
+
 	public void unchainTask() {
 		this.chain = null;
 		// FIXME do actual unchaining
-	}	
+	}
 
 	public boolean isChained() {
 		return this.chain != null;
