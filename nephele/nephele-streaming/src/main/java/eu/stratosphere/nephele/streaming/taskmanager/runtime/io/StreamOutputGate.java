@@ -130,7 +130,7 @@ public final class StreamOutputGate<T extends Record> extends
 
 			chainLink.getInputGate().haltTaskThreadIfNecessary();
 			chainLink.getOutputGate().flush();
-			chainLink.getOutputGate().streamChain = streamChain;
+			chainLink.getOutputGate().streamChain = null;
 		}
 
 		LOG.info("Successfully chained tasks " + streamChain);
@@ -172,10 +172,6 @@ public final class StreamOutputGate<T extends Record> extends
 					.getAmountOfDataTransmitted());
 		}
 		this.getWrappedOutputGate().outputBufferSent(channelIndex);
-	}
-
-	public void redirectToStreamChain(final RuntimeChain streamChain) {
-		this.streamChain = streamChain;
 	}
 
 	@Override
