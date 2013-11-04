@@ -29,7 +29,7 @@ import eu.stratosphere.nephele.ipc.RPC;
 import eu.stratosphere.nephele.net.NetUtils;
 import eu.stratosphere.nephele.protocols.PluginCommunicationProtocol;
 import eu.stratosphere.nephele.streaming.StreamingPluginLoader;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractSerializableQosMessage;
 import eu.stratosphere.nephele.util.StringUtils;
 
 /**
@@ -53,7 +53,7 @@ public final class StreamMessagingThread extends Thread {
 	 * The blocking queue which is used to asynchronously exchange data with the
 	 * job manager component of this plugin.
 	 */
-	private final BlockingQueue<AbstractStreamMessage> dataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
+	private final BlockingQueue<AbstractSerializableQosMessage> dataQueue = new LinkedBlockingQueue<AbstractSerializableQosMessage>();
 
 	private final BlockingQueue<InstanceConnectionInfo> connectionInfoQueue = new LinkedBlockingQueue<InstanceConnectionInfo>();
 
@@ -73,7 +73,7 @@ public final class StreamMessagingThread extends Thread {
 			while (!interrupted()) {
 				InstanceConnectionInfo connectionInfo = this.connectionInfoQueue
 						.take();
-				AbstractStreamMessage data = this.dataQueue.take();
+				AbstractSerializableQosMessage data = this.dataQueue.take();
 
 				try {
 					this.getProxy(connectionInfo).sendData(
@@ -110,7 +110,7 @@ public final class StreamMessagingThread extends Thread {
 
 	public void sendToTaskManagerAsynchronously(
 			final InstanceConnectionInfo connectionInfo,
-			final AbstractStreamMessage data) throws InterruptedException {
+			final AbstractSerializableQosMessage data) throws InterruptedException {
 		this.dataQueue.put(data);
 		this.connectionInfoQueue.put(connectionInfo);
 	}

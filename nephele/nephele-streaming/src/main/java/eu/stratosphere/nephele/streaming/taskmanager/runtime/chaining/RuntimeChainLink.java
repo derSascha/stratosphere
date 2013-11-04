@@ -20,7 +20,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
 import eu.stratosphere.nephele.types.Record;
 
-public final class StreamChainLink {
+public final class RuntimeChainLink {
 
 	private final Mapper<? extends Record, ? extends Record> mapper;
 
@@ -28,7 +28,7 @@ public final class StreamChainLink {
 
 	private final StreamOutputGate<? extends Record> outputGate;
 
-	StreamChainLink(final Mapper<? extends Record, ? extends Record> mapper,
+	public RuntimeChainLink(final Mapper<? extends Record, ? extends Record> mapper,
 			final StreamInputGate<? extends Record> inputGate,
 			final StreamOutputGate<? extends Record> outputGate) {
 
@@ -37,17 +37,17 @@ public final class StreamChainLink {
 		this.outputGate = outputGate;
 	}
 
-	Mapper<? extends Record, ? extends Record> getMapper() {
+	public Mapper<? extends Record, ? extends Record> getMapper() {
 
 		return this.mapper;
 	}
 
-	StreamInputGate<? extends Record> getInputGate() {
+	public StreamInputGate<? extends Record> getInputGate() {
 
 		return this.inputGate;
 	}
 
-	StreamOutputGate<? extends Record> getOutputGate() {
+	public StreamOutputGate<? extends Record> getOutputGate() {
 
 		return this.outputGate;
 	}

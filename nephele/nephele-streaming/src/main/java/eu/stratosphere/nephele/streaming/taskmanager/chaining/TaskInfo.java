@@ -18,12 +18,14 @@ import java.lang.management.ThreadMXBean;
 
 import eu.stratosphere.nephele.execution.ExecutionListener;
 import eu.stratosphere.nephele.execution.ExecutionState;
+import eu.stratosphere.nephele.execution.RuntimeEnvironment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.profiling.impl.EnvironmentThreadSet;
 import eu.stratosphere.nephele.profiling.impl.types.InternalExecutionVertexThreadProfilingData;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosStatistic;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosValue;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
 /**
@@ -40,22 +42,26 @@ public class TaskInfo implements ExecutionListener {
 
 	private QosStatistic cpuUtilization;
 
-	private double invalidatedCpuUtilization;
+	private double unchainedCpuUtilization;
 
 	private volatile EnvironmentThreadSet environmentThreadSet;
 
-	private ChainInfo chain;
+	private boolean isChained;
+
+	private TaskInfo nextInChain;
 
 	public TaskInfo(RuntimeTask task, ThreadMXBean tmx) {
 		this.task = task;
 		this.tmx = tmx;
 		this.cpuUtilization = new QosStatistic(CPU_STATISTIC_WINDOW_SIZE);
-		this.invalidatedCpuUtilization = -1;
+		this.unchainedCpuUtilization = -1;
 		this.task.registerExecutionListener(this);
+		this.isChained = false;
+		this.nextInChain = null;
 	}
 
 	/**
-	 * @return the runtimetask
+	 * @return the runtime task
 	 */
 	public RuntimeTask getTask() {
 		return this.task;
@@ -63,6 +69,13 @@ public class TaskInfo implements ExecutionListener {
 
 	public ExecutionVertexID getVertexID() {
 		return this.task.getVertexID();
+	}
+
+	public StreamTaskEnvironment getStreamTaskEnvironment() {
+		RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) getTask()
+				.getEnvironment();
+		return (StreamTaskEnvironment) runtimeEnv.getInvokable()
+				.getEnvironment();
 	}
 
 	/**
@@ -106,7 +119,8 @@ public class TaskInfo implements ExecutionListener {
 			 * cpuUtilization==50 => it uses half a core's worth of CPU time
 			 * 
 			 * cpuUtilization==200 => it uses two core's worth of CPU time (this
-			 * can happen if it spawns several user threads)
+			 * can happen if the vertex's main thread spawns several user
+			 * threads)
 			 */
 			double cpuUtilization = (profilingData.getUserTime()
 					+ profilingData.getSystemTime() + profilingData
@@ -126,13 +140,12 @@ public class TaskInfo implements ExecutionListener {
 	}
 
 	public void invalidateCPUUtilizationMeasurements() {
-		this.invalidatedCpuUtilization = this.cpuUtilization
-				.getArithmeticMean();
+		this.unchainedCpuUtilization = this.cpuUtilization.getArithmeticMean();
 		this.cpuUtilization = new QosStatistic(CPU_STATISTIC_WINDOW_SIZE);
 	}
 
 	public double getInvalidatedCpuUtilization() {
-		return this.invalidatedCpuUtilization;
+		return this.unchainedCpuUtilization;
 	}
 
 	/*
@@ -220,17 +233,19 @@ public class TaskInfo implements ExecutionListener {
 		this.task.unregisterExecutionListener(this);
 	}
 
-	public void chainTask(ChainInfo chainInfo) {
-		this.chain = chainInfo;
-		// FIXME do actual chaining
+	public void setIsChained(boolean isChained) {
+		this.isChained = isChained;
 	}
 
-	public void unchainTask() {
-		this.chain = null;
-		// FIXME do actual unchaining
+	public void setNextInChain(TaskInfo nextInChain) {
+		this.nextInChain = nextInChain;
+	}
+
+	public TaskInfo getNextInChain() {
+		return this.nextInChain;
 	}
 
 	public boolean isChained() {
-		return this.chain != null;
+		return this.isChained;
 	}
 }

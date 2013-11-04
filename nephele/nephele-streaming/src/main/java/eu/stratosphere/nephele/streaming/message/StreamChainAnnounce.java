@@ -15,7 +15,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
  * @author Bjoern Lohrmann
  * 
  */
-public class StreamChainAnnounce extends AbstractStreamMessage {
+public class StreamChainAnnounce extends AbstractSerializableQosMessage {
 
 	private QosReporterID.Vertex chainBegin;
 

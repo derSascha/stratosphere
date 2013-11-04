@@ -21,7 +21,7 @@ import java.util.LinkedList;
 
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractSerializableQosMessage;
 
 /**
  * Informs a task manager about its Qos reporter and Qos manager roles.
@@ -29,7 +29,7 @@ import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
  * @author Bjoern Lohrmann
  * 
  */
-public class DeployInstanceQosRolesAction extends AbstractStreamMessage {
+public class DeployInstanceQosRolesAction extends AbstractSerializableQosMessage implements QosAction {
 
 	private final InstanceConnectionInfo instanceConnectionInfo;
 

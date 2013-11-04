@@ -15,31 +15,31 @@
 
 package eu.stratosphere.nephele.streaming.message.action;
 
-import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChain;
 
 /**
- * This class implements an abstract base class for actions the stream Qos
- * components of the Nephele streaming plugin can initiate to achieve particular
- * latency or throughput goals.
+ * This class is used to signal to a StreamOutputGate that it is supposed to
+ * establish a chain (series of adjacent tasks with pointwise wiring pattern
+ * in-between that are executed within the same thread).
  * 
- * @author warneke
+ * @author Bjoern Lohrmann
  */
-public abstract class AbstractQosAction extends AbstractStreamMessage {
+public final class ChainTasksAction extends AbstractQosMessage implements QosAction {
 
-	/**
-	 * Constructs a new abstract action object.
-	 * 
-	 * @param jobID
-	 *            the ID of the job the initiated action applies to
-	 */
-	AbstractQosAction(final JobID jobID) {
-		super(jobID);
+	private final RuntimeChain runtimeChain;
+
+	public ChainTasksAction(final RuntimeChain runtimeChain) {
+		super();
+		this.runtimeChain = runtimeChain;
 	}
 
 	/**
-	 * Default constructor required for deserialization.
+	 * Returns the runtime chain.
+	 * 
+	 * @return the runtime chain.
 	 */
-	AbstractQosAction() {
+	public RuntimeChain getRuntimeChain() {
+		return this.runtimeChain;
 	}
 }

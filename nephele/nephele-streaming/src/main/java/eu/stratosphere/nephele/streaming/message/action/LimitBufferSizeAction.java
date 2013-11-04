@@ -23,6 +23,7 @@ import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.streaming.message.AbstractSerializableQosMessage;
 
 /**
  * This class implements an action to limit the buffer size of a particular
@@ -30,7 +31,7 @@ import eu.stratosphere.nephele.jobgraph.JobID;
  * 
  * @author warneke, Bjoern Lohrmann
  */
-public final class LimitBufferSizeAction extends AbstractQosAction {
+public final class LimitBufferSizeAction extends AbstractSerializableQosMessage implements QosAction {
 
 	/**
 	 * The ID of the vertex the initiated action applies to.

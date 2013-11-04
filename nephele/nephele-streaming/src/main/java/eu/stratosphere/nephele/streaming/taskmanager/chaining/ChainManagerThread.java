@@ -66,6 +66,7 @@ public class ChainManagerThread extends Thread {
 					"The thread contention monitoring is not supported.");
 		}
 		this.started = false;
+		this.setName("ChainManager");
 	}
 
 	@Override

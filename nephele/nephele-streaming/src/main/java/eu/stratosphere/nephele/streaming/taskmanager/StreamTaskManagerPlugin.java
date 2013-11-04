@@ -28,7 +28,7 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
 import eu.stratosphere.nephele.profiling.ProfilingException;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
 import eu.stratosphere.nephele.streaming.taskmanager.chaining.ChainManagerThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.StreamJobEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
@@ -240,8 +240,8 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void sendData(final IOReadableWritable data) throws IOException {
-		if (data instanceof AbstractStreamMessage) {
-			AbstractStreamMessage streamMsg = (AbstractStreamMessage) data;
+		if (data instanceof AbstractQosMessage) {
+			AbstractQosMessage streamMsg = (AbstractQosMessage) data;
 			this.getOrCreateJobEnvironment(streamMsg.getJobID())
 					.handleStreamMessage(streamMsg);
 		}

@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.log4j.Logger;
+
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
 import eu.stratosphere.nephele.io.channels.AbstractInputChannel;
@@ -43,6 +45,8 @@ import eu.stratosphere.nephele.types.Record;
  */
 public final class StreamInputGate<T extends Record> extends
 		AbstractInputGateWrapper<T> {
+	
+	private final static Logger LOG = Logger.getLogger(StreamInputGate.class);
 
 	private final InputChannelChooser channelChooser;
 
@@ -101,7 +105,7 @@ public final class StreamInputGate<T extends Record> extends
 				record = this.readFromChannel(channelToReadFrom, target);
 			} else {
 				// never returns and dumps any incoming data
-				this.trapTaskThread(target);
+				this.trapTaskThreadUntilWokenUp();
 			}
 		} while (record == null);
 
@@ -132,49 +136,6 @@ public final class StreamInputGate<T extends Record> extends
 		if (this.qosCallback != null) {
 			AbstractTaggableRecord taggableRecord = (AbstractTaggableRecord) record;
 			this.qosCallback.recordReceived(inputChannel, taggableRecord);
-		}
-	}
-
-	/**
-	 * This method should only be called if this input gate is inside a chain
-	 * and the task thread (doing this call) should therefore be halted (unless
-	 * interrupted).
-	 * 
-	 * @param target
-	 * @throws InterruptedException
-	 *             if task thread is interrupted.
-	 */
-	private void trapTaskThread(T target) throws InterruptedException {
-		this.signalThatTaskHasHalted();
-
-		// this should never return unless the task is interrupted
-		this.dumpIncomingData(target);
-
-		throw new RuntimeException(
-				"Failed to halt chained task, this is a bug.");
-	}
-
-	private void dumpIncomingData(T target) throws InterruptedException {
-		this.channelChooser.setBlockIfNoChannelAvailable(true);
-		while (true) {
-			int channelToDump = this.channelChooser
-					.chooseNextAvailableChannel();
-			try {
-				// FIXME: this silently dumps data that was in transit at the
-				// time of task locking
-				// also this MAY be unsafe if invoking target.read() multiple
-				// times throws exceptions
-				while (this.getInputChannel(channelToDump).readRecord(target) != null) {
-				}
-			} catch (IOException e) {
-			}
-		}
-	}
-
-	private void signalThatTaskHasHalted() {
-		synchronized (this.taskThreadHalted) {
-			this.taskThreadHalted.set(true);
-			this.taskThreadHalted.notify();
 		}
 	}
 
@@ -213,12 +174,41 @@ public final class StreamInputGate<T extends Record> extends
 	public void initializeDecompressors() throws CompressionException {
 		this.getWrappedInputGate().initializeDecompressors();
 	}
+	
+	/**
+	 * This method should only be called if this input gate is inside a chain
+	 * and the task thread (doing this call) should therefore be halted (unless
+	 * interrupted).
+	 * 
+	 * @param target
+	 * @throws InterruptedException
+	 *             if task thread is interrupted.
+	 */
+	private void trapTaskThreadUntilWokenUp() throws InterruptedException {
+		synchronized (this.taskThreadHalted) {
+			this.taskThreadHalted.set(true);
+			this.taskThreadHalted.notify();
+			LOG.info("Task thread " + this.executingThread.getName() + " has halted");
+			this.taskThreadHalted.wait();
+			LOG.info("Task thread " + this.executingThread.getName() + " is awake again.");
+		}
+	}
 
-	public void haltTaskThread() throws InterruptedException {
+
+	public void haltTaskThreadIfNecessary() throws InterruptedException {
 		this.channelChooser.setBlockIfNoChannelAvailable(false);
 		synchronized (this.taskThreadHalted) {
 			if (!this.taskThreadHalted.get()) {
 				this.taskThreadHalted.wait();
+			}
+		}
+	}
+
+	public void wakeUpTaskThreadIfNecessary() {
+		this.channelChooser.setBlockIfNoChannelAvailable(true);
+		synchronized (this.taskThreadHalted) {
+			if (this.taskThreadHalted.get()) {
+				this.taskThreadHalted.notify();
 			}
 		}
 	}

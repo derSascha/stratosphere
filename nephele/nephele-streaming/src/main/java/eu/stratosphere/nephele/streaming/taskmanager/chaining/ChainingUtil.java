@@ -14,41 +14,40 @@
  **********************************************************************************************************************/
 package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 
+import java.util.ArrayList;
+
+import eu.stratosphere.nephele.streaming.message.action.ChainTasksAction;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChain;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChainLink;
+
 /**
  * @author bjoern
  * 
  */
 public class ChainingUtil {
 
-	/**
-	 * @param flowsToChain
-	 *            The sub-dataflows to chain.
-	 */
-	public static void mergeControlFlowsInTasks(TaskChain dataflow) {
-		// FIXME implement
-		// StringBuilder logMessage = new StringBuilder(
-		// "Created chain with tasks:");
-		//
-		// for (int i = chainStart; i < chainStart + chainLength; i++) {
-		// TaskInfo nextToChain = candidateChainMembers.get(i);
-		// logMessage.append(" ");
-		// logMessage.append(nextToChain.getTask().getEnvironment()
-		// .getTaskName());
-		// logMessage.append(nextToChain.getTask().getEnvironment()
-		// .getIndexInSubtaskGroup());
-		//
-		// chain.appendToChain(candidateChainMembers.get(i), i);
-		// }
-		//
-		// LOG.info(logMessage.toString());
+	public static void chainTaskThreads(TaskChain chainModel)
+			throws InterruptedException {
 
+		ArrayList<RuntimeChainLink> chainLinks = new ArrayList<RuntimeChainLink>();
+		for (int i = 0; i < chainModel.getNumberOfChainedTasks(); i++) {
+			StreamTaskEnvironment taskEnvironment = chainModel.getTask(i)
+					.getStreamTaskEnvironment();
+			chainLinks.add(new RuntimeChainLink(taskEnvironment.getMapper(),
+					taskEnvironment.getInputGate(0), taskEnvironment
+							.getOutputGate(0)));
+		}
+
+		RuntimeChain runtimeChain = new RuntimeChain(chainLinks);
+		chainLinks.get(0).getOutputGate()
+				.enqueueQosAction(new ChainTasksAction(runtimeChain));
+		runtimeChain.waitUntilTasksAreChained();
 	}
 
-	/**
-	 * @param newLeftChain
-	 * @param runnable
-	 */
-	public static void splitControlFlowsInTasks(TaskChain leftChain,
+	public static void unchainTaskThreads(TaskChain leftChain,
 			TaskChain rightChain) {
+
+		// FIXME
 	}
 }

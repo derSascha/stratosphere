@@ -6,7 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
 import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
@@ -28,7 +28,7 @@ public class QosManagerThread extends Thread {
 
 	private static final Log LOG = LogFactory.getLog(QosManagerThread.class);
 
-	private final LinkedBlockingQueue<AbstractStreamMessage> streamingDataQueue;
+	private final LinkedBlockingQueue<AbstractQosMessage> streamingDataQueue;
 
 	private StreamMessagingThread messagingThread;
 
@@ -39,7 +39,7 @@ public class QosManagerThread extends Thread {
 	public QosManagerThread(JobID jobID, StreamMessagingThread messagingThread) {
 		this.messagingThread = messagingThread;
 		this.qosModel = new QosModel(jobID);
-		this.streamingDataQueue = new LinkedBlockingQueue<AbstractStreamMessage>();
+		this.streamingDataQueue = new LinkedBlockingQueue<AbstractQosMessage>();
 		this.bufferSizeManager = new BufferSizeManager(jobID, this.qosModel,
 				this.messagingThread);
 		this.setName(String.format("QosManagerThread (JobID: %s)",
@@ -59,7 +59,7 @@ public class QosManagerThread extends Thread {
 
 		try {
 			while (!interrupted()) {
-				AbstractStreamMessage streamingData = this.streamingDataQueue
+				AbstractQosMessage streamingData = this.streamingDataQueue
 						.take();
 
 				nooOfReports++;
@@ -129,7 +129,7 @@ public class QosManagerThread extends Thread {
 		this.interrupt();
 	}
 
-	public void handOffStreamingData(AbstractStreamMessage data) {
+	public void handOffStreamingData(AbstractQosMessage data) {
 		this.streamingDataQueue.add(data);
 	}
 }

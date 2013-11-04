@@ -22,7 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
 import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
@@ -150,7 +150,7 @@ public class StreamJobEnvironment {
 		this.chainManager.shutdown();
 	}
 
-	public void handleStreamMessage(AbstractStreamMessage streamMsg) {
+	public void handleStreamMessage(AbstractQosMessage streamMsg) {
 		if (this.environmentIsShutDown) {
 			return;
 		}

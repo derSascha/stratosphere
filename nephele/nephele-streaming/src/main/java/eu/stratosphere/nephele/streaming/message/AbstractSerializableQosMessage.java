@@ -12,37 +12,46 @@
  * specific language governing permissions and limitations under the License.
  *
  **********************************************************************************************************************/
-package eu.stratosphere.nephele.streaming.taskmanager.chaining;
+package eu.stratosphere.nephele.streaming.message;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
+import eu.stratosphere.nephele.io.IOReadableWritable;
+import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
  * @author Bjoern Lohrmann
- * 
+ *
  */
-public class ChainInfo {
-
-	private CandidateChainConfig candidateChainConfig;
-
-	private List<TaskInfo> chainMembers;
-
-	private int indexOfFirstMemberInCandidateChainConfig;
-
-	public ChainInfo(CandidateChainConfig candidateChainConfig) {
-
-		this.candidateChainConfig = candidateChainConfig;
-		this.chainMembers = new ArrayList<TaskInfo>();
+public class AbstractSerializableQosMessage extends AbstractQosMessage implements IOReadableWritable {
+	
+	public AbstractSerializableQosMessage(JobID jobID) {
+		super(jobID);
 	}
 
-	public void appendToChain(TaskInfo taskInfo, int indexInCandidateChain) {
-		if (this.chainMembers.isEmpty()) {
-			this.indexOfFirstMemberInCandidateChainConfig = indexInCandidateChain;
-		}
+	/**
+	 * Empty default constructor.
+	 */
+	public AbstractSerializableQosMessage() {
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void write(final DataOutput out) throws IOException {
+		getJobID().write(out);
+	}
 
-		this.chainMembers.add(taskInfo);
-		taskInfo.chainTask(this);
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void read(final DataInput in) throws IOException {
+		JobID jobID = new JobID();
+		jobID.read(in);
+		this.setJobID(jobID);
 	}
 }

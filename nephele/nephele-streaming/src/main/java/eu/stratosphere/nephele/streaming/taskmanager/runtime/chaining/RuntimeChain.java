@@ -16,95 +16,86 @@
 package eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import eu.stratosphere.nephele.execution.Mapper;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
 import eu.stratosphere.nephele.types.Record;
 import eu.stratosphere.nephele.util.StringUtils;
 
-public final class StreamChain {
+public final class RuntimeChain {
 
-	private static final Log LOG = LogFactory.getLog(StreamChain.class);
+	private ArrayList<RuntimeChainLink> chainLinks = new ArrayList<RuntimeChainLink>();
 
-	private final List<StreamChainLink> chainLinks;
+	private final AtomicBoolean tasksSuccessfullyChained = new AtomicBoolean(
+			false);
 
-	public StreamChain(final List<StreamChainLink> chainLinks) {
+	public RuntimeChain(List<RuntimeChainLink> chainLinks) {
 
-		if (chainLinks.isEmpty()) {
+		if (chainLinks.size() < 2) {
 			throw new IllegalArgumentException(
-					"List chainLinks must not be empty");
+					"At least 2 chain links are required!");
 		}
 
-		this.chainLinks = chainLinks;
-	}
-
-	public StreamOutputGate<? extends Record> getFirstOutputGate() {
-
-		return this.chainLinks.get(0).getOutputGate();
+		this.chainLinks.addAll(chainLinks);
 	}
 
 	public void writeRecord(final Record record) throws IOException {
-
 		try {
-			this.executeMapper(record, 1);
+			this.executeMappers(record, 1);
 		} catch (Exception e) {
 			throw new IOException(StringUtils.stringifyException(e));
 		}
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	void executeMapper(final Record record, final int chainIndex)
+	private void executeMappers(Record record, int indexInChain)
 			throws Exception {
+		// TODO this will be much nicer once we have an IOC interface to
+		// write Nephele tasks
 
-		final StreamChainLink chainLink = this.chainLinks.get(chainIndex);
-		final Mapper mapper = chainLink.getMapper();
+		RuntimeChainLink chainLink = this.chainLinks.get(indexInChain);
+		Mapper mapper = chainLink.getMapper();
+		StreamOutputGate outputGate = chainLink.getOutputGate();
 
 		chainLink.getInputGate().reportRecordReceived(record, 0);
 		mapper.map(record);
+		Queue outputCollector = mapper.getOutputCollector();
 
-		final StreamOutputGate outputGate = chainLink.getOutputGate();
-
-		final Queue outputCollector = mapper.getOutputCollector();
-
-		if (chainIndex == this.chainLinks.size() - 1) {
-
+		boolean isLastInChain = indexInChain == this.chainLinks.size() - 1;
+		if (isLastInChain) {
 			while (!outputCollector.isEmpty()) {
 				outputGate.writeRecord((Record) outputCollector.poll());
 			}
-
 		} else {
-
 			while (!outputCollector.isEmpty()) {
-				final Record outputRecord = (Record) outputCollector.poll();
+				Record outputRecord = (Record) outputCollector.poll();
 				outputGate.reportRecordEmitted(outputRecord);
-				this.executeMapper(RecordUtils.createCopy(outputRecord),
-						chainIndex + 1);
+				this.executeMappers(RecordUtils.createCopy(outputRecord),
+						indexInChain + 1);
 			}
 		}
 	}
 
-	public void waitUntilFlushed() throws InterruptedException {
-		try {
-			LOG.info("Locking task threads in chain");
-			for (int i = 0; i < this.chainLinks.size(); i++) {
-				StreamChainLink chainLink = this.chainLinks.get(i);
-				if (i == 0) {
-					chainLink.getOutputGate().flush();
-					chainLink.getOutputGate().redirectToStreamChain(this);
-				} else {
-					chainLink.getInputGate().haltTaskThread();
-					chainLink.getOutputGate().flush();
-				}
-			}
-			LOG.info("Task threads chain in successfully locked");
-		} catch (IOException e) {
-			LOG.error(StringUtils.stringifyException(e));
-		}
+	public List<RuntimeChainLink> getChainLinks() {
+		return this.chainLinks;
+	}
 
+	public void waitUntilTasksAreChained() throws InterruptedException {
+		synchronized (this.tasksSuccessfullyChained) {
+			if (!this.tasksSuccessfullyChained.get()) {
+				this.tasksSuccessfullyChained.wait();
+			}
+		}
+	}
+
+	public void signalTasksAreSuccessfullyChained() {
+		synchronized (this.tasksSuccessfullyChained) {
+			this.tasksSuccessfullyChained.set(true);
+			this.tasksSuccessfullyChained.notifyAll();
+		}
 	}
 }

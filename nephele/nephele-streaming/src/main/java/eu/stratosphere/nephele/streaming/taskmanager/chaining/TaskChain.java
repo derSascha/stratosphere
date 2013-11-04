@@ -43,7 +43,11 @@ public class TaskChain {
 
 	public TaskChain(TaskInfo task) {
 		this.tasksInChain.add(task);
-		task.invalidateCPUUtilizationMeasurements();
+		if (task.hasCPUUtilizationMeasurements()) {
+			task.invalidateCPUUtilizationMeasurements();
+		}
+		task.setIsChained(false);
+		task.setNextInChain(null);
 	}
 
 	/**
@@ -114,8 +118,8 @@ public class TaskChain {
 			@Override
 			public void run() {
 				try {
-					ChainingUtil.splitControlFlowsInTasks(newLeftChain,
-							newRightChain);
+					ChainingUtil
+							.unchainTaskThreads(newLeftChain, newRightChain);
 				} catch (Exception e) {
 					LOG.error("Error during chain construction.", e);
 				} finally {
@@ -145,7 +149,7 @@ public class TaskChain {
 			@Override
 			public void run() {
 				try {
-					ChainingUtil.mergeControlFlowsInTasks(mergedChain);
+					ChainingUtil.chainTaskThreads(mergedChain);
 				} catch (Exception e) {
 					LOG.error("Error during chain construction.", e);
 				} finally {
@@ -155,5 +159,25 @@ public class TaskChain {
 		});
 
 		return mergedChain;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder toReturn = new StringBuilder();
+		toReturn.append(this.tasksInChain.get(0).getTask().getEnvironment()
+				.getTaskName());
+		toReturn.append(this.tasksInChain.get(0).getTask().getEnvironment()
+				.getIndexInSubtaskGroup());
+
+		for (int i = 1; i < this.tasksInChain.size(); i++) {
+			TaskInfo nextToChain = this.tasksInChain.get(i);
+			toReturn.append("->");
+			toReturn.append(nextToChain.getTask().getEnvironment()
+					.getTaskName());
+			toReturn.append(nextToChain.getTask().getEnvironment()
+					.getIndexInSubtaskGroup());
+		}
+
+		return toReturn.toString();
 	}
 }
