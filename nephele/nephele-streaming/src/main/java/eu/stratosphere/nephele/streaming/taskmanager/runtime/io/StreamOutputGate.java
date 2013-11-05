@@ -31,7 +31,8 @@ import eu.stratosphere.nephele.io.channels.bytebuffered.NetworkOutputChannel;
 import eu.stratosphere.nephele.io.compression.CompressionException;
 import eu.stratosphere.nephele.io.compression.CompressionLevel;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractOutputGateWrapper;
-import eu.stratosphere.nephele.streaming.message.action.ChainTasksAction;
+import eu.stratosphere.nephele.streaming.message.action.DropCurrentChainAction;
+import eu.stratosphere.nephele.streaming.message.action.EstablishNewChainAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.message.action.QosAction;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.OutputGateQosReportingListener;
@@ -108,17 +109,23 @@ public final class StreamOutputGate<T extends Record> extends
 		while ((action = this.qosActionQueue.poll()) != null) {
 			if (action instanceof LimitBufferSizeAction) {
 				this.limitBufferSize((LimitBufferSizeAction) action);
-			} else if (action instanceof ChainTasksAction) {
-				this.chainTasks((ChainTasksAction) action);
+			} else if (action instanceof EstablishNewChainAction) {
+				this.establishChain((EstablishNewChainAction) action);
+			} else if (action instanceof DropCurrentChainAction) {
+				dropCurrentChain();
 			}
 		}
+	}
+
+	private void dropCurrentChain() {
+		this.streamChain = null;
 	}
 
 	public AbstractOutputChannel<T> getOutputChannel(ChannelID channelID) {
 		return this.outputChannels.get(channelID);
 	}
 
-	private void chainTasks(ChainTasksAction chainTasksAction)
+	private void establishChain(EstablishNewChainAction chainTasksAction)
 			throws InterruptedException, IOException {
 
 		RuntimeChain streamChain = chainTasksAction.getRuntimeChain();

@@ -139,12 +139,7 @@ public class TaskInfo implements ExecutionListener {
 		return this.cpuUtilization.getArithmeticMean();
 	}
 
-	public void invalidateCPUUtilizationMeasurements() {
-		this.unchainedCpuUtilization = this.cpuUtilization.getArithmeticMean();
-		this.cpuUtilization = new QosStatistic(CPU_STATISTIC_WINDOW_SIZE);
-	}
-
-	public double getInvalidatedCpuUtilization() {
+	public double getUnchainedCpuUtilization() {
 		return this.unchainedCpuUtilization;
 	}
 
@@ -234,6 +229,14 @@ public class TaskInfo implements ExecutionListener {
 	}
 
 	public void setIsChained(boolean isChained) {
+		if (!this.isChained && this.hasCPUUtilizationMeasurements()) {
+			this.unchainedCpuUtilization = this.getCPUUtilization();
+		}
+
+		if (this.hasCPUUtilizationMeasurements()) {
+			this.cpuUtilization = new QosStatistic(CPU_STATISTIC_WINDOW_SIZE);
+		}
+
 		this.isChained = isChained;
 	}
 

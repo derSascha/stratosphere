@@ -12,34 +12,15 @@
  * specific language governing permissions and limitations under the License.
  *
  **********************************************************************************************************************/
-
 package eu.stratosphere.nephele.streaming.message.action;
 
 import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChain;
 
 /**
- * This class is used to signal to a StreamOutputGate that it is supposed to
- * establish a chain (series of adjacent tasks with pointwise wiring pattern
- * in-between that are executed within the same thread).
- * 
  * @author Bjoern Lohrmann
+ *
  */
-public final class ChainTasksAction extends AbstractQosMessage implements QosAction {
+public class DropCurrentChainAction extends AbstractQosMessage implements
+		QosAction {
 
-	private final RuntimeChain runtimeChain;
-
-	public ChainTasksAction(final RuntimeChain runtimeChain) {
-		super();
-		this.runtimeChain = runtimeChain;
-	}
-
-	/**
-	 * Returns the runtime chain.
-	 * 
-	 * @return the runtime chain.
-	 */
-	public RuntimeChain getRuntimeChain() {
-		return this.runtimeChain;
-	}
 }

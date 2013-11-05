@@ -71,6 +71,7 @@ public class ChainManagerThread extends Thread {
 
 	@Override
 	public void run() {
+		LOG.info("ChainManager thread started");
 		int counter = 0;
 		try {
 			while (!interrupted()) {
@@ -89,6 +90,7 @@ public class ChainManagerThread extends Thread {
 
 		} finally {
 			cleanUp();
+			LOG.info("ChainManager thread stopped.");
 		}
 	}
 

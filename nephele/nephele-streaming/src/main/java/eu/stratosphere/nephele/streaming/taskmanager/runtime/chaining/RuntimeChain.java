@@ -22,6 +22,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import eu.stratosphere.nephele.execution.Mapper;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
 import eu.stratosphere.nephele.types.Record;
 import eu.stratosphere.nephele.util.StringUtils;
@@ -97,5 +98,13 @@ public final class RuntimeChain {
 			this.tasksSuccessfullyChained.set(true);
 			this.tasksSuccessfullyChained.notifyAll();
 		}
+	}
+
+	public StreamOutputGate<? extends Record> getFirstOutputGate() {
+		return this.chainLinks.get(0).getOutputGate();
+	}
+
+	public StreamInputGate<? extends Record> getFirstInputGate() {
+		return this.chainLinks.get(0).getInputGate();
 	}
 }

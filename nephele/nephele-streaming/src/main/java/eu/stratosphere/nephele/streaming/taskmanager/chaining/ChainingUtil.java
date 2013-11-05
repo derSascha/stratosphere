@@ -16,7 +16,8 @@ package eu.stratosphere.nephele.streaming.taskmanager.chaining;
 
 import java.util.ArrayList;
 
-import eu.stratosphere.nephele.streaming.message.action.ChainTasksAction;
+import eu.stratosphere.nephele.streaming.message.action.DropCurrentChainAction;
+import eu.stratosphere.nephele.streaming.message.action.EstablishNewChainAction;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChain;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChainLink;
@@ -30,6 +31,13 @@ public class ChainingUtil {
 	public static void chainTaskThreads(TaskChain chainModel)
 			throws InterruptedException {
 
+		RuntimeChain runtimeChain = assembleRuntimeChain(chainModel);
+		runtimeChain.getFirstOutputGate().enqueueQosAction(
+				new EstablishNewChainAction(runtimeChain));
+		runtimeChain.waitUntilTasksAreChained();
+	}
+
+	private static RuntimeChain assembleRuntimeChain(TaskChain chainModel) {
 		ArrayList<RuntimeChainLink> chainLinks = new ArrayList<RuntimeChainLink>();
 		for (int i = 0; i < chainModel.getNumberOfChainedTasks(); i++) {
 			StreamTaskEnvironment taskEnvironment = chainModel.getTask(i)
@@ -40,14 +48,30 @@ public class ChainingUtil {
 		}
 
 		RuntimeChain runtimeChain = new RuntimeChain(chainLinks);
-		chainLinks.get(0).getOutputGate()
-				.enqueueQosAction(new ChainTasksAction(runtimeChain));
-		runtimeChain.waitUntilTasksAreChained();
+		return runtimeChain;
 	}
 
 	public static void unchainTaskThreads(TaskChain leftChain,
-			TaskChain rightChain) {
+			TaskChain rightChain) throws InterruptedException {
 
-		// FIXME
+		if (leftChain.getNumberOfChainedTasks() > 1) {
+			RuntimeChain leftRuntimeChain = assembleRuntimeChain(leftChain);
+			leftRuntimeChain.getFirstOutputGate().enqueueQosAction(
+					new EstablishNewChainAction(leftRuntimeChain));
+			leftRuntimeChain.waitUntilTasksAreChained();
+		} else {
+			leftChain.getTask(0).getStreamTaskEnvironment().getOutputGate(0)
+					.enqueueQosAction(new DropCurrentChainAction());
+		}
+
+		if (rightChain.getNumberOfChainedTasks() > 1) {
+			RuntimeChain rightRuntimeChain = assembleRuntimeChain(rightChain);
+			rightRuntimeChain.getFirstOutputGate().enqueueQosAction(
+					new EstablishNewChainAction(rightRuntimeChain));
+			rightRuntimeChain.getFirstInputGate().wakeUpTaskThreadIfNecessary();
+			rightRuntimeChain.waitUntilTasksAreChained();
+		} else {
+			rightChain.getTask(0).getStreamTaskEnvironment().getInputGate(0).wakeUpTaskThreadIfNecessary();
+		}
 	}
 }

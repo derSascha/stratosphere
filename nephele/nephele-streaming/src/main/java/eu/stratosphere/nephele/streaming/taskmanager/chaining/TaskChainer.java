@@ -175,7 +175,7 @@ public class TaskChainer {
 			} else {
 				task = chain.getTask(noOfChainedTasks - noOfTasksToUnchain);
 			}
-			estimatedRemainingCpuUtil -= task.getInvalidatedCpuUtilization();
+			estimatedRemainingCpuUtil -= task.getUnchainedCpuUtilization();
 		}
 
 		return Pair.of(noOfTasksToUnchain, estimatedRemainingCpuUtil);

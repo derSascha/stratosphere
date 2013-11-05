@@ -33,21 +33,16 @@ public class TaskChain {
 
 	private static final Logger LOG = Logger.getLogger(TaskChain.class);
 
-	private final AtomicBoolean taskControlFlowsUnderManipulation = new AtomicBoolean(
-			false);
+	private final AtomicBoolean taskControlFlowsUnderManipulation = new AtomicBoolean(false);
 
-	private ArrayList<TaskInfo> tasksInChain = new ArrayList<TaskInfo>();
+	private final ArrayList<TaskInfo> tasksInChain = new ArrayList<TaskInfo>();
 
-	private QosStatistic aggregateCpuUtilization = new QosStatistic(
+	private final QosStatistic aggregateCpuUtilization = new QosStatistic(
 			TaskInfo.CPU_STATISTIC_WINDOW_SIZE);
 
 	public TaskChain(TaskInfo task) {
 		this.tasksInChain.add(task);
-		if (task.hasCPUUtilizationMeasurements()) {
-			task.invalidateCPUUtilizationMeasurements();
-		}
-		task.setIsChained(false);
-		task.setNextInChain(null);
+		fixTasksChainedStatus();
 	}
 
 	/**
@@ -56,9 +51,18 @@ public class TaskChain {
 	protected TaskChain() {
 	}
 
-	private void invalidateCpuUtilMeasurements() {
-		for (TaskInfo task : this.tasksInChain) {
-			task.invalidateCPUUtilizationMeasurements();
+	private void fixTasksChainedStatus() {
+		if (this.tasksInChain.size() == 1) {
+			this.tasksInChain.get(0).setIsChained(false);
+			this.tasksInChain.get(0).setNextInChain(null);
+		} else {
+			for (int i = 0; i < this.tasksInChain.size(); i++) {
+				TaskInfo task = this.tasksInChain.get(i);
+				task.setIsChained(true);
+				if (i < this.tasksInChain.size() - 1) {
+					task.setNextInChain(this.tasksInChain.get(i + 1));
+				}
+			}
 		}
 	}
 
@@ -85,11 +89,6 @@ public class TaskChain {
 		return this.aggregateCpuUtilization.getArithmeticMean();
 	}
 
-	public void invalidateCPUUtilizationMeasurements() {
-		this.aggregateCpuUtilization = new QosStatistic(
-				TaskInfo.CPU_STATISTIC_WINDOW_SIZE);
-	}
-
 	public int getNumberOfChainedTasks() {
 		return this.tasksInChain.size();
 	}
@@ -104,13 +103,14 @@ public class TaskChain {
 		final TaskChain newLeftChain = new TaskChain();
 		final TaskChain newRightChain = new TaskChain();
 
-		chain.invalidateCPUUtilizationMeasurements();
-		newLeftChain.tasksInChain = new ArrayList<TaskInfo>(
-				chain.tasksInChain.subList(0, splitIndex));
-		newRightChain.tasksInChain = new ArrayList<TaskInfo>(
-				chain.tasksInChain.subList(splitIndex,
-						chain.tasksInChain.size()));
+		newLeftChain.tasksInChain.addAll(chain.tasksInChain.subList(0,
+				splitIndex));
+		newRightChain.tasksInChain.addAll(chain.tasksInChain.subList(
+				splitIndex, chain.tasksInChain.size()));
 
+		newLeftChain.fixTasksChainedStatus();
+		newRightChain.fixTasksChainedStatus();
+		
 		newLeftChain.taskControlFlowsUnderManipulation.set(true);
 		newRightChain.taskControlFlowsUnderManipulation.set(true);
 
@@ -142,7 +142,7 @@ public class TaskChain {
 			mergedChain.tasksInChain.addAll(subchain.tasksInChain);
 		}
 
-		mergedChain.invalidateCpuUtilMeasurements();
+		mergedChain.fixTasksChainedStatus();
 		mergedChain.taskControlFlowsUnderManipulation.set(true);
 
 		backgroundWorkers.execute(new Runnable() {
