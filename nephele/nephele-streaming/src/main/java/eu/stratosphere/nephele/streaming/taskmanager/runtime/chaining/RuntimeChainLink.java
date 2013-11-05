@@ -16,11 +16,14 @@
 package eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining;
 
 import eu.stratosphere.nephele.execution.Mapper;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamInputGate;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.io.StreamOutputGate;
 import eu.stratosphere.nephele.types.Record;
 
 public final class RuntimeChainLink {
+
+	private final StreamTaskEnvironment taskEnvironment;
 
 	private final Mapper<? extends Record, ? extends Record> mapper;
 
@@ -28,11 +31,12 @@ public final class RuntimeChainLink {
 
 	private final StreamOutputGate<? extends Record> outputGate;
 
-	public RuntimeChainLink(final Mapper<? extends Record, ? extends Record> mapper,
+	public RuntimeChainLink(final StreamTaskEnvironment taskEnvironment,
 			final StreamInputGate<? extends Record> inputGate,
 			final StreamOutputGate<? extends Record> outputGate) {
 
-		this.mapper = mapper;
+		this.taskEnvironment = taskEnvironment;
+		this.mapper = taskEnvironment.getMapper();
 		this.inputGate = inputGate;
 		this.outputGate = outputGate;
 	}
@@ -50,5 +54,15 @@ public final class RuntimeChainLink {
 	public StreamOutputGate<? extends Record> getOutputGate() {
 
 		return this.outputGate;
+	}
+
+	public StreamTaskEnvironment getTaskEnvironment() {
+		return this.taskEnvironment;
+	}
+
+	@Override
+	public String toString() {
+		return this.taskEnvironment.getTaskName()
+				+ this.taskEnvironment.getIndexInSubtaskGroup();
 	}
 }

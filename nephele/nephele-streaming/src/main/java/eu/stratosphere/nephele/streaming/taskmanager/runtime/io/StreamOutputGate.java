@@ -118,6 +118,7 @@ public final class StreamOutputGate<T extends Record> extends
 	}
 
 	private void dropCurrentChain() {
+		LOG.info("Dropped chain " + this.streamChain);
 		this.streamChain = null;
 	}
 
@@ -140,7 +141,8 @@ public final class StreamOutputGate<T extends Record> extends
 			chainLink.getOutputGate().streamChain = null;
 		}
 
-		LOG.info("Successfully chained tasks " + streamChain);
+		streamChain.signalTasksAreSuccessfullyChained();
+		LOG.info("Established chain " + streamChain);
 	}
 
 	private void limitBufferSize(LimitBufferSizeAction lbsa) {

@@ -63,20 +63,20 @@ public class TaskChainer {
 	 */
 	private void splitChainsIfNecessary() {
 
-		int currChain = 0;
-		while (currChain < this.chains.size()) {
-			TaskChain chain = this.chains.get(currChain);
-
+		int currChainIndex = 0;
+		while (currChainIndex < this.chains.size()) {
+			TaskChain chain = this.chains.get(currChainIndex);
+			
 			if (chain.hasCPUUtilizationMeasurements()
 					&& chain.getCPUUtilization() > 99
 					&& chain.getNumberOfChainedTasks() > 1) {
 
 				Pair<TaskChain, TaskChain> splitResult = splitChain(chain);
-				this.chains.set(currChain, splitResult.getLeft());
-				this.chains.add(currChain + 1, splitResult.getRight());
-				currChain = currChain + 2;
+				this.chains.set(currChainIndex, splitResult.getLeft());
+				this.chains.add(currChainIndex + 1, splitResult.getRight());
+				currChainIndex = currChainIndex + 2;
 			} else {
-				currChain++;
+				currChainIndex++;
 			}
 		}
 	}

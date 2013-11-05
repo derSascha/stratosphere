@@ -96,7 +96,7 @@ public final class RuntimeChain {
 	public void signalTasksAreSuccessfullyChained() {
 		synchronized (this.tasksSuccessfullyChained) {
 			this.tasksSuccessfullyChained.set(true);
-			this.tasksSuccessfullyChained.notifyAll();
+			this.tasksSuccessfullyChained.notify();
 		}
 	}
 
@@ -106,5 +106,17 @@ public final class RuntimeChain {
 
 	public StreamInputGate<? extends Record> getFirstInputGate() {
 		return this.chainLinks.get(0).getInputGate();
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder(this.chainLinks.get(0).toString());
+		
+		for(int i=1; i< this.chainLinks.size(); i++) {
+			builder.append("->");
+			builder.append(this.chainLinks.get(i).toString());
+		}
+		
+		return builder.toString();
 	}
 }

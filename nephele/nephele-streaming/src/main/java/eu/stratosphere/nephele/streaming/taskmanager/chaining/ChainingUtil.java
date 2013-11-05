@@ -23,7 +23,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeCha
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChainLink;
 
 /**
- * @author bjoern
+ * @author Bjoern Lohrmann
  * 
  */
 public class ChainingUtil {
@@ -42,7 +42,7 @@ public class ChainingUtil {
 		for (int i = 0; i < chainModel.getNumberOfChainedTasks(); i++) {
 			StreamTaskEnvironment taskEnvironment = chainModel.getTask(i)
 					.getStreamTaskEnvironment();
-			chainLinks.add(new RuntimeChainLink(taskEnvironment.getMapper(),
+			chainLinks.add(new RuntimeChainLink(taskEnvironment,
 					taskEnvironment.getInputGate(0), taskEnvironment
 							.getOutputGate(0)));
 		}
