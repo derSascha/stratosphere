@@ -22,12 +22,13 @@ import org.apache.commons.logging.LogFactory;
 import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.profiling.ProfilingException;
 import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
+import eu.stratosphere.nephele.streaming.message.ChainUpdates;
 import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
-import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.chaining.ChainManagerThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosManagerThread;
@@ -52,22 +53,21 @@ public class StreamJobEnvironment {
 
 	private final QosReportForwarderThread qosReportForwarder;
 
+	/**
+	 * A special thread that chains/unchains "mapper" tasks (special Nephele
+	 * execution vertices that declare themselves as chainable).
+	 */
 	private final ChainManagerThread chainManager;
 
 	private final HashMap<ExecutionVertexID, StreamTaskQosCoordinator> taskQosCoordinators;
-
-	private final StreamMessagingThread messagingThread;
 
 	private volatile boolean environmentIsShutDown;
 
 	private volatile QosManagerThread qosManager;
 
-	public StreamJobEnvironment(JobID jobID,
-			StreamMessagingThread messagingThread,
-			ChainManagerThread chainManagerThread) {
+	public StreamJobEnvironment(JobID jobID) throws ProfilingException {
 
 		this.jobID = jobID;
-		this.messagingThread = messagingThread;
 		this.environmentIsShutDown = false;
 
 		QosReporterConfigCenter reporterConfig = new QosReporterConfigCenter();
@@ -77,8 +77,8 @@ public class StreamJobEnvironment {
 				.getDefaultTaggingInterval());
 
 		this.qosReportForwarder = new QosReportForwarderThread(jobID,
-				messagingThread, reporterConfig);
-		this.chainManager = chainManagerThread;
+				reporterConfig);
+		this.chainManager = new ChainManagerThread(reporterConfig);
 		this.taskQosCoordinators = new HashMap<ExecutionVertexID, StreamTaskQosCoordinator>();
 	}
 
@@ -157,6 +157,8 @@ public class StreamJobEnvironment {
 
 		if (streamMsg instanceof QosReport) {
 			this.handleQosReport((QosReport) streamMsg);
+		} else if (streamMsg instanceof ChainUpdates) {
+			this.handleChainUpdates((ChainUpdates) streamMsg);
 		} else if (streamMsg instanceof LimitBufferSizeAction) {
 			this.handleLimitBufferSizeAction((LimitBufferSizeAction) streamMsg);
 		} else if (streamMsg instanceof DeployInstanceQosRolesAction) {
@@ -165,6 +167,11 @@ public class StreamJobEnvironment {
 			LOG.error("Received message is of unknown type "
 					+ streamMsg.getClass());
 		}
+	}
+
+	private void handleChainUpdates(ChainUpdates chainUpdates) {
+		this.ensureQosManagerIsRunning();
+		this.qosManager.handOffStreamingData(chainUpdates);
 	}
 
 	private void handleDeployInstanceQosRolesAction(
@@ -212,8 +219,7 @@ public class StreamJobEnvironment {
 
 	private synchronized void ensureQosManagerIsRunningSynchronized() {
 		if (this.qosManager == null) {
-			this.qosManager = new QosManagerThread(this.jobID,
-					this.messagingThread);
+			this.qosManager = new QosManagerThread(this.jobID);
 			this.qosManager.start();
 		}
 	}

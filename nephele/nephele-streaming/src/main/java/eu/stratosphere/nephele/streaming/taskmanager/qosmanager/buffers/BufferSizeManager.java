@@ -59,11 +59,10 @@ public class BufferSizeManager {
 
 	private JobID jobID;
 
-	public BufferSizeManager(JobID jobID, QosModel qosModel,
-			StreamMessagingThread messagingThread) {
+	public BufferSizeManager(JobID jobID, QosModel qosModel) {
 		this.jobID = jobID;
 		this.qosModel = qosModel;
-		this.messagingThread = messagingThread;
+		this.messagingThread = StreamMessagingThread.getInstance();
 
 		this.adjustmentInterval = StreamTaskManagerPlugin
 				.getPluginConfiguration().getLong(

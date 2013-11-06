@@ -20,6 +20,8 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.QosReporterConfigCenter;
+
 /**
  * @author Bjoern Lohrmann
  */
@@ -34,9 +36,15 @@ public class TaskChainer {
 
 	private final ExecutorService backgroundWorkers;
 
+	private final QosReporterConfigCenter configCenter;
+
 	public TaskChainer(List<TaskInfo> chainingCandidates,
-			ExecutorService backgroundWorkers) {
+			ExecutorService backgroundWorkers,
+			QosReporterConfigCenter configCenter) {
+
 		this.backgroundWorkers = backgroundWorkers;
+		this.configCenter = configCenter;
+
 		for (TaskInfo task : chainingCandidates) {
 			this.chains.add(new TaskChain(task));
 		}
@@ -66,7 +74,7 @@ public class TaskChainer {
 		int currChainIndex = 0;
 		while (currChainIndex < this.chains.size()) {
 			TaskChain chain = this.chains.get(currChainIndex);
-			
+
 			if (chain.hasCPUUtilizationMeasurements()
 					&& chain.getCPUUtilization() > 99
 					&& chain.getNumberOfChainedTasks() > 1) {
@@ -154,7 +162,8 @@ public class TaskChainer {
 					- endUnchainProposal.getLeft();
 		}
 
-		return TaskChain.split(flow, splitIndex, this.backgroundWorkers);
+		return TaskChain.splitAndAnnounceChain(flow, splitIndex,
+				this.backgroundWorkers, this.configCenter);
 	}
 
 	private Pair<Integer, Double> computeUnchainingProposal(TaskChain chain,
@@ -185,8 +194,8 @@ public class TaskChainer {
 		List<TaskChain> chainsToMerge = this.chains.subList(mergeStart,
 				mergeEnd);
 
-		TaskChain mergedChain = TaskChain.merge(chainsToMerge,
-				this.backgroundWorkers);
+		TaskChain mergedChain = TaskChain.mergeAndAnnounceChains(chainsToMerge,
+				this.backgroundWorkers, this.configCenter);
 
 		this.chains.removeAll(chainsToMerge);
 		this.chains.add(mergeStart, mergedChain);

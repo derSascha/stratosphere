@@ -22,8 +22,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 
+import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosStatistic;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosValue;
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.QosReporterConfigCenter;
 
 /**
  * @author Bjoern Lohrmann
@@ -33,7 +35,8 @@ public class TaskChain {
 
 	private static final Logger LOG = Logger.getLogger(TaskChain.class);
 
-	private final AtomicBoolean taskControlFlowsUnderManipulation = new AtomicBoolean(false);
+	private final AtomicBoolean taskControlFlowsUnderManipulation = new AtomicBoolean(
+			false);
 
 	private final ArrayList<TaskInfo> tasksInChain = new ArrayList<TaskInfo>();
 
@@ -97,8 +100,21 @@ public class TaskChain {
 		return this.tasksInChain.get(index);
 	}
 
-	public static Pair<TaskChain, TaskChain> split(TaskChain chain,
-			int splitIndex, ExecutorService backgroundWorkers) {
+	public TaskInfo getFirstTask() {
+		return this.tasksInChain.get(0);
+	}
+
+	public TaskInfo getLastTask() {
+		return this.tasksInChain.get(this.tasksInChain.size() - 1);
+	}
+
+	public JobID getJobID() {
+		return getFirstTask().getTask().getJobID();
+	}
+
+	public static Pair<TaskChain, TaskChain> splitAndAnnounceChain(
+			TaskChain chain, int splitIndex, ExecutorService backgroundWorkers,
+			final QosReporterConfigCenter configCenter) {
 
 		final TaskChain newLeftChain = new TaskChain();
 		final TaskChain newRightChain = new TaskChain();
@@ -110,7 +126,7 @@ public class TaskChain {
 
 		newLeftChain.fixTasksChainedStatus();
 		newRightChain.fixTasksChainedStatus();
-		
+
 		newLeftChain.taskControlFlowsUnderManipulation.set(true);
 		newRightChain.taskControlFlowsUnderManipulation.set(true);
 
@@ -118,8 +134,9 @@ public class TaskChain {
 			@Override
 			public void run() {
 				try {
-					ChainingUtil
-							.unchainTaskThreads(newLeftChain, newRightChain);
+					ChainingUtil.unchainAndAnnounceTaskThreads(newLeftChain,
+							newRightChain, configCenter);
+
 				} catch (Exception e) {
 					LOG.error("Error during chain construction.", e);
 				} finally {
@@ -133,8 +150,9 @@ public class TaskChain {
 		return Pair.of(newLeftChain, newRightChain);
 	}
 
-	public static TaskChain merge(List<TaskChain> subchains,
-			ExecutorService backgroundWorkers) {
+	public static TaskChain mergeAndAnnounceChains(List<TaskChain> subchains,
+			ExecutorService backgroundWorkers,
+			final QosReporterConfigCenter configCenter) {
 
 		final TaskChain mergedChain = new TaskChain();
 
@@ -149,7 +167,7 @@ public class TaskChain {
 			@Override
 			public void run() {
 				try {
-					ChainingUtil.chainTaskThreads(mergedChain);
+					ChainingUtil.chainTaskThreads(mergedChain, configCenter);
 				} catch (Exception e) {
 					LOG.error("Error during chain construction.", e);
 				} finally {
@@ -180,4 +198,5 @@ public class TaskChain {
 
 		return toReturn.toString();
 	}
+
 }

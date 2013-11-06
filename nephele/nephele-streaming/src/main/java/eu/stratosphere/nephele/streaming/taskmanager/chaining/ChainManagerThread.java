@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.profiling.ProfilingException;
 import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
+import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.QosReporterConfigCenter;
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
 /**
@@ -38,27 +39,28 @@ public class ChainManagerThread extends Thread {
 	private final static Logger LOG = Logger
 			.getLogger(ChainManagerThread.class);
 
-	private final ExecutorService backgroundChainingWorkers;
+	private final ExecutorService backgroundChainingWorkers = Executors
+			.newCachedThreadPool();
 
-	private final ConcurrentHashMap<ExecutionVertexID, TaskInfo> activeMapperTasks;
+	private final ConcurrentHashMap<ExecutionVertexID, TaskInfo> activeMapperTasks = new ConcurrentHashMap<ExecutionVertexID, TaskInfo>();
 
-	private final CopyOnWriteArraySet<CandidateChainConfig> pendingCandidateChainConfigs;
+	private final CopyOnWriteArraySet<CandidateChainConfig> pendingCandidateChainConfigs = new CopyOnWriteArraySet<CandidateChainConfig>();
 
-	private final ArrayList<TaskChainer> taskChainers;
+	private final ArrayList<TaskChainer> taskChainers = new ArrayList<TaskChainer>();
 
-	private ThreadMXBean tmx;
+	private final ThreadMXBean tmx = ManagementFactory.getThreadMXBean();
+
+	private final QosReporterConfigCenter configCenter;
 
 	private boolean started;
 
-	public ChainManagerThread() throws ProfilingException {
-		this.backgroundChainingWorkers = Executors.newCachedThreadPool();
-		this.activeMapperTasks = new ConcurrentHashMap<ExecutionVertexID, TaskInfo>();
-		this.pendingCandidateChainConfigs = new CopyOnWriteArraySet<CandidateChainConfig>();
-		this.taskChainers = new ArrayList<TaskChainer>();
+	public ChainManagerThread(QosReporterConfigCenter configCenter)
+			throws ProfilingException {
+		
+		this.configCenter = configCenter;
 
 		// Initialize MX interface and check if thread contention monitoring is
 		// supported
-		this.tmx = ManagementFactory.getThreadMXBean();
 		if (this.tmx.isThreadContentionMonitoringSupported()) {
 			this.tmx.setThreadContentionMonitoringEnabled(true);
 		} else {
@@ -125,7 +127,7 @@ public class ChainManagerThread extends Thread {
 		}
 
 		this.taskChainers.add(new TaskChainer(taskInfos,
-				this.backgroundChainingWorkers));
+				this.backgroundChainingWorkers, this.configCenter));
 
 		return true;
 	}

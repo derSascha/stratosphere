@@ -43,6 +43,8 @@ import eu.stratosphere.nephele.util.StringUtils;
  */
 public final class StreamMessagingThread extends Thread {
 
+	private static StreamMessagingThread SINGLETON_INSTANCE;
+
 	/**
 	 * The log object.
 	 */
@@ -59,7 +61,7 @@ public final class StreamMessagingThread extends Thread {
 
 	private HashMap<InstanceConnectionInfo, PluginCommunicationProtocol> proxies = new HashMap<InstanceConnectionInfo, PluginCommunicationProtocol>();
 
-	public StreamMessagingThread() {
+	private StreamMessagingThread() {
 		this.setName("StreamMessagingThread");
 	}
 
@@ -110,8 +112,24 @@ public final class StreamMessagingThread extends Thread {
 
 	public void sendToTaskManagerAsynchronously(
 			final InstanceConnectionInfo connectionInfo,
-			final AbstractSerializableQosMessage data) throws InterruptedException {
+			final AbstractSerializableQosMessage data)
+			throws InterruptedException {
 		this.dataQueue.put(data);
 		this.connectionInfoQueue.put(connectionInfo);
+	}
+
+	public synchronized static StreamMessagingThread getInstance() {
+		if (SINGLETON_INSTANCE == null) {
+			SINGLETON_INSTANCE = new StreamMessagingThread();
+			SINGLETON_INSTANCE.start();
+		}
+		return SINGLETON_INSTANCE;
+	}
+
+	public synchronized static void destroyInstance() {
+		if (SINGLETON_INSTANCE != null) {
+			SINGLETON_INSTANCE.stopMessagingThread();
+			SINGLETON_INSTANCE = null;
+		}
 	}
 }

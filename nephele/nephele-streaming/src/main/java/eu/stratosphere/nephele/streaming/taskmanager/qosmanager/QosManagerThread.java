@@ -7,10 +7,9 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
-import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
+import eu.stratosphere.nephele.streaming.message.ChainUpdates;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
-import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.buffers.BufferSizeManager;
 
 /**
@@ -30,18 +29,14 @@ public class QosManagerThread extends Thread {
 
 	private final LinkedBlockingQueue<AbstractQosMessage> streamingDataQueue;
 
-	private StreamMessagingThread messagingThread;
-
 	private BufferSizeManager bufferSizeManager;
 
 	private QosModel qosModel;
 
-	public QosManagerThread(JobID jobID, StreamMessagingThread messagingThread) {
-		this.messagingThread = messagingThread;
+	public QosManagerThread(JobID jobID) {
 		this.qosModel = new QosModel(jobID);
 		this.streamingDataQueue = new LinkedBlockingQueue<AbstractQosMessage>();
-		this.bufferSizeManager = new BufferSizeManager(jobID, this.qosModel,
-				this.messagingThread);
+		this.bufferSizeManager = new BufferSizeManager(jobID, this.qosModel);
 		this.setName(String.format("QosManagerThread (JobID: %s)",
 				jobID.toString()));
 	}
@@ -80,9 +75,9 @@ public class QosManagerThread extends Thread {
 					this.qosModel
 							.mergeShallowQosGraph(((DeployInstanceQosRolesAction) streamingData)
 									.getQosManager().getShallowQosGraph());
-				} else if (streamingData instanceof StreamChainAnnounce) {
+				} else if (streamingData instanceof ChainUpdates) {
 					this.qosModel
-							.processStreamChainAnnounce((StreamChainAnnounce) streamingData);
+							.processChainUpdates((ChainUpdates) streamingData);
 				}
 
 				long now = System.currentTimeMillis();
@@ -122,7 +117,6 @@ public class QosManagerThread extends Thread {
 		this.streamingDataQueue.clear();
 		this.qosModel = null;
 		this.bufferSizeManager = null;
-		this.messagingThread = null;
 	}
 
 	public void shutdown() {

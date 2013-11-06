@@ -142,11 +142,10 @@ public class QosReportForwarderThread extends Thread {
 	}
 
 	public QosReportForwarderThread(JobID jobID,
-			StreamMessagingThread messagingThread,
 			QosReporterConfigCenter reporterConfig) {
 
 		this.jobID = jobID;
-		this.messagingThread = messagingThread;
+		this.messagingThread = StreamMessagingThread.getInstance();
 		this.reporterConfigCenter = reporterConfig;
 		this.pendingReports = new AggregatedReport[0];
 		this.currentReportIndex = -1;
