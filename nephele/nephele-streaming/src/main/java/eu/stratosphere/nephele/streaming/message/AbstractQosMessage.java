@@ -15,27 +15,22 @@
 
 package eu.stratosphere.nephele.streaming.message;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 
 /**
  * Abstract base class to be used to for exchanging messages between the
- * different components of the streaming plugin.
+ * different subcomponents of the nephele-streaming component.
  * 
- * @author warneke
+ * @author Bjoern Lohrmann
  */
-public abstract class AbstractStreamMessage implements IOReadableWritable {
+public abstract class AbstractQosMessage {
 
 	/**
 	 * The ID of the job this piece of streaming data refers to
 	 */
-	private final JobID jobID;
+	private JobID jobID;
 
-	public AbstractStreamMessage(JobID jobID) {
+	public AbstractQosMessage(JobID jobID) {
 		if (jobID == null) {
 			throw new IllegalArgumentException("jobID must not be null");
 		}
@@ -44,36 +39,17 @@ public abstract class AbstractStreamMessage implements IOReadableWritable {
 	}
 
 	/**
-	 * Default constructor required for deserilization.
+	 * Empty default constructor.
 	 */
-	public AbstractStreamMessage() {
-
-		this.jobID = new JobID();
+	public AbstractQosMessage() {
 	}
 
-	/**
-	 * Returns the ID of the job this path latency information refers to.
-	 * 
-	 * @return the ID of the job this path latency information refers to
-	 */
 	public JobID getJobID() {
 
 		return this.jobID;
 	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void write(final DataOutput out) throws IOException {
-		this.jobID.write(out);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void read(final DataInput in) throws IOException {
-		this.jobID.read(in);
+	
+	public void setJobID(JobID jobID) {
+		this.jobID = jobID;
 	}
 }

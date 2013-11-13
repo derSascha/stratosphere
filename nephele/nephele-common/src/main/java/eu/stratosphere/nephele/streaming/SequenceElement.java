@@ -22,7 +22,7 @@ import eu.stratosphere.nephele.io.AbstractID;
 import eu.stratosphere.nephele.io.IOReadableWritable;
 
 /**
- * A sequences is a series of connected vertices (tasks) and edges (channels).
+ * A sequence is a series of connected vertices (tasks) and edges (channels).
  * This class models an element of such a sequence and thus models either a
  * vertex or an edge. To unambiguously define a sequence we needs to not only
  * inlude vertex IDs but also the indices of input/output gates. This class is

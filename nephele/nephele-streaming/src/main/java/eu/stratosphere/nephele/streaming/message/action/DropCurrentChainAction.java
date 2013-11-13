@@ -12,34 +12,15 @@
  * specific language governing permissions and limitations under the License.
  *
  **********************************************************************************************************************/
-
 package eu.stratosphere.nephele.streaming.message.action;
 
-import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
 
 /**
- * This class implements an abstract base class for actions the stream Qos
- * components of the Nephele streaming plugin can initiate to achieve particular
- * latency or throughput goals.
- * 
- * @author warneke
+ * @author Bjoern Lohrmann
+ *
  */
-public abstract class AbstractQosAction extends AbstractStreamMessage {
+public class DropCurrentChainAction extends AbstractQosMessage implements
+		QosAction {
 
-	/**
-	 * Constructs a new abstract action object.
-	 * 
-	 * @param jobID
-	 *            the ID of the job the initiated action applies to
-	 */
-	AbstractQosAction(final JobID jobID) {
-		super(jobID);
-	}
-
-	/**
-	 * Default constructor required for deserialization.
-	 */
-	AbstractQosAction() {
-	}
 }

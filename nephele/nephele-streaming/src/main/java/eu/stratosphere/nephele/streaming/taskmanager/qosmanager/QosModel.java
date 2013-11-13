@@ -20,14 +20,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.io.GateID;
 import eu.stratosphere.nephele.io.channels.ChannelID;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.streaming.JobGraphLatencyConstraint;
 import eu.stratosphere.nephele.streaming.LatencyConstraintID;
-import eu.stratosphere.nephele.streaming.message.StreamChainAnnounce;
+import eu.stratosphere.nephele.streaming.message.ChainUpdates;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.qosreport.EdgeLatency;
@@ -165,29 +166,26 @@ public class QosModel {
 		}
 	}
 
-	public void processStreamChainAnnounce(StreamChainAnnounce announce) {
+	public void processChainUpdates(ChainUpdates announce) {
+		for (QosReporterID.Edge edgeReporterID : announce.getUnchainedEdges()) {
+			
+			QosEdge edge = this.edgeBySourceChannelID.get(edgeReporterID
+					.getSourceChannelID());
+			edge.getQosData().setIsInChain(false);
+			
+			Logger.getLogger(this.getClass()).info(
+					"Edge " + edge + " has been unchained.");
+		}
 
-		QosVertex currentVertex = this.vertexByID.get(announce.getChainBegin()
-				.getVertexID());
-
-		while (!currentVertex.getID().equals(
-				announce.getChainEnd().getVertexID())) {
-
-			if (currentVertex.getGroupVertex().getNumberOfOutputGates() != 1) {
-				throw new RuntimeException(
-						"Cannot chain task that has more than one output gate");
-			}
-
-			if (currentVertex.getGroupVertex().getForwardEdge(0)
-					.getDistributionPattern() != DistributionPattern.POINTWISE) {
-
-				throw new RuntimeException(
-						"Cannot chain task with non-POINTIWSE distribution pattern.");
-			}
-
-			QosEdge forwardEdge = currentVertex.getOutputGate(0).getEdge(0);
-			forwardEdge.getQosData().setIsInChain(true);
-			currentVertex = forwardEdge.getInputGate().getVertex();
+		for (QosReporterID.Edge edgeReporterID : announce
+				.getNewlyChainedEdges()) {
+			
+			QosEdge edge = this.edgeBySourceChannelID.get(edgeReporterID
+					.getSourceChannelID());
+			edge.getQosData().setIsInChain(true);
+			
+			Logger.getLogger(this.getClass()).info(
+					"Edge " + edge + " has been chained.");
 		}
 	}
 

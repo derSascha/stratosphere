@@ -20,12 +20,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import eu.stratosphere.nephele.executiongraph.ExecutionGraph;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
+import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.io.DistributionPattern;
 import eu.stratosphere.nephele.jobgraph.JobVertexID;
@@ -62,7 +64,7 @@ public class QosSetup {
 
 	private HashMap<LatencyConstraintID, QosGraph> qosGraphs;
 
-	private HashMap<InstanceConnectionInfo, TaskManagerQosRoles> qosRoles;
+	private HashMap<InstanceConnectionInfo, TaskManagerQosSetup> taskManagerQosSetups;
 
 	public QosSetup(ExecutionGraph executionGraph,
 			List<JobGraphLatencyConstraint> constraints) {
@@ -70,7 +72,7 @@ public class QosSetup {
 		this.executionGraph = executionGraph;
 		this.constraints = constraints;
 		this.qosGraphs = new HashMap<LatencyConstraintID, QosGraph>();
-		this.qosRoles = new HashMap<InstanceConnectionInfo, TaskManagerQosRoles>();
+		this.taskManagerQosSetups = new HashMap<InstanceConnectionInfo, TaskManagerQosSetup>();
 	}
 
 	public void computeQosRoles() {
@@ -88,7 +90,7 @@ public class QosSetup {
 	private LinkedList<QosManagerRole> collectAllManagerRoles() {
 		LinkedList<QosManagerRole> managers = new LinkedList<QosManagerRole>();
 
-		for (TaskManagerQosRoles tmRoles : this.qosRoles.values()) {
+		for (TaskManagerQosSetup tmRoles : this.taskManagerQosSetups.values()) {
 			managers.addAll(tmRoles.getManagerRoles());
 		}
 
@@ -203,19 +205,21 @@ public class QosSetup {
 
 			LOG.info(String
 					.format("Using group vertex %s to run %d QosManagers for constraint %s",
-							anchorVertex.getName(), this.qosRoles.size(),
-							qosGraph.getConstraints().iterator().next().getID()));
+							anchorVertex.getName(),
+							this.taskManagerQosSetups.size(), qosGraph
+									.getConstraints().iterator().next().getID()));
 
 		}
 	}
 
-	private TaskManagerQosRoles getOrCreateInstanceRoles(
+	private TaskManagerQosSetup getOrCreateInstanceRoles(
 			InstanceConnectionInfo instance) {
 
-		TaskManagerQosRoles instanceRoles = this.qosRoles.get(instance);
+		TaskManagerQosSetup instanceRoles = this.taskManagerQosSetups
+				.get(instance);
 		if (instanceRoles == null) {
-			instanceRoles = new TaskManagerQosRoles(instance);
-			this.qosRoles.put(instance, instanceRoles);
+			instanceRoles = new TaskManagerQosSetup(instance);
+			this.taskManagerQosSetups.put(instance, instanceRoles);
 		}
 
 		return instanceRoles;
@@ -397,7 +401,8 @@ public class QosSetup {
 	}
 
 	public void attachRolesToExecutionGraph() {
-		for (TaskManagerQosRoles instanceQosRoles : this.qosRoles.values()) {
+		for (TaskManagerQosSetup instanceQosRoles : this.taskManagerQosSetups
+				.values()) {
 			DeployInstanceQosRolesAction rolesDeployment = instanceQosRoles
 					.toDeploymentAction(this.executionGraph.getJobID());
 
@@ -431,6 +436,30 @@ public class QosSetup {
 							rolesDeployment);
 				}
 			}
+		}
+	}
+
+	public void computeCandidateChains() {
+		// gets called whenever a candidate chain is found
+		CandidateChainListener chainListener = new CandidateChainListener() {
+			@Override
+			public void handleCandidateChain(
+					InstanceConnectionInfo executingInstance,
+					LinkedList<ExecutionVertexID> chain) {
+
+				QosSetup.this.taskManagerQosSetups.get(executingInstance)
+						.addCandidateChain(chain);
+			}
+		};
+
+		CandidateChainFinder chainFinder = new CandidateChainFinder(
+				chainListener, this.executionGraph);
+
+		for (Entry<LatencyConstraintID, QosGraph> entry : this.qosGraphs
+				.entrySet()) {
+
+			chainFinder.findChainsAlongConstraint(entry.getKey(),
+					entry.getValue());
 		}
 	}
 }

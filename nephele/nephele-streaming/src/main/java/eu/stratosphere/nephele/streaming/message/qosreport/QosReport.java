@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.streaming.message.AbstractSerializableQosMessage;
 import eu.stratosphere.nephele.streaming.message.action.EdgeQosReporterConfig;
 import eu.stratosphere.nephele.streaming.message.action.VertexQosReporterConfig;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
@@ -24,7 +24,7 @@ import eu.stratosphere.nephele.streaming.taskmanager.qosmodel.QosReporterID;
  * 
  * @author Bjoern Lohrmann
  */
-public class QosReport extends AbstractStreamMessage {
+public class QosReport extends AbstractSerializableQosMessage {
 
 	private HashMap<QosReporterID.Edge, EdgeLatency> edgeLatencies;
 

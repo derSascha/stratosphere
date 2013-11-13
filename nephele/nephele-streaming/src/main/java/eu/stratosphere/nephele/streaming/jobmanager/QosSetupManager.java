@@ -230,6 +230,7 @@ public class QosSetupManager implements VertexAssignmentListener {
 	private void computeAndDistributeQosSetup() {
 		QosSetup qosSetup = new QosSetup(this.executionGraph, this.constraints);
 		qosSetup.computeQosRoles();
+		qosSetup.computeCandidateChains();
 		qosSetup.attachRolesToExecutionGraph();
 
 		// FIXME: continue here: distribute QoS setup
