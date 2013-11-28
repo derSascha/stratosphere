@@ -14,7 +14,6 @@ import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.plugins.PluginManager;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
-import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosConstraintViolationListener;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosModel;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosUtils;
@@ -40,8 +39,8 @@ public class BufferSizeManager {
 	 * Provides access to the configuration entry which defines the buffer size
 	 * adjustment interval-
 	 */
-	public static final String QOSMANAGER_ADJUSTMENTINTERVAL_KEY = PluginManager.PLUGINS_NAMESPACE_KEY_PREFIX
-			+ ".streaming.qosmanager.adjustmentinterval";
+	public static final String QOSMANAGER_ADJUSTMENTINTERVAL_KEY = PluginManager
+			.prefixWithPluginNamespace("streaming.qosmanager.adjustmentinterval");
 
 	public static final long DEFAULT_ADJUSTMENTINTERVAL = 5000;
 
@@ -68,8 +67,7 @@ public class BufferSizeManager {
 		this.messagingThread = messagingThread;
 
 		this.adjustmentInterval = GlobalConfiguration.getLong(
-						QOSMANAGER_ADJUSTMENTINTERVAL_KEY,
-						DEFAULT_ADJUSTMENTINTERVAL);
+				QOSMANAGER_ADJUSTMENTINTERVAL_KEY, DEFAULT_ADJUSTMENTINTERVAL);
 
 		this.timeOfNextAdjustment = QosUtils.alignToInterval(
 				System.currentTimeMillis() + WAIT_BEFORE_FIRST_ADJUSTMENT,

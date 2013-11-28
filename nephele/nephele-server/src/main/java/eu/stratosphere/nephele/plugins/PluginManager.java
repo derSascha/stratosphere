@@ -48,12 +48,12 @@ public final class PluginManager {
 	 */
 	private static final Log LOG = LogFactory.getLog(PluginManager.class);
 
-	public static final String PLUGINS_NAMESPACE_KEY_PREFIX = "eu.stratosphere.nephele.plugins.";
+	private static final String PLUGINS_NAMESPACE_KEY_PREFIX = "eu.stratosphere.nephele.plugins.";
 
 	/**
 	 * Pattern for plugins classname property.
 	 */
-	public static final String PLUGINS_CLASSNAME_KEY_PATTERN = PLUGINS_NAMESPACE_KEY_PREFIX
+	private static final String PLUGINS_CLASSNAME_KEY_PATTERN = PLUGINS_NAMESPACE_KEY_PREFIX
 			+ "%s.classname";
 
 	/**
@@ -182,8 +182,7 @@ public final class PluginManager {
 			Class<? extends AbstractPluginLoader> loaderClass = (Class<? extends AbstractPluginLoader>) Class
 					.forName(pluginClassname);
 			Constructor<? extends AbstractPluginLoader> constructor = (Constructor<? extends AbstractPluginLoader>) loaderClass
-					.getConstructor(String.class, Configuration.class,
-							PluginLookupService.class);
+					.getConstructor(String.class, PluginLookupService.class);
 			pluginLoader = constructor.newInstance(pluginName,
 					pluginLookupService);
 			LOG.info("Successfully loaded plugin " + pluginName);
@@ -211,5 +210,9 @@ public final class PluginManager {
 				taskManager);
 
 		return getInstance(lookupService).getTaskManagerPluginsInternal();
+	}
+	
+	public static String prefixWithPluginNamespace(String keySuffix) {
+		return PLUGINS_NAMESPACE_KEY_PREFIX + keySuffix;
 	}
 }

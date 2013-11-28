@@ -53,8 +53,8 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 * Provides access to the configuration entry which defines the interval in
 	 * which records shall be tagged.
 	 */
-	public static final String TAGGING_INTERVAL_KEY = PluginManager.PLUGINS_NAMESPACE_KEY_PREFIX
-			+ ".streaming.qosreporter.tagginginterval";
+	public static final String TAGGING_INTERVAL_KEY = PluginManager
+			.prefixWithPluginNamespace("streaming.qosreporter.tagginginterval");
 
 	/**
 	 * The default tagging interval.
@@ -66,8 +66,8 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 * which received tags shall be aggregated and sent to the job manager
 	 * plugin component.
 	 */
-	public static final String AGGREGATION_INTERVAL_KEY = PluginManager.PLUGINS_NAMESPACE_KEY_PREFIX
-			+ ".streaming.qosreporter.aggregationinterval";
+	public static final String AGGREGATION_INTERVAL_KEY = PluginManager
+			.prefixWithPluginNamespace("streaming.qosreporter.aggregationinterval");
 
 	/**
 	 * The default aggregation interval.

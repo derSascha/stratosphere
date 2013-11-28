@@ -15,7 +15,6 @@
 
 package eu.stratosphere.nephele.streaming;
 
-import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.plugins.AbstractPluginLoader;
 import eu.stratosphere.nephele.plugins.JobManagerPlugin;
 import eu.stratosphere.nephele.plugins.PluginID;
@@ -65,7 +64,6 @@ public final class StreamingPluginLoader extends AbstractPluginLoader {
 	 *            plugin
 	 */
 	public StreamingPluginLoader(final String pluginName,
-			final Configuration pluginConfiguration,
 			final PluginLookupService pluginLookupService) {
 		super(pluginName, pluginLookupService);
 	}

@@ -43,8 +43,8 @@ public class QosLogger {
 	 * Provides access to the configuration entry which defines the log file
 	 * location.
 	 */
-	private static final String LOGFILE_PATTERN_KEY = PluginManager.PLUGINS_NAMESPACE_KEY_PREFIX
-			+ ".streaming.qosmanager.logging.qos_statistics_filepattern";
+	private static final String LOGFILE_PATTERN_KEY = PluginManager
+			.prefixWithPluginNamespace("streaming.qosmanager.logging.qos_statistics_filepattern");
 
 	private static final String DEFAULT_LOGFILE_PATTERN = "/tmp/qos_statistics_%s";
 
