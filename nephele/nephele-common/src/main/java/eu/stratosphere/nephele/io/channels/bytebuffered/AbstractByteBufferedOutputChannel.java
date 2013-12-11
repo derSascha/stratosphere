@@ -206,10 +206,6 @@ public abstract class AbstractByteBufferedOutputChannel<T extends Record> extend
 	}
 
 
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public void processEvent(AbstractEvent event) {
 
 		if (event instanceof AbstractTaskEvent) {

@@ -32,7 +32,6 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.internal.util.collections.Sets;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -287,8 +286,8 @@ public class QosGraphTest {
 		assertEquals("The Start-Vertex should be vertex1", "vertex1",
 				v1.getName());
 		assertEquals(0, v1.getNumberOfInputGates());
-		Set<QosGroupVertex> supposedSplitVertices = Sets.newSet(
-				this.fix.vertex2, this.fix.vertex3);
+		Set<QosGroupVertex> supposedSplitVertices = new HashSet<QosGroupVertex>(Arrays.asList(
+				this.fix.vertex2, this.fix.vertex3));
 		for (QosGroupEdge ge : v1.getForwardEdges()) {
 			QosGroupVertex targetVertex = ge.getTargetVertex();
 			assertEquals("Source vertex should be vertex1", v1,
@@ -300,8 +299,8 @@ public class QosGraphTest {
 				v1.getNumberOfMembers());
 		for (QosVertex memberV1 : v1.getMembers()) {
 			memberV1.getOutputGate(0);
-			Set<QosGate> qosGates = Sets.newSet(memberV1.getOutputGate(0),
-					memberV1.getOutputGate(1));
+			Set<QosGate> qosGates = new HashSet<QosGate>(Arrays.asList(memberV1.getOutputGate(0),
+					memberV1.getOutputGate(1)));
 			int nonNullCount = 0;
 			int numberOfTotalEdges = 0;
 			for (QosGate g : qosGates)
@@ -447,9 +446,9 @@ public class QosGraphTest {
 	}
 
 	private void checkGraphIntegrity(QosGraph qosGraph1) {
-		Set<String> expectedVertexNames = Sets.newSet(
+		Set<String> expectedVertexNames = new HashSet<String>(Arrays.asList(
 				this.fix.vertex2.getName(), this.fix.vertex3.getName(),
-				this.fix.vertex4.getName());
+				this.fix.vertex4.getName()));
 		for (QosGroupVertex gv : qosGraph1.getAllVertices()) {
 			if (gv.getName().equals(this.fix.vertex2.getName())) { // vertex2
 				assertEquals(1, gv.getNumberOfInputGates());

@@ -1,8 +1,8 @@
-# Stratosphere - "Streaming" Distribution
+# Stratosphere Streaming Distribution
 
-Based on official "Ozone" Distribution from github.com/stratosphere/stratosphere
+_"Big Data looks tiny from Stratosphere."_
 
-Stratosphere-Streaming is a modification of the official Stratosphere "Ozone" distribution, optimized for stream processing applications. The goal is to provide and enforce QoS guarantees (latency, throughput) on large scale streaming workflows with hundreds of compute nodes.
+Stratosphere-Streaming is a modification of the official Stratosphere distribution, optimized for stream processing applications. The goal is to provide and enforce QoS guarantees (latency, throughput) on large scale streaming workflows with hundreds of compute nodes.
 
 Currently, it is implemented as a plugin and patchset inside Stratosphere's Nephele layer. Stratosphere's PACT layer does not suit itself to stream processing and has been removed.
 
@@ -16,7 +16,7 @@ This tutorial shows how to build Stratosphere on your own system. Please open a 
 #### Requirements
 * Unix-like environment (We use Linux, Mac OS X, Cygwin)
 * git
-* maven
+* Maven (at least version 3.0.4)
 * Java 6 or 7
 
 ```
@@ -103,7 +103,7 @@ We use the GitHub Pull Request system for the development of Stratosphere. Just 
 * Bug reports
 * Bug fixes
 * Documentation
-* Tools that ease the use and development of Stratosphere Streaming
+* Tools that ease the use and development of Stratosphere
 * Well-written Stratosphere jobs
 
 
@@ -111,8 +111,9 @@ Let us know if you have created a system that uses Stratosphere-Streaming, so th
 
 ## About
 
-[Stratosphere](www.stratosphere.eu) is a DFG-founded research project. Ozone is the codename of the latest Stratosphere distribution. The Stratosphere-Streaming
-distribution is a fork of Ozone. We combine cutting edge research outcomes with a stable and usable codebase.
+[Stratosphere](http://www.stratosphere.eu) is a DFG-founded research project.
+We combine cutting edge research outcomes with a stable and usable codebase.
+
 
 
 

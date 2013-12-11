@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import eu.stratosphere.nephele.event.task.AbstractTaskEvent;
+import eu.stratosphere.nephele.io.InputChannelResult;
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.RecordAvailabilityListener;
 import eu.stratosphere.nephele.io.channels.AbstractInputChannel;
@@ -45,14 +47,11 @@ public final class StreamInputGate<T extends Record> extends
 
 	private HashMap<ChannelID, AbstractInputChannel<T>> inputChannels;
 
-	/**
-	 * The thread which executes the task connected to the input gate.
-	 */
-	private Thread executingThread = null;
-
 	private AtomicBoolean taskThreadHalted = new AtomicBoolean(false);
 
 	private volatile InputGateQosReportingListener qosCallback;
+
+	private AbstractTaskEvent currentEvent;
 
 	public StreamInputGate(final InputGate<T> wrappedInputGate) {
 		super(wrappedInputGate);
@@ -73,50 +72,48 @@ public final class StreamInputGate<T extends Record> extends
 	 * {@inheritDoc}
 	 */
 	@Override
-	public T readRecord(final T target) throws IOException,
+	public InputChannelResult readRecord(final T target) throws IOException,
 			InterruptedException {
-		if (this.executingThread == null) {
-			this.executingThread = Thread.currentThread();
-		}
 
 		if (this.isClosed()) {
-			return null;
+			return InputChannelResult.END_OF_STREAM;
 		}
 
-		if (this.executingThread.isInterrupted()) {
+		if (Thread.interrupted()) {
 			throw new InterruptedException();
 		}
 
-		T record = null;
-		int channelToReadFrom;
-		do {
-			channelToReadFrom = this.channelChooser
-					.chooseNextAvailableChannel();
-
-			if (channelToReadFrom != -1) {
-				// regular reading
-				record = this.readFromChannel(channelToReadFrom, target);
-			} else {
-				// never returns and dumps any incoming data
-				this.trapTaskThread(target);
-			}
-		} while (record == null);
-
-		this.reportRecordReceived(record, channelToReadFrom);
-
-		return record;
-	}
-
-	private T readFromChannel(int channelToReadFrom, T targetRecord)
-			throws IOException {
-		final T returnValue = this.getInputChannel(channelToReadFrom)
-				.readRecord(targetRecord);
-
-		if (returnValue == null) {
-			this.channelChooser.markCurrentChannelUnavailable();
+		int channelToReadFrom = this.channelChooser
+				.chooseNextAvailableChannel();
+		
+		if (channelToReadFrom == -1) {
+			// traps task thread because it is inside a chain
+			this.trapTaskThread(target);
 		}
 
-		return returnValue;
+		InputChannelResult result = this.getInputChannel(channelToReadFrom).readRecord(target);
+		switch (result) {
+		case INTERMEDIATE_RECORD_FROM_BUFFER:
+			this.reportRecordReceived(target, channelToReadFrom);
+			return InputChannelResult.INTERMEDIATE_RECORD_FROM_BUFFER;
+		case LAST_RECORD_FROM_BUFFER:
+			this.reportRecordReceived(target, channelToReadFrom);
+			this.channelChooser.decreaseAvailableInputOnCurrentChannel();
+			return InputChannelResult.LAST_RECORD_FROM_BUFFER;
+		case EVENT:
+			this.channelChooser.decreaseAvailableInputOnCurrentChannel();
+			this.currentEvent = this.getInputChannel(channelToReadFrom).getCurrentEvent();
+			return InputChannelResult.EVENT;
+		case NONE:
+			this.channelChooser.decreaseAvailableInputOnCurrentChannel();
+			return InputChannelResult.NONE;
+		case END_OF_STREAM:
+			this.channelChooser.setNoAvailableInputOnCurrentChannel();
+			return isClosed() ? InputChannelResult.END_OF_STREAM
+					: InputChannelResult.NONE;
+		default: // silence the compiler
+			throw new RuntimeException();
+		}
 	}
 
 	/**
@@ -180,7 +177,7 @@ public final class StreamInputGate<T extends Record> extends
 	 */
 	@Override
 	public void notifyRecordIsAvailable(final int channelIndex) {
-		this.channelChooser.addIncomingAvailableChannel(channelIndex);
+		this.channelChooser.increaseAvailableInput(channelIndex);
 	}
 
 	/**
@@ -190,15 +187,6 @@ public final class StreamInputGate<T extends Record> extends
 	public void registerRecordAvailabilityListener(
 			final RecordAvailabilityListener<T> listener) {
 		this.getWrappedInputGate().registerRecordAvailabilityListener(listener);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public boolean hasRecordAvailable() throws IOException,
-			InterruptedException {
-		return this.getWrappedInputGate().hasRecordAvailable();
 	}
 
 	@Override
@@ -254,12 +242,13 @@ public final class StreamInputGate<T extends Record> extends
 		return channel;
 	}
 
-	/**
-	 * {@inheritDoc}
+	/* (non-Javadoc)
+	 * @see eu.stratosphere.nephele.io.InputGate#getCurrentEvent()
 	 */
 	@Override
-	public void removeAllInputChannels() {
-		this.inputChannels.clear();
-		this.getWrappedInputGate().removeAllInputChannels();
+	public AbstractTaskEvent getCurrentEvent() {
+		AbstractTaskEvent e = this.currentEvent;
+		this.currentEvent = null;
+		return e;
 	}
 }

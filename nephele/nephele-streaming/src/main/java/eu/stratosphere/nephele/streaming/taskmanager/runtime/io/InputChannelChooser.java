@@ -13,11 +13,21 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class InputChannelChooser {
 
-	private final LinkedBlockingQueue<Integer> incomingAvailableChannels = new LinkedBlockingQueue<Integer>();
+	private final LinkedBlockingQueue<Integer> incomingInputAvailabilities = new LinkedBlockingQueue<Integer>();
 
 	private final RoundRobinChannelSchedule channelSchedule = new RoundRobinChannelSchedule();
 
 	private volatile boolean blockIfNoChannelAvailable = true;
+
+	private int[] channelInputAvailibilityCounter;
+
+	private int currentChannel;
+
+	public InputChannelChooser() {
+		this.channelInputAvailibilityCounter = new int[1];
+		this.channelInputAvailibilityCounter[0] = 0;
+		this.currentChannel = -1;
+	}
 
 	/**
 	 * @return index of the next available channel, or -1 if no channel is
@@ -32,20 +42,24 @@ public class InputChannelChooser {
 			this.waitForAvailableChannelsIfNecessary();
 		}
 
-		return this.channelSchedule.nextChannel();
+		this.currentChannel = this.channelSchedule.nextChannel();
+		return this.currentChannel;
 	}
 
 	public void setBlockIfNoChannelAvailable(boolean blockIfNoChannelAvailable) {
 		this.blockIfNoChannelAvailable = blockIfNoChannelAvailable;
-		synchronized (this.incomingAvailableChannels) {
+		synchronized (this.incomingInputAvailabilities) {
 			// wake up any task thread that is waiting on available channels
 			// so that it realizes it should be halted.
-			this.incomingAvailableChannels.notify();
+			this.incomingInputAvailabilities.notify();
 		}
 	}
 
-	public void markCurrentChannelUnavailable() {
-		this.channelSchedule.unscheduleCurrentChannel();
+	public void decreaseAvailableInputOnCurrentChannel() {
+		this.channelInputAvailibilityCounter[this.currentChannel]--;
+		if (this.channelInputAvailibilityCounter[this.currentChannel] == 0) {
+			this.channelSchedule.unscheduleCurrentChannel();
+		}
 	}
 
 	/**
@@ -57,26 +71,44 @@ public class InputChannelChooser {
 	 */
 	private void waitForAvailableChannelsIfNecessary()
 			throws InterruptedException {
-		synchronized (this.incomingAvailableChannels) {
-			while (this.incomingAvailableChannels.isEmpty()
+
+		synchronized (this.incomingInputAvailabilities) {
+			while (this.incomingInputAvailabilities.isEmpty()
 					&& this.blockIfNoChannelAvailable) {
-				this.incomingAvailableChannels.wait();
+				this.incomingInputAvailabilities.wait();
 			}
 		}
 		this.dequeueIncomingAvailableChannels();
 	}
 
-	public void addIncomingAvailableChannel(int channelIndex) {
-		synchronized (this.incomingAvailableChannels) {
-			this.incomingAvailableChannels.add(Integer.valueOf(channelIndex));
-			this.incomingAvailableChannels.notify();
+	public void increaseAvailableInput(int channelIndex) {
+		synchronized (this.incomingInputAvailabilities) {
+			this.incomingInputAvailabilities.add(Integer.valueOf(channelIndex));
+			this.incomingInputAvailabilities.notify();
 		}
 	}
 
 	private void dequeueIncomingAvailableChannels() {
-		Integer incoming;
-		while ((incoming = this.incomingAvailableChannels.poll()) != null) {
-			this.channelSchedule.scheduleChannel(incoming);
+		Integer channelIndex;
+		while ((channelIndex = this.incomingInputAvailabilities.poll()) != null) {
+			increaseChannelInputAvailability(channelIndex);
+			this.channelSchedule.scheduleChannel(channelIndex);
 		}
+	}
+
+	private void increaseChannelInputAvailability(int channelIndex) {
+		if (channelIndex >= this.channelInputAvailibilityCounter.length) {
+			int[] newAvailiblityCounters = new int[channelIndex + 1];
+			System.arraycopy(this.channelInputAvailibilityCounter, 0,
+					newAvailiblityCounters, 0,
+					this.channelInputAvailibilityCounter.length);
+			this.channelInputAvailibilityCounter = newAvailiblityCounters;
+		}
+		this.channelInputAvailibilityCounter[channelIndex]++;
+	}
+
+	public void setNoAvailableInputOnCurrentChannel() {
+		this.channelInputAvailibilityCounter[this.currentChannel] = 0;
+		this.channelSchedule.unscheduleCurrentChannel();
 	}
 }

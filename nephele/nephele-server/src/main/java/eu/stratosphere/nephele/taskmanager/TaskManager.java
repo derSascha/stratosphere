@@ -82,6 +82,7 @@ import eu.stratosphere.nephele.services.memorymanager.MemoryManager;
 import eu.stratosphere.nephele.services.memorymanager.spi.DefaultMemoryManager;
 import eu.stratosphere.nephele.taskmanager.bytebuffered.ByteBufferedChannelManager;
 import eu.stratosphere.nephele.taskmanager.bytebuffered.InsufficientResourcesException;
+import eu.stratosphere.nephele.taskmanager.runtime.ExecutorThreadFactory;
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 import eu.stratosphere.nephele.util.SerializableArrayList;
 import eu.stratosphere.nephele.util.StringUtils;
@@ -92,7 +93,6 @@ import eu.stratosphere.nephele.util.StringUtils;
  * Task managers are able to automatically discover the job manager and receive its configuration from it
  * as long as the job manager is running on the same local network
  * 
- * @author warneke
  */
 public class TaskManager implements TaskOperationProtocol, PluginCommunicationProtocol {
 
@@ -106,7 +106,7 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 
 	private final PluginCommunicationProtocol pluginCommunicationService;
 
-	private final ExecutorService executorService = Executors.newCachedThreadPool();
+	private final ExecutorService executorService = Executors.newCachedThreadPool(ExecutorThreadFactory.INSTANCE);
 
 	private static final int handlerCount = 1;
 
@@ -154,7 +154,7 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 	 * receive an initial configuration. All parameters are obtained from the 
 	 * {@link GlobalConfiguration}, which must be loaded prior to instantiating the task manager.
 	 */
-	public TaskManager() throws Exception {
+	public TaskManager(final int taskManagersPerJVM) throws Exception {
 		
 		// IMPORTANT! At this point, the GlobalConfiguration must have been read!
 
@@ -260,13 +260,12 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 		// Load profiler if it should be used
 		if (GlobalConfiguration.getBoolean(ProfilingUtils.ENABLE_PROFILING_KEY, false)) {
 			final String profilerClassName = GlobalConfiguration.getString(ProfilingUtils.TASKMANAGER_CLASSNAME_KEY,
-				null);
-			if (profilerClassName == null) {
-				LOG.error("Cannot find class name for the profiler.");
-				throw new Exception("Cannot find class name for the profiler.");
-			}
+				"eu.stratosphere.nephele.profiling.impl.TaskManagerProfilerImpl");
 			this.profiler = ProfilingUtils.loadTaskManagerProfiler(profilerClassName, jobManagerAddress.getAddress(),
 				this.localInstanceConnectionInfo);
+			if (this.profiler == null) {
+				LOG.error("Cannot find class name for the profiler.");
+			}
 		} else {
 			this.profiler = null;
 			LOG.debug("Profiler disabled");
@@ -290,7 +289,7 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 		this.byteBufferedChannelManager = byteBufferedChannelManager;
 
 		// Determine hardware description
-		HardwareDescription hardware = HardwareDescriptionFactory.extractFromSystem();
+		HardwareDescription hardware = HardwareDescriptionFactory.extractFromSystem(taskManagersPerJVM);
 		if (hardware == null) {
 			LOG.warn("Cannot determine hardware description");
 		}
@@ -357,7 +356,7 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 		// Create a new task manager object
 		TaskManager taskManager = null;
 		try {
-			taskManager = new TaskManager();
+			taskManager = new TaskManager(1);
 		} catch (Exception e) {
 			LOG.fatal("Taskmanager startup failed:" + StringUtils.stringifyException(e));
 			System.exit(FAILURERETURNCODE);
@@ -463,6 +462,11 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 		return new TaskKillResult(id, AbstractTaskResult.ReturnCode.SUCCESS);
 	}
 
+	private void reportAsyncronousEvent(final ExecutionVertexID vertexID) {
+
+		this.byteBufferedChannelManager.reportAsynchronousEvent(vertexID);
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -562,7 +566,6 @@ public class TaskManager implements TaskOperationProtocol, PluginCommunicationPr
 		Task task = null;
 
 		synchronized (this) {
-
 			final Task runningTask = this.runningTasks.get(id);
 			boolean registerTask = true;
 			if (runningTask == null) {

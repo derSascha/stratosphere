@@ -20,6 +20,7 @@ import java.io.IOException;
 import eu.stratosphere.nephele.event.task.AbstractTaskEvent;
 import eu.stratosphere.nephele.event.task.EventListener;
 import eu.stratosphere.nephele.io.GateID;
+import eu.stratosphere.nephele.io.InputChannelResult;
 import eu.stratosphere.nephele.io.InputGate;
 import eu.stratosphere.nephele.io.channels.AbstractInputChannel;
 import eu.stratosphere.nephele.io.channels.ChannelID;
@@ -192,7 +193,7 @@ public abstract class AbstractInputGateWrapper<T extends Record> implements
 	 * {@inheritDoc}
 	 */
 	@Override
-	public T readRecord(final T target) throws IOException,
+	public InputChannelResult readRecord(final T target) throws IOException,
 			InterruptedException {
 
 		return this.wrappedInputGate.readRecord(target);
@@ -229,16 +230,6 @@ public abstract class AbstractInputGateWrapper<T extends Record> implements
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void activateInputChannels() throws IOException,
-			InterruptedException {
-
-		this.wrappedInputGate.activateInputChannels();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public void close() throws IOException, InterruptedException {
 
 		this.wrappedInputGate.close();
@@ -266,13 +257,5 @@ public abstract class AbstractInputGateWrapper<T extends Record> implements
 
 		return this.wrappedInputGate.createInMemoryInputChannel(inputGate,
 				channelID, connectedChannelID);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void removeAllInputChannels() {
-		this.wrappedInputGate.removeAllInputChannels();
 	}
 }

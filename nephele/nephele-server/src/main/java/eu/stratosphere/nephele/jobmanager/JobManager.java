@@ -33,7 +33,9 @@
 
 package eu.stratosphere.nephele.jobmanager;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -41,6 +43,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,6 +59,10 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 import eu.stratosphere.nephele.client.AbstractJobResult;
 import eu.stratosphere.nephele.client.AbstractJobResult.ReturnCode;
@@ -63,6 +70,7 @@ import eu.stratosphere.nephele.client.JobCancelResult;
 import eu.stratosphere.nephele.client.JobProgressResult;
 import eu.stratosphere.nephele.client.JobSubmissionResult;
 import eu.stratosphere.nephele.configuration.ConfigConstants;
+import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.configuration.GlobalConfiguration;
 import eu.stratosphere.nephele.deployment.TaskDeploymentDescriptor;
 import eu.stratosphere.nephele.discovery.DiscoveryException;
@@ -94,10 +102,13 @@ import eu.stratosphere.nephele.ipc.Server;
 import eu.stratosphere.nephele.jobgraph.AbstractJobVertex;
 import eu.stratosphere.nephele.jobgraph.JobGraph;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.jobmanager.archive.ArchiveListener;
+import eu.stratosphere.nephele.jobmanager.archive.MemoryArchivist;
 import eu.stratosphere.nephele.jobmanager.scheduler.AbstractScheduler;
 import eu.stratosphere.nephele.jobmanager.scheduler.SchedulingException;
 import eu.stratosphere.nephele.jobmanager.splitassigner.InputSplitManager;
 import eu.stratosphere.nephele.jobmanager.splitassigner.InputSplitWrapper;
+import eu.stratosphere.nephele.jobmanager.web.WebInfoServer;
 import eu.stratosphere.nephele.managementgraph.ManagementGraph;
 import eu.stratosphere.nephele.managementgraph.ManagementVertexID;
 import eu.stratosphere.nephele.multicast.MulticastManager;
@@ -119,6 +130,7 @@ import eu.stratosphere.nephele.taskmanager.TaskKillResult;
 import eu.stratosphere.nephele.taskmanager.TaskSubmissionResult;
 import eu.stratosphere.nephele.taskmanager.bytebuffered.ConnectionInfoLookupResponse;
 import eu.stratosphere.nephele.taskmanager.bytebuffered.RemoteReceiver;
+import eu.stratosphere.nephele.taskmanager.runtime.ExecutorThreadFactory;
 import eu.stratosphere.nephele.topology.NetworkTopology;
 import eu.stratosphere.nephele.types.IntegerRecord;
 import eu.stratosphere.nephele.types.StringRecord;
@@ -148,6 +160,8 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 	private final JobManagerProfiler profiler;
 
 	private final EventCollector eventCollector;
+	
+	private final ArchiveListener archive;
 
 	private final InputSplitManager inputSplitManager;
 
@@ -161,7 +175,7 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 
 	private final int recommendedClientPollingInterval;
 
-	private final ExecutorService executorService = Executors.newCachedThreadPool();
+	private final ExecutorService executorService = Executors.newCachedThreadPool(ExecutorThreadFactory.INSTANCE);
 
 	private final static int SLEEPINTERVAL = 1000;
 
@@ -170,6 +184,8 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 	private final AtomicBoolean isShutdownInProgress = new AtomicBoolean(false);
 
 	private volatile boolean isShutDown = false;
+	
+	private WebInfoServer server;
 	
 	public JobManager(ExecutionMode executionMode) {
 
@@ -204,6 +220,16 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 
 		// Load the job progress collector
 		this.eventCollector = new EventCollector(this.recommendedClientPollingInterval);
+		
+		// Register simple job archive
+		int archived_items = GlobalConfiguration.getInteger(
+				ConfigConstants.JOB_MANAGER_WEB_ARCHIVE_COUNT, ConfigConstants.DEFAULT_JOB_MANAGER_WEB_ARCHIVE_COUNT);
+		if(archived_items > 0) {
+			this.archive = new MemoryArchivist(archived_items);
+			this.eventCollector.registerArchivist(archive);
+		}
+		else
+			this.archive = null;
 
 		// Load the input split manager
 		this.inputSplitManager = new InputSplitManager();
@@ -241,7 +267,7 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 			LOG.info("Trying to load " + instanceManagerClassName + " as instance manager");
 			this.instanceManager = JobManagerUtils.loadInstanceManager(instanceManagerClassName);
 			if (this.instanceManager == null) {
-				LOG.error("UNable to load instance manager " + instanceManagerClassName);
+				LOG.error("Unable to load instance manager " + instanceManagerClassName);
 				System.exit(FAILURERETURNCODE);
 			}
 		}
@@ -263,11 +289,7 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 		// Load profiler if it should be used
 		if (GlobalConfiguration.getBoolean(ProfilingUtils.ENABLE_PROFILING_KEY, false)) {
 			final String profilerClassName = GlobalConfiguration.getString(ProfilingUtils.JOBMANAGER_CLASSNAME_KEY,
-				null);
-			if (profilerClassName == null) {
-				LOG.error("Cannot find class name for the profiler");
-				System.exit(FAILURERETURNCODE);
-			}
+				"eu.stratosphere.nephele.profiling.impl.JobManagerProfilerImpl");
 			this.profiler = ProfilingUtils.loadJobManagerProfiler(profilerClassName, ipcAddress);
 			if (this.profiler == null) {
 				LOG.error("Cannot load profiler");
@@ -358,6 +380,30 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 	}
 
 	/**
+	 * Log Stratosphere version information.
+	 */
+	private static void logVersionInformation() {
+		String version = JobManager.class.getPackage().getImplementationVersion();
+		
+		// if version == null, then the JobManager runs from inside the IDE (or somehow not from the maven build jar)
+		if (version != null) {
+			String revision = "<unknown>";
+			try {
+				Properties properties = new Properties();
+				InputStream propFile = JobManager.class.getClassLoader().getResourceAsStream(".version.properties");
+				if (propFile != null) {
+					properties.load(propFile);
+					revision = properties.getProperty("git.commit.id.abbrev");
+				}
+			} catch (IOException e) {
+				LOG.info("Cannot determine code revision. Unable ro read version property file.");
+			}
+			
+			LOG.info("Starting Stratosphere JobManager (Version: " + version + ", Rev:" + revision + ")");
+		}
+	}
+	
+	/**
 	 * Entry point for the program
 	 * 
 	 * @param args
@@ -365,7 +411,20 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 	 */
 	@SuppressWarnings("static-access")
 	public static void main(final String[] args) {
-
+		
+		// determine if a valid log4j config exists and initialize a default logger if not
+		if (System.getProperty("log4j.configuration") == null) {
+			Logger root = Logger.getRootLogger();
+			root.removeAllAppenders();
+			PatternLayout layout = new PatternLayout("%d{HH:mm:ss,SSS} %-5p %-60c %x - %m%n");
+			ConsoleAppender appender = new ConsoleAppender(layout, "System.err");
+			root.addAppender(appender);
+			root.setLevel(Level.INFO);
+		}
+		
+		// output the version and revision information to the log
+		logVersionInformation();
+		
 		final Option configDirOpt = OptionBuilder.withArgName("config directory").hasArg()
 			.withDescription("Specify configuration directory.").create("configDir");
 
@@ -404,6 +463,15 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 
 		// Create a new job manager object
 		JobManager jobManager = new JobManager(executionMode);
+		
+		// Set base dir for info server
+		Configuration infoserverConfig = GlobalConfiguration.getConfiguration();
+		if (configDir != null) {
+			infoserverConfig.setString(ConfigConstants.STRATOSPHERE_BASE_DIR_PATH_KEY, configDir+"/..");
+		}
+				
+		// Start info server for jobmanager
+		jobManager.startInfoServer(infoserverConfig);
 
 		// Run the main task loop
 		jobManager.runTaskLoop();
@@ -888,14 +956,21 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 	}
 
 	/**
+	 * Returns current ManagementGraph from eventCollector and, if not current, from archive
+	 * 
 	 * {@inheritDoc}
 	 */
 	@Override
 	public ManagementGraph getManagementGraph(final JobID jobID) throws IOException {
 
-		final ManagementGraph mg = this.eventCollector.getManagementGraph(jobID);
+		ManagementGraph mg = this.eventCollector.getManagementGraph(jobID);
 		if (mg == null) {
-			throw new IOException("Cannot find job with ID " + jobID);
+			if(this.archive != null)
+				mg = this.archive.getManagementGraph(jobID);
+			
+			if (mg == null) {
+				throw new IOException("Cannot find job with ID " + jobID);
+			}
 		}
 
 		return mg;
@@ -1238,7 +1313,48 @@ public class JobManager implements DeploymentManager, ExtendedManagementProtocol
 
 		return new InputSplitWrapper(jobID, this.inputSplitManager.getNextInputSplit(vertex, sequenceNumber.getValue()));
 	}
+	
+	/**
+	 * Starts the Jetty Infoserver for the Jobmanager
+	 * 
+	 * @param config
+	 */
+	public void startInfoServer(Configuration config) {
+		// Start InfoServer
+		try {
+			int port = config.getInteger(ConfigConstants.JOB_MANAGER_WEB_PORT_KEY, ConfigConstants.DEFAULT_WEB_FRONTEND_PORT);
+			server = new WebInfoServer(config, port, this);
+			server.start();
+		} catch (FileNotFoundException e) {
+			LOG.error(e.getMessage());
+		} catch (Exception e) {
+			LOG.error("Cannot instantiate info server: " + StringUtils.stringifyException(e));
+		}
+	}
+	
+	
+	// TODO Add to RPC?
+	public List<RecentJobEvent> getOldJobs() throws IOException {
 
+		//final List<RecentJobEvent> eventList = new SerializableArrayList<RecentJobEvent>();
+
+		if (this.archive == null) {
+			throw new IOException("No instance of the event collector found");
+		}
+
+		//this.eventCollector.getRecentJobs(eventList);
+
+		return this.archive.getJobs();
+	}
+	
+	public ArchiveListener getArchive() {
+		return this.archive;
+	}
+
+	public int getNumberOfTaskTrackers() {
+		return this.instanceManager.getNumberOfTaskTrackers();
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 */

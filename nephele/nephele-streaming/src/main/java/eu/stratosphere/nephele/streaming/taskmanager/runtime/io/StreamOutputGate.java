@@ -21,6 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import eu.stratosphere.nephele.io.ChannelSelector;
 import eu.stratosphere.nephele.io.OutputGate;
 import eu.stratosphere.nephele.io.channels.AbstractOutputChannel;
 import eu.stratosphere.nephele.io.channels.ChannelID;
@@ -197,6 +198,14 @@ public final class StreamOutputGate<T extends Record> extends
 		this.outputChannels.put(channelID, channel);
 		return channel;
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public ChannelSelector<T> getChannelSelector() {
+		return this.streamChannelSelector;
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -206,5 +215,4 @@ public final class StreamOutputGate<T extends Record> extends
 		this.outputChannels.clear();
 		this.getWrappedOutputGate().removeAllOutputChannels();
 	}
-
 }

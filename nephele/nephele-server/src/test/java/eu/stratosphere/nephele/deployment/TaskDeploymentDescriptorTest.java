@@ -26,10 +26,13 @@ import org.junit.Test;
 import eu.stratosphere.nephele.configuration.Configuration;
 import eu.stratosphere.nephele.execution.librarycache.LibraryCacheManager;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
+import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.io.library.FileLineReader;
 import eu.stratosphere.nephele.jobgraph.JobID;
+import eu.stratosphere.nephele.plugins.PluginID;
 import eu.stratosphere.nephele.template.AbstractInvokable;
 import eu.stratosphere.nephele.util.SerializableArrayList;
+import eu.stratosphere.nephele.util.SerializableHashMap;
 import eu.stratosphere.nephele.util.ServerTestUtils;
 import eu.stratosphere.nephele.util.StringUtils;
 
@@ -58,10 +61,11 @@ public class TaskDeploymentDescriptorTest {
 			0);
 		final SerializableArrayList<GateDeploymentDescriptor> inputGates = new SerializableArrayList<GateDeploymentDescriptor>(
 			0);
+		final SerializableHashMap<PluginID, IOReadableWritable> attachedPluginData = new SerializableHashMap<PluginID, IOReadableWritable>();
 
 		final TaskDeploymentDescriptor tdd = new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 			indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-			invokableClass, outputGates, inputGates, null);
+			invokableClass, outputGates, inputGates, attachedPluginData);
 
 		assertEquals(jobID, tdd.getJobID());
 		assertEquals(vertexID, tdd.getVertexID());
@@ -93,6 +97,7 @@ public class TaskDeploymentDescriptorTest {
 			0);
 		final SerializableArrayList<GateDeploymentDescriptor> inputGates = new SerializableArrayList<GateDeploymentDescriptor>(
 			0);
+		final SerializableHashMap<PluginID, IOReadableWritable> attachedPluginData = new SerializableHashMap<PluginID, IOReadableWritable>();
 
 		boolean firstExceptionCaught = false;
 		boolean secondExceptionCaught = false;
@@ -108,7 +113,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(null, vertexID, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			firstExceptionCaught = true;
 		}
@@ -116,7 +121,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, null, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			secondExceptionCaught = true;
 		}
@@ -124,7 +129,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, null,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			thirdExceptionCaught = true;
 		}
@@ -132,7 +137,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				-1, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			forthExceptionCaught = true;
 		}
@@ -140,7 +145,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				indexInSubtaskGroup, -1, jobConfiguration, taskConfiguration,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			fifthExceptionCaught = true;
 		}
@@ -148,7 +153,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, null, taskConfiguration,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			sixthExceptionCaught = true;
 		}
@@ -156,7 +161,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, null,
-				invokableClass, outputGates, inputGates, null);
+				invokableClass, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			seventhExceptionCaught = true;
 		}
@@ -164,7 +169,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				 null, outputGates, inputGates, null);
+				 null, outputGates, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			eighthExceptionCaught = true;
 			
@@ -173,7 +178,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				invokableClass, null, inputGates, null);
+				invokableClass, null, inputGates, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			ninethExeceptionCaught = true;
 			
@@ -182,7 +187,7 @@ public class TaskDeploymentDescriptorTest {
 		try {
 			new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 				indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-				invokableClass, outputGates, null, null);
+				invokableClass, outputGates, null, attachedPluginData);
 		} catch (IllegalArgumentException e) {
 			tenthExceptionCaught = true;
 		}
@@ -247,10 +252,11 @@ public class TaskDeploymentDescriptorTest {
 			0);
 		final SerializableArrayList<GateDeploymentDescriptor> inputGates = new SerializableArrayList<GateDeploymentDescriptor>(
 			0);
+		final SerializableHashMap<PluginID, IOReadableWritable> attachedPluginData = new SerializableHashMap<PluginID, IOReadableWritable>();
 
 		final TaskDeploymentDescriptor orig = new TaskDeploymentDescriptor(jobID, vertexID, taskName,
 			indexInSubtaskGroup, currentNumberOfSubtasks, jobConfiguration, taskConfiguration,
-			invokableClass, outputGates, inputGates, null);
+			invokableClass, outputGates, inputGates, attachedPluginData);
 
 		TaskDeploymentDescriptor copy = null;
 

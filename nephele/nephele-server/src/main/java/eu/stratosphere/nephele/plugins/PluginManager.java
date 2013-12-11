@@ -48,7 +48,7 @@ public final class PluginManager {
 	 */
 	private static final Log LOG = LogFactory.getLog(PluginManager.class);
 
-	private static final String PLUGINS_NAMESPACE_KEY_PREFIX = "eu.stratosphere.nephele.plugins.";
+	private static final String PLUGINS_NAMESPACE_KEY_PREFIX = "plugins.";
 
 	/**
 	 * Pattern for plugins classname property.
