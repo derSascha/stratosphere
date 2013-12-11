@@ -36,8 +36,6 @@ import eu.stratosphere.nephele.executiongraph.ExecutionSignature;
 import eu.stratosphere.nephele.executiongraph.ExecutionStage;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertex;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
-import eu.stratosphere.nephele.instance.AbstractInstance;
-import eu.stratosphere.nephele.instance.AllocatedResource;
 import eu.stratosphere.nephele.instance.InstanceConnectionInfo;
 import eu.stratosphere.nephele.instance.InstanceManager;
 import eu.stratosphere.nephele.instance.InstanceType;
@@ -267,47 +265,19 @@ public class QosGraphFixture {
 
 		// inject InstanceConnectionInfos
 		this.instanceConnectionInfos = new InstanceConnectionInfo[5][];
-		this.instanceConnectionInfos[0] = this
+		this.instanceConnectionInfos[0] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex1);
-		this.instanceConnectionInfos[1] = this
+		this.instanceConnectionInfos[1] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex2);
-		this.instanceConnectionInfos[2] = this
+		this.instanceConnectionInfos[2] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex3);
-		this.instanceConnectionInfos[3] = this
+		this.instanceConnectionInfos[3] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex4);
-		this.instanceConnectionInfos[4] = this
+		this.instanceConnectionInfos[4] = QosGraphTestUtil
 				.generateAndAssignInstances(this.execVertex5);
 	}
 
-	private InstanceConnectionInfo[] generateAndAssignInstances(
-			ExecutionGroupVertex groupVertex) {
-
-		InstanceConnectionInfo[] connectionInfos = new InstanceConnectionInfo[groupVertex
-				.getCurrentNumberOfGroupMembers()];
-		for (int i = 0; i < connectionInfos.length; i++) {
-			ExecutionVertex vertex = groupVertex.getGroupMember(i);
-
-			try {
-				connectionInfos[i] = new InstanceConnectionInfo(
-						InetAddress.getByName(String.format("10.10.10.%d",
-								i + 1)), "hostname", "domainname", 1, 1);
-
-				AbstractInstance instance = mock(AbstractInstance.class);
-				when(instance.getInstanceConnectionInfo()).thenReturn(
-						connectionInfos[i]);
-
-				AllocatedResource resource = mock(AllocatedResource.class);
-				when(resource.getInstance()).thenReturn(instance);
-
-				vertex.setAllocatedResource(resource);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
-		}
-		return connectionInfos;
-	}
-
-	public void makeConstraints() {
+    public void makeConstraints() {
 		/**
 		 * Covers e13,v3,e34,v4,e45
 		 */
@@ -317,7 +287,7 @@ public class QosGraphFixture {
 		sequence1.addVertex(this.jobVertex3.getID(), 0, 0);
 		sequence1.addEdge(this.jobVertex3.getID(), 0, this.jobVertex4.getID(),
 				1);
-		sequence1.addVertex(this.jobVertex4.getID(), 0, 0);
+		sequence1.addVertex(this.jobVertex4.getID(), 1, 0);
 		sequence1.addEdge(this.jobVertex4.getID(), 0, this.jobVertex5.getID(),
 				0);
 		this.constraint1 = new JobGraphLatencyConstraint(sequence1, 2000);
@@ -331,7 +301,7 @@ public class QosGraphFixture {
 		sequence2.addVertex(this.jobVertex2.getID(), 0, 0);
 		sequence2.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(),
 				0);
-		sequence2.addVertex(this.jobVertex4.getID(), 1, 0);
+		sequence2.addVertex(this.jobVertex4.getID(), 0, 0);
 		this.constraint2 = new JobGraphLatencyConstraint(sequence2, 2000);
 
 		/**
@@ -341,7 +311,7 @@ public class QosGraphFixture {
 		sequence3.addVertex(this.jobVertex2.getID(), 0, 0);
 		sequence3.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(),
 				0);
-		sequence3.addVertex(this.jobVertex4.getID(), 1, 0);
+		sequence3.addVertex(this.jobVertex4.getID(), 0, 0);
 		sequence3.addEdge(this.jobVertex4.getID(), 0, this.jobVertex5.getID(),
 				0);
 		this.constraint3 = new JobGraphLatencyConstraint(sequence3, 2000);
@@ -353,7 +323,7 @@ public class QosGraphFixture {
 		sequence4.addVertex(this.jobVertex2.getID(), 0, 0);
 		sequence4.addEdge(this.jobVertex2.getID(), 0, this.jobVertex4.getID(),
 				0);
-		sequence4.addVertex(this.jobVertex4.getID(), 1, 0);
+		sequence4.addVertex(this.jobVertex4.getID(), 0, 0);
 		this.constraint4 = new JobGraphLatencyConstraint(sequence4, 2000);
 
 		/**

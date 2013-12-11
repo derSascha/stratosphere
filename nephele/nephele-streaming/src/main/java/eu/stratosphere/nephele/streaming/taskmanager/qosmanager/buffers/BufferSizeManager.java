@@ -60,11 +60,10 @@ public class BufferSizeManager {
 
 	private JobID jobID;
 
-	public BufferSizeManager(JobID jobID, QosModel qosModel,
-			StreamMessagingThread messagingThread) {
+	public BufferSizeManager(JobID jobID, QosModel qosModel) {
 		this.jobID = jobID;
 		this.qosModel = qosModel;
-		this.messagingThread = messagingThread;
+		this.messagingThread = StreamMessagingThread.getInstance();
 
 		this.adjustmentInterval = GlobalConfiguration.getLong(
 				QOSMANAGER_ADJUSTMENTINTERVAL_KEY, DEFAULT_ADJUSTMENTINTERVAL);
@@ -106,7 +105,7 @@ public class BufferSizeManager {
 
 		this.doAdjust(edgesToAdjust);
 
-		LOG.info(String.format(
+		LOG.debug(String.format(
 				"Adjusted edges: %d | Edges with stale Qos data: %d",
 				edgesToAdjust.size(), this.staleEdges.size()));
 

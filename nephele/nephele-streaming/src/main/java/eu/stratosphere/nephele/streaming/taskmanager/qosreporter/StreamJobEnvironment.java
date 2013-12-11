@@ -22,16 +22,17 @@ import org.apache.commons.logging.LogFactory;
 import eu.stratosphere.nephele.execution.Environment;
 import eu.stratosphere.nephele.executiongraph.ExecutionVertexID;
 import eu.stratosphere.nephele.jobgraph.JobID;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
-import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
+import eu.stratosphere.nephele.profiling.ProfilingException;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
+import eu.stratosphere.nephele.streaming.message.ChainUpdates;
+import eu.stratosphere.nephele.streaming.message.action.CandidateChainConfig;
 import eu.stratosphere.nephele.streaming.message.action.DeployInstanceQosRolesAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
 import eu.stratosphere.nephele.streaming.message.qosreport.QosReport;
-import eu.stratosphere.nephele.streaming.taskmanager.StreamMessagingThread;
 import eu.stratosphere.nephele.streaming.taskmanager.StreamTaskManagerPlugin;
+import eu.stratosphere.nephele.streaming.taskmanager.chaining.ChainManagerThread;
 import eu.stratosphere.nephele.streaming.taskmanager.qosmanager.QosManagerThread;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChainCoordinator;
 import eu.stratosphere.nephele.taskmanager.runtime.RuntimeTask;
 
 /**
@@ -48,25 +49,25 @@ public class StreamJobEnvironment {
 	private static final Log LOG = LogFactory
 			.getLog(StreamJobEnvironment.class);
 
-	private JobID jobID;
+	private final JobID jobID;
 
-	private QosReportForwarderThread qosReportForwarder;
+	private final QosReportForwarderThread qosReportForwarder;
 
-	private volatile QosManagerThread qosManager;
+	/**
+	 * A special thread that chains/unchains "mapper" tasks (special Nephele
+	 * execution vertices that declare themselves as chainable).
+	 */
+	private final ChainManagerThread chainManager;
 
-	private StreamChainCoordinator chainCoordinator;
-
-	private HashMap<ExecutionVertexID, StreamTaskQosCoordinator> taskQosCoordinators;
-
-	private StreamMessagingThread messagingThread;
+	private final HashMap<ExecutionVertexID, StreamTaskQosCoordinator> taskQosCoordinators;
 
 	private volatile boolean environmentIsShutDown;
 
-	public StreamJobEnvironment(JobID jobID,
-			StreamMessagingThread messagingThread) {
+	private volatile QosManagerThread qosManager;
+
+	public StreamJobEnvironment(JobID jobID) throws ProfilingException {
 
 		this.jobID = jobID;
-		this.messagingThread = messagingThread;
 		this.environmentIsShutDown = false;
 
 		QosReporterConfigCenter reporterConfig = new QosReporterConfigCenter();
@@ -76,9 +77,8 @@ public class StreamJobEnvironment {
 				.getDefaultTaggingInterval());
 
 		this.qosReportForwarder = new QosReportForwarderThread(jobID,
-				messagingThread, reporterConfig);
-
-		this.chainCoordinator = new StreamChainCoordinator();
+				reporterConfig);
+		this.chainManager = new ChainManagerThread(reporterConfig);
 		this.taskQosCoordinators = new HashMap<ExecutionVertexID, StreamTaskQosCoordinator>();
 	}
 
@@ -103,8 +103,12 @@ public class StreamJobEnvironment {
 			}
 
 			this.taskQosCoordinators.put(task.getVertexID(),
-					new StreamTaskQosCoordinator(task.getVertexID(), streamEnv,
-							this.qosReportForwarder, this.chainCoordinator));
+					new StreamTaskQosCoordinator(task, streamEnv,
+							this.qosReportForwarder));
+		}
+
+		if (streamEnv.isMapperTask()) {
+			this.chainManager.registerMapperTask(task);
 		}
 	}
 
@@ -124,37 +128,50 @@ public class StreamJobEnvironment {
 				taggingInterval);
 	}
 
-	private void shutdownEnvironment() {
+	public synchronized void shutdownEnvironment() {
+		if (this.environmentIsShutDown) {
+			return;
+		}
+
 		this.environmentIsShutDown = true;
+
+		for (StreamTaskQosCoordinator qosCoordinator : this.taskQosCoordinators
+				.values()) {
+			// shuts down Qos reporting for this vertex
+			qosCoordinator.shutdownReporting();
+		}
+		this.taskQosCoordinators.clear();
 
 		if (this.qosManager != null) {
 			this.qosManager.shutdown();
 		}
 		this.qosManager = null;
-
 		this.qosReportForwarder.shutdown();
-		this.qosReportForwarder = null;
-		this.taskQosCoordinators = null;
-		// FIXME stop chaining stuff
+		this.chainManager.shutdown();
 	}
 
-	public void handleStreamMessage(AbstractStreamMessage streamMsg) {
+	public void handleStreamMessage(AbstractQosMessage streamMsg) {
 		if (this.environmentIsShutDown) {
 			return;
 		}
 
 		if (streamMsg instanceof QosReport) {
 			this.handleQosReport((QosReport) streamMsg);
+		} else if (streamMsg instanceof ChainUpdates) {
+			this.handleChainUpdates((ChainUpdates) streamMsg);
 		} else if (streamMsg instanceof LimitBufferSizeAction) {
 			this.handleLimitBufferSizeAction((LimitBufferSizeAction) streamMsg);
-		} else if (streamMsg instanceof ConstructStreamChainAction) {
-			this.handleConstructStreamChainAction((ConstructStreamChainAction) streamMsg);
 		} else if (streamMsg instanceof DeployInstanceQosRolesAction) {
 			this.handleDeployInstanceQosRolesAction((DeployInstanceQosRolesAction) streamMsg);
 		} else {
 			LOG.error("Received message is of unknown type "
 					+ streamMsg.getClass());
 		}
+	}
+
+	private void handleChainUpdates(ChainUpdates chainUpdates) {
+		this.ensureQosManagerIsRunning();
+		this.qosManager.handOffStreamingData(chainUpdates);
 	}
 
 	private void handleDeployInstanceQosRolesAction(
@@ -165,6 +182,11 @@ public class StreamJobEnvironment {
 		}
 
 		this.qosReportForwarder.configureReporting(deployRolesAction);
+
+		for (CandidateChainConfig chainConfig : deployRolesAction
+				.getCandidateChains()) {
+			this.chainManager.registerCandidateChain(chainConfig);
+		}
 
 		LOG.info(String
 				.format("Deployed %d vertex Qos reporters, %d edge Qos reporters and %d Qos manager roles",
@@ -197,8 +219,7 @@ public class StreamJobEnvironment {
 
 	private synchronized void ensureQosManagerIsRunningSynchronized() {
 		if (this.qosManager == null) {
-			this.qosManager = new QosManagerThread(this.jobID,
-					this.messagingThread);
+			this.qosManager = new QosManagerThread(this.jobID);
 			this.qosManager.start();
 		}
 	}
@@ -211,21 +232,6 @@ public class StreamJobEnvironment {
 		if (qosCoordinator != null) {
 			qosCoordinator.handleLimitBufferSizeAction(action);
 		}
-	}
-
-	private void handleConstructStreamChainAction(
-			ConstructStreamChainAction action) {
-
-		// FIXME
-		// StreamTaskQosCoordinator qosCoordinator = this.taskQosCoordinators
-		// .get(action.getVertexID());
-		//
-		// if (qosCoordinator != null) {
-		// qosCoordinator.handleLimitBufferSizeAction(action);
-		// } else {
-		// LOG.error("Cannot find QoS coordinator for vertex with ID "
-		// + action.getVertexID());
-		// }
 	}
 
 	@SuppressWarnings("unused")
@@ -243,23 +249,12 @@ public class StreamJobEnvironment {
 			// shuts down Qos reporting for this vertex
 			qosCoordinator.shutdownReporting();
 			this.taskQosCoordinators.remove(vertexID);
+
+			this.chainManager.unregisterMapperTask(vertexID);
 		}
 
 		if (this.taskQosCoordinators.isEmpty()) {
 			shutdownEnvironment();
 		}
-	}
-	
-	public synchronized void shutdownReportingAndEnvironment() {
-		if (this.environmentIsShutDown) {
-			return;
-		}
-		
-		for(StreamTaskQosCoordinator qosCoordinator : this.taskQosCoordinators.values()) {
-			// shuts down Qos reporting for this vertex
-			qosCoordinator.shutdownReporting();			
-		}
-		this.taskQosCoordinators.clear();
-		shutdownEnvironment();
 	}
 }

@@ -29,11 +29,13 @@ import eu.stratosphere.nephele.io.channels.bytebuffered.AbstractByteBufferedOutp
 import eu.stratosphere.nephele.io.channels.bytebuffered.InMemoryOutputChannel;
 import eu.stratosphere.nephele.io.channels.bytebuffered.NetworkOutputChannel;
 import eu.stratosphere.nephele.plugins.wrapper.AbstractOutputGateWrapper;
-import eu.stratosphere.nephele.streaming.message.action.AbstractQosAction;
-import eu.stratosphere.nephele.streaming.message.action.ConstructStreamChainAction;
+import eu.stratosphere.nephele.streaming.message.action.DropCurrentChainAction;
+import eu.stratosphere.nephele.streaming.message.action.EstablishNewChainAction;
 import eu.stratosphere.nephele.streaming.message.action.LimitBufferSizeAction;
+import eu.stratosphere.nephele.streaming.message.action.QosAction;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.listener.OutputGateQosReportingListener;
-import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.StreamChain;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChain;
+import eu.stratosphere.nephele.streaming.taskmanager.runtime.chaining.RuntimeChainLink;
 import eu.stratosphere.nephele.types.AbstractTaggableRecord;
 import eu.stratosphere.nephele.types.Record;
 
@@ -50,7 +52,7 @@ public final class StreamOutputGate<T extends Record> extends
 
 	private final static Logger LOG = Logger.getLogger(StreamOutputGate.class);
 
-	private StreamChain streamChain = null;
+	private RuntimeChain streamChain = null;
 
 	private volatile OutputGateQosReportingListener qosCallback;
 
@@ -58,14 +60,14 @@ public final class StreamOutputGate<T extends Record> extends
 
 	private StreamChannelSelector<T> streamChannelSelector;
 
-	private LinkedBlockingQueue<AbstractQosAction> qosActionQueue;
+	private LinkedBlockingQueue<QosAction> qosActionQueue;
 
 	public StreamOutputGate(final OutputGate<T> wrappedOutputGate,
 			StreamChannelSelector<T> streamChannelSelector) {
 		super(wrappedOutputGate);
 		this.outputChannels = new HashMap<ChannelID, AbstractOutputChannel<T>>();
 		this.streamChannelSelector = streamChannelSelector;
-		this.qosActionQueue = new LinkedBlockingQueue<AbstractQosAction>();
+		this.qosActionQueue = new LinkedBlockingQueue<QosAction>();
 	}
 
 	public void setQosReportingListener(
@@ -95,32 +97,50 @@ public final class StreamOutputGate<T extends Record> extends
 		this.handlePendingQosActions();
 	}
 
-	public void enqueueQosAction(AbstractQosAction qosAction) {
+	public void enqueueQosAction(QosAction qosAction) {
 		this.qosActionQueue.add(qosAction);
 	}
 
-	private void handlePendingQosActions() throws InterruptedException {
-		AbstractQosAction action;
+	private void handlePendingQosActions() throws InterruptedException,
+			IOException {
+		QosAction action;
 		while ((action = this.qosActionQueue.poll()) != null) {
 			if (action instanceof LimitBufferSizeAction) {
 				this.limitBufferSize((LimitBufferSizeAction) action);
-			} else if (action instanceof ConstructStreamChainAction) {
-				this.constructStreamChain((ConstructStreamChainAction) action);
+			} else if (action instanceof EstablishNewChainAction) {
+				this.establishChain((EstablishNewChainAction) action);
+			} else if (action instanceof DropCurrentChainAction) {
+				dropCurrentChain();
 			}
 		}
+	}
+
+	private void dropCurrentChain() {
+		LOG.info("Dropped chain " + this.streamChain);
+		this.streamChain = null;
 	}
 
 	public AbstractOutputChannel<T> getOutputChannel(ChannelID channelID) {
 		return this.outputChannels.get(channelID);
 	}
 
-	private void constructStreamChain(ConstructStreamChainAction csca)
-			throws InterruptedException {
+	private void establishChain(EstablishNewChainAction chainTasksAction)
+			throws InterruptedException, IOException {
 
-		// FIXME
-		// StreamChain streamChain = this.chainCoordinator
-		// .constructStreamChain(csca.getVertexIDs());
-		// streamChain.waitUntilFlushed();
+		RuntimeChain streamChain = chainTasksAction.getRuntimeChain();
+		this.streamChain = streamChain;
+		this.flush();
+
+		for (RuntimeChainLink chainLink : streamChain.getChainLinks().subList(
+				1, streamChain.getChainLinks().size())) {
+
+			chainLink.getInputGate().haltTaskThreadIfNecessary();
+			chainLink.getOutputGate().flush();
+			chainLink.getOutputGate().streamChain = null;
+		}
+
+		streamChain.signalTasksAreSuccessfullyChained();
+		LOG.info("Established chain " + streamChain);
 	}
 
 	private void limitBufferSize(LimitBufferSizeAction lbsa) {
@@ -159,10 +179,6 @@ public final class StreamOutputGate<T extends Record> extends
 					.getAmountOfDataTransmitted());
 		}
 		this.getWrappedOutputGate().outputBufferSent(channelIndex);
-	}
-
-	public void redirectToStreamChain(final StreamChain streamChain) {
-		this.streamChain = streamChain;
 	}
 
 	/**
@@ -215,4 +231,5 @@ public final class StreamOutputGate<T extends Record> extends
 		this.outputChannels.clear();
 		this.getWrappedOutputGate().removeAllOutputChannels();
 	}
+
 }

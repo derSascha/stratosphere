@@ -192,7 +192,6 @@ public final class TaskDeploymentDescriptor implements IOReadableWritable {
 	 * Default constructor for serialization/deserialization.
 	 */
 	public TaskDeploymentDescriptor() {
-
 		this.jobID = new JobID();
 		this.vertexID = new ExecutionVertexID();
 		this.taskName = null;

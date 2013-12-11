@@ -299,5 +299,5 @@ public abstract class AbstractOutputGateWrapper<T extends Record> implements Out
 	@Override
 	public void outputBufferSent(final int channelIndex) {
 		this.wrappedOutputGate.outputBufferSent(channelIndex);
-	}
+	}	
 }

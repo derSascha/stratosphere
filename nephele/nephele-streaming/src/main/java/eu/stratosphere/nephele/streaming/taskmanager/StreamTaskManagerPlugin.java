@@ -29,7 +29,8 @@ import eu.stratosphere.nephele.io.IOReadableWritable;
 import eu.stratosphere.nephele.jobgraph.JobID;
 import eu.stratosphere.nephele.plugins.PluginManager;
 import eu.stratosphere.nephele.plugins.TaskManagerPlugin;
-import eu.stratosphere.nephele.streaming.message.AbstractStreamMessage;
+import eu.stratosphere.nephele.profiling.ProfilingException;
+import eu.stratosphere.nephele.streaming.message.AbstractQosMessage;
 import eu.stratosphere.nephele.streaming.taskmanager.qosreporter.StreamJobEnvironment;
 import eu.stratosphere.nephele.streaming.taskmanager.runtime.StreamTaskEnvironment;
 import eu.stratosphere.nephele.taskmanager.Task;
@@ -91,20 +92,11 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	private final long defaultAggregationInterval;
 
-	/**
-	 * A special thread to asynchronously send data to other task managers
-	 * without suffering from the RPC latency.
-	 */
-	private final StreamMessagingThread messagingThread;
-
 	public StreamTaskManagerPlugin() {
 		this.defaultTaggingInterval = GlobalConfiguration.getInteger(
 				TAGGING_INTERVAL_KEY, DEFAULT_TAGGING_INTERVAL);
 		this.defaultAggregationInterval = GlobalConfiguration.getLong(
 				AGGREGATION_INTERVAL_KEY, DEFAULT_AGGREGATION_INTERVAL);
-
-		this.messagingThread = new StreamMessagingThread();
-		this.messagingThread.start();
 
 		LOG.info(String
 				.format("Configured tagging interval is every %d records / Aggregation interval is %d millis ",
@@ -127,12 +119,13 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void shutdown() {
-		this.messagingThread.stopMessagingThread();
+		StreamMessagingThread.destroyInstance();
 
 		for (StreamJobEnvironment jobEnvironment : this.streamJobEnvironments
 				.values()) {
 
-			jobEnvironment.shutdownReportingAndEnvironment();
+			jobEnvironment.shutdownEnvironment();
+
 		}
 		this.streamJobEnvironments.clear();
 
@@ -147,30 +140,35 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 			final Configuration jobConfiguration,
 			final IOReadableWritable pluginData) {
 
-		if (task instanceof RuntimeTask) {
+		try {
+			if (task instanceof RuntimeTask) {
 
-			RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) task
-					.getEnvironment();
-			if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
-				StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv
-						.getInvokable().getEnvironment();
+				RuntimeEnvironment runtimeEnv = (RuntimeEnvironment) task
+						.getEnvironment();
+				if (runtimeEnv.getInvokable().getEnvironment() instanceof StreamTaskEnvironment) {
+					StreamTaskEnvironment streamEnv = (StreamTaskEnvironment) runtimeEnv
+							.getInvokable().getEnvironment();
 
-				// unfortunately, Nephele's runtime environment does not know
-				// its ExecutionVertexID.
-				streamEnv.setVertexID(task.getVertexID());
-				this.getOrCreateJobEnvironment(runtimeEnv.getJobID())
-						.registerTask((RuntimeTask) task, streamEnv);
-			}
+					// unfortunately, Nephele's runtime environment does not
+					// know its ExecutionVertexID.
+					streamEnv.setVertexID(task.getVertexID());
+					this.getOrCreateJobEnvironment(runtimeEnv.getJobID())
+							.registerTask((RuntimeTask) task, streamEnv);
+				}
 
-			// process attached plugin data, such as Qos manager/reporter
-			// configs
-			if (pluginData != null) {
-				try {
-					this.sendData(pluginData);
-				} catch (IOException e) {
-					LOG.error("Error when consuming attached plugin data", e);
+				// process attached plugin data, such as Qos manager/reporter
+				// configs
+				if (pluginData != null) {
+					try {
+						this.sendData(pluginData);
+					} catch (IOException e) {
+						LOG.error("Error when consuming attached plugin data",
+								e);
+					}
 				}
 			}
+		} catch (Exception e) {
+			LOG.error(e);
 		}
 	}
 
@@ -179,14 +177,19 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void unregisterTask(final Task task) {
-		if (task instanceof RuntimeTask) {
-			this.getOrCreateJobEnvironment(task.getJobID()).unregisterTask(
-					task.getVertexID(),
-					((RuntimeTask) task).getRuntimeEnvironment());
+		try {
+			if (task instanceof RuntimeTask) {
+				this.getOrCreateJobEnvironment(task.getJobID()).unregisterTask(
+						task.getVertexID(),
+						((RuntimeTask) task).getRuntimeEnvironment());
+			}
+		} catch (Exception e) {
+			LOG.error(e);
 		}
 	}
 
-	private StreamJobEnvironment getOrCreateJobEnvironment(JobID jobID) {
+	private StreamJobEnvironment getOrCreateJobEnvironment(JobID jobID)
+			throws ProfilingException {
 
 		StreamJobEnvironment jobEnvironment = this.streamJobEnvironments
 				.get(jobID);
@@ -198,15 +201,16 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 		return jobEnvironment;
 	}
 
-	private StreamJobEnvironment createJobEnvironmentIfNecessary(JobID jobID) {
+	private StreamJobEnvironment createJobEnvironmentIfNecessary(JobID jobID)
+			throws ProfilingException {
+
 		StreamJobEnvironment jobEnvironment;
 		synchronized (this.streamJobEnvironments) {
 			// test again to avoid race conditions
 			if (this.streamJobEnvironments.containsKey(jobID)) {
 				jobEnvironment = this.streamJobEnvironments.get(jobID);
 			} else {
-				jobEnvironment = new StreamJobEnvironment(jobID,
-						this.messagingThread);
+				jobEnvironment = new StreamJobEnvironment(jobID);
 				this.streamJobEnvironments.put(jobID, jobEnvironment);
 			}
 		}
@@ -218,10 +222,14 @@ public class StreamTaskManagerPlugin implements TaskManagerPlugin {
 	 */
 	@Override
 	public void sendData(final IOReadableWritable data) throws IOException {
-		if (data instanceof AbstractStreamMessage) {
-			AbstractStreamMessage streamMsg = (AbstractStreamMessage) data;
-			this.getOrCreateJobEnvironment(streamMsg.getJobID())
-					.handleStreamMessage(streamMsg);
+		try {
+			if (data instanceof AbstractQosMessage) {
+				AbstractQosMessage streamMsg = (AbstractQosMessage) data;
+				this.getOrCreateJobEnvironment(streamMsg.getJobID())
+						.handleStreamMessage(streamMsg);
+			}
+		} catch (Exception e) {
+			LOG.error(e);
 		}
 	}
 

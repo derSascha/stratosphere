@@ -44,7 +44,7 @@ public final class RecordUtils {
 	 *             thrown if an error occurs while copying the object
 	 */
 	public static Record createCopy(final Record original) throws IOException {
-
+		// TODO this can be done way more efficiently!
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		final DataOutputStream dos = new DataOutputStream(baos);
 

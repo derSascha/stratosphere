@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
  *
- * Copyright (C) 2010-2013 by the Stratosphere project (http://stratosphere.eu)
+ * Copyright (C) 2010 by the Stratosphere project (http://stratosphere.eu)
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -50,6 +50,11 @@ public abstract class AbstractID implements IOReadableWritable {
 	 * The lower part of the actual ID.
 	 */
 	private long lowerPart;
+	
+	/**
+	 * A precomputed hash value.
+	 */
+	private int precomputedHash;
 
 	/**
 	 * Constructs a new ID with a specific bytes value.
@@ -62,6 +67,7 @@ public abstract class AbstractID implements IOReadableWritable {
 
 		this.lowerPart = byteArrayToLong(bytes, 0);
 		this.upperPart = byteArrayToLong(bytes, SIZE_OF_LONG);
+		precomputeHash();
 	}
 
 	/**
@@ -98,6 +104,7 @@ public abstract class AbstractID implements IOReadableWritable {
 
 		this.lowerPart = generateRandomBytes();
 		this.upperPart = generateRandomBytes();
+		precomputeHash();
 	}
 
 	/**
@@ -108,6 +115,11 @@ public abstract class AbstractID implements IOReadableWritable {
 	protected static long generateRandomBytes() {
 
 		return (long) (Math.random() * Long.MAX_VALUE);
+	}
+
+
+	private void precomputeHash() {
+		this.precomputedHash = (int) (this.lowerPart ^ (this.upperPart >>> 32));
 	}
 
 	/**
@@ -157,6 +169,7 @@ public abstract class AbstractID implements IOReadableWritable {
 	public void setID(final AbstractID src) {
 		this.lowerPart = src.lowerPart;
 		this.upperPart = src.upperPart;
+		this.precomputedHash = src.precomputedHash;
 	}
 
 	/**
@@ -187,8 +200,7 @@ public abstract class AbstractID implements IOReadableWritable {
 	 */
 	@Override
 	public int hashCode() {
-
-		return (int) (this.lowerPart ^ (this.upperPart >>> 32));
+		return this.precomputedHash;
 	}
 
 	/**
@@ -199,6 +211,7 @@ public abstract class AbstractID implements IOReadableWritable {
 
 		this.lowerPart = in.readLong();
 		this.upperPart = in.readLong();
+		this.precomputeHash();
 	}
 
 	/**

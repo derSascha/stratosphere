@@ -1,4 +1,4 @@
-For the latest information about Stratosphere, please visit our website at:
+For the latest information about Stratosphere-Streaming, please visit our website at:
 
    http://www.stratosphere.eu/
 

@@ -142,11 +142,10 @@ public class QosReportForwarderThread extends Thread {
 	}
 
 	public QosReportForwarderThread(JobID jobID,
-			StreamMessagingThread messagingThread,
 			QosReporterConfigCenter reporterConfig) {
 
 		this.jobID = jobID;
-		this.messagingThread = messagingThread;
+		this.messagingThread = StreamMessagingThread.getInstance();
 		this.reporterConfigCenter = reporterConfig;
 		this.pendingReports = new AggregatedReport[0];
 		this.currentReportIndex = -1;
@@ -266,7 +265,6 @@ public class QosReportForwarderThread extends Thread {
 
 	private void processDummyVertexReporterActivity(
 			DummyVertexReporterActivity record) {
-
 		QosReporterID.Vertex reporterID = record.getReporterID();
 
 		if (this.reporterActivityMap.get(reporterID) != Boolean.TRUE) {
