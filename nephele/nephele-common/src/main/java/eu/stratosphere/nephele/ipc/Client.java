@@ -82,6 +82,8 @@ public class Client {
 
 	private int refCount = 1;
 
+	final static int DEFAULT_MAX_IDLE_TIME = 10000; // 10 seconds
+
 	final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
 
 	final static int PING_CALL_ID = -1;
@@ -627,7 +629,7 @@ public class Client {
 	 * Construct an IPC client whose values are of the given {@link Writable} class.
 	 */
 	public Client(final SocketFactory factory) {
-		this.maxIdleTime = 1000;
+		this.maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		this.maxRetries = 10;
 		this.tcpNoDelay = false;
 		this.pingInterval = DEFAULT_PING_INTERVAL;
