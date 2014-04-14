@@ -48,6 +48,7 @@
 		<module>nephele-visualization</module>
 		<module>nephele-server</module>
 		<module>nephele-streaming</module>
+		<module>nephele-streaming-benchmark-basic</module>
 		<module>nephele-examples</module>
 	</modules>
 
