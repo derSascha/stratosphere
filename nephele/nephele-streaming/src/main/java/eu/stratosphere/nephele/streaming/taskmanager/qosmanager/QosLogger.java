@@ -64,6 +64,18 @@ public class QosLogger {
 
 	private long loggingInterval;
 
+	private int edges;
+
+	private double[] edgeThroughputInMbit;
+
+	private double[] edgeOutputBufferLifetime;
+
+	private double[] edgeRecordsPerBuffer;
+
+	private double[] edgeRecordsPerSecond;
+
+	private int[] edgeBufferSize;
+
 	public QosLogger(LatencyConstraintID constraintID, QosGraph qosGraph,
 			long loggingInterval) throws IOException {
 
@@ -72,6 +84,7 @@ public class QosLogger {
 
 		this.aggregatedMemberLatencies = new double[jobGraphSequence.size()][];
 		this.inputOutputGateCombinations = new int[jobGraphSequence.size()][];
+		this.edges = 0;
 		for (SequenceElement<JobVertexID> sequenceElement : jobGraphSequence) {
 			int index = sequenceElement.getIndexInSequence();
 
@@ -88,8 +101,14 @@ public class QosLogger {
 						.getOutputGateIndex();
 				this.inputOutputGateCombinations[index][1] = sequenceElement
 						.getInputGateIndex();
+				edges++;
 			}
 		}
+		this.edgeThroughputInMbit = new double[edges];
+		this.edgeOutputBufferLifetime = new double[edges];
+		this.edgeRecordsPerBuffer = new double[edges];
+		this.edgeRecordsPerSecond = new double[edges];
+		this.edgeBufferSize = new int[edges];
 		this.resetCounters();
 
 		this.loggingInterval = loggingInterval;
@@ -113,11 +132,19 @@ public class QosLogger {
 				this.aggregatedMemberLatencies[i][j] = 0;
 			}
 		}
+		for (int i = 0; i < this.edges; i++) {
+			this.edgeThroughputInMbit[i] = 0;
+			this.edgeOutputBufferLifetime[i] = 0;
+			this.edgeRecordsPerBuffer[i] = 0;
+			this.edgeRecordsPerSecond[i] = 0;
+			this.edgeBufferSize[i] = 0;
+		}
 	}
 
 	public void addMemberSequenceToLog(List<QosGraphMember> sequenceMembers) {
 		double sequenceLatency = 0;
 		int index = 0;
+		int edgeIndex = 0;
 
 		for (QosGraphMember member : sequenceMembers) {
 			if (member.isVertex()) {
@@ -139,6 +166,13 @@ public class QosLogger {
 						edgeQos.getChannelLatencyInMillis()
 								- outputBufferLatency);
 				sequenceLatency += edgeQos.getChannelLatencyInMillis();
+
+				this.edgeThroughputInMbit[edgeIndex] = edgeQos.getChannelThroughputInMbit();
+				this.edgeOutputBufferLifetime[edgeIndex] = edgeQos.getOutputBufferLifetimeInMillis();
+				this.edgeRecordsPerBuffer[edgeIndex] = edgeQos.getRecordsPerBuffer();
+				this.edgeRecordsPerSecond[edgeIndex] = edgeQos.getRecordsPerSecond();
+				this.edgeBufferSize[edgeIndex] = edgeQos.getBufferSize();
+				edgeIndex++;
 			}
 
 			index++;
@@ -194,6 +228,20 @@ public class QosLogger {
 								/ this.activeMemberSequences));
 			}
 		}
+		for (int edgeIndex = 0; edgeIndex < this.edges; edgeIndex++) {
+			builder.append(';');
+			builder.append(this.formatDouble(edgeThroughputInMbit[edgeIndex]));
+			builder.append(';');
+			builder.append(this.formatDouble(edgeOutputBufferLifetime[edgeIndex]));
+			builder.append(';');
+			builder.append(this.formatDouble(0)); // TODO
+			builder.append(';');
+			builder.append(this.formatDouble(edgeRecordsPerBuffer[edgeIndex]));
+			builder.append(';');
+			builder.append(this.formatDouble(edgeRecordsPerSecond[edgeIndex]));
+			builder.append(';');
+			builder.append(edgeBufferSize[edgeIndex]);
+		}
 	}
 
 	private void appendDummyLine(StringBuilder builder) {
@@ -205,6 +253,14 @@ public class QosLogger {
 
 		for (int i = 0; i < this.aggregatedMemberLatencies.length; i++) {
 			for (int j = 0; j < this.aggregatedMemberLatencies[i].length; j++) {
+				builder.append(';');
+				builder.append(this.formatDouble(0));
+			}
+		}
+		// throughputInMbit, outputBufferLifetime, recordsInOutputBufferTime, recordsPerBuffer,
+		// recordsPerSecond and bufferSize dummies
+		for (int i = 0; i < this.edges; i++) {
+			for (int j = 0; j < 6; j++) {
 				builder.append(';');
 				builder.append(this.formatDouble(0));
 			}
@@ -244,6 +300,15 @@ public class QosLogger {
 				builder.append("edge" + edgeIndex);
 				edgeIndex++;
 			}
+		}
+		for (edgeIndex = 0; edgeIndex < this.edges; edgeIndex++) {
+			builder.append(';');
+			builder.append("edge" + edgeIndex + "throughputInMbit;");
+			builder.append("edge" + edgeIndex + "outputBufferLifetime;");
+			builder.append("edge" + edgeIndex + "recordsInOutputBufferTime;");
+			builder.append("edge" + edgeIndex + "recordsPerBuffer;");
+			builder.append("edge" + edgeIndex + "recordsPerSecond;");
+			builder.append("edge" + edgeIndex + "bufferSize");
 		}
 		builder.append('\n');
 		this.writer.write(builder.toString());
