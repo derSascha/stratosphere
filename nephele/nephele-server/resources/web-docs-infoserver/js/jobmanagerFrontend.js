@@ -48,8 +48,12 @@ $(".opensub").live("click", function() {
 $(".cancel").live("click", function() {
 	var id = $(this).attr("job");
 	$.ajax({ url : "/jobsInfo?get=cancel&job=" + id, type : "GET",
-	    success : function(json) {
-	    }
+        success : function(json) {
+        alert("Job " + id + " successfully canceled.");
+        },
+        error : function(json, textStatus) {
+            alert("Failed to cancel job " + id + ": " + textStatus);
+        }
 	//complete: setTimeout(function() {poll()}, 5000),
 	//timeout: 2000
 	});
@@ -102,6 +106,9 @@ function drawDependencies() {
 
 function fillTable(table, json) {
 	$(table).html("");
+
+    // sort jobs by timestamp
+    json.sort(function(a, b) { return b.time - a.time; });
 
 	$.each(json, function(i, job) {
 		var countGroups = 0;
